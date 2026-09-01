@@ -134,6 +134,16 @@ function _M.setup()
 	end
 end
 
+-- dialogs that actually block play: everything except auto-explore's own
+-- "Running..." progress popup, which is expected while a run is in flight
+function _M.blockingDialogs()
+	local n = 0
+	for _, d in ipairs(game.dialogs) do
+		if not (d.title and tostring(d.title):find("Running")) then n = n + 1 end
+	end
+	return n
+end
+
 -- one action per open dialog: answer chats, spend-then-close levelups,
 -- drive stores (buy one, sell one, leave), accept quantity prompts,
 -- close everything else
@@ -238,6 +248,7 @@ function _M.frame()
 	if #game.dialogs > 0 then
 		local d = game.dialogs[#game.dialogs]
 		if d and d.key then pcall(_M.handleDialog, d) end
+		if not d.__ap_seen then d.__ap_seen = true; _M.event("dialog_seen", {dialog=d.__CLASSNAME or "?", title=tostring(d.title or "")}) end
 	end
 
 	local zname = game.zone and game.zone.short_name
@@ -262,7 +273,7 @@ function _M.frame()
 			energy=(p and p.energy and math.floor(p.energy.value)) or -1,
 			ticks=st.ticks or 0, in_level=(p and game.level and game.level:hasEntity(p)) and true or false})
 	end
-	if game.paused and p and not p.dead and p.x and #game.dialogs == 0
+	if game.paused and p and not p.dead and p.x and _M.blockingDialogs() == 0
 	   and game.zone and game.level then
 		local okp, err = pcall(function() p:act() end)
 		if not okp then _M.event("autopilot_error", {err=tostring(err)}) end
@@ -440,7 +451,7 @@ function _M:onPlayerAct(p)
 	if not game.level or not game.zone then return end
 	if p.dead then return end
 	if p.resting or p.running then return end
-	if #game.dialogs > 0 then return end
+	if _M.blockingDialogs() > 0 then return end
 
 	-- spend any levelup points that arrived outside the dialog
 	if (p.unused_stats or 0) > 0 or (p.unused_talents or 0) > 0 or (p.unused_generics or 0) > 0 then
@@ -533,6 +544,15 @@ function _M:onPlayerAct(p)
 	self.state.level_acts = self.state.level_acts + 1
 
 	if not self.state.explored then
+		-- auto-explore's terminal move is "go stand on an exit": if we are on
+		-- a level-change tile with nothing pulling us elsewhere, we're done
+		local here = game.level.map(p.x, p.y, game.level.map.TERRAIN)
+		if here and here.change_level and self.state.level_acts > 5 then
+			self.state.explored = true
+			_M.event("level_explored", {acts=self.state.level_acts, reason="at_exit"})
+		end
+	end
+	if not self.state.explored then
 		local started = p:autoExplore()
 		if started and game.turn ~= self.state.last_act_turn then
 			self.state.last_act_turn = game.turn
@@ -541,7 +561,7 @@ function _M:onPlayerAct(p)
 		end
 		-- explore returned nothing, or keeps "starting" without the clock moving
 		self.state.explore_noprog = self.state.explore_noprog + 1
-		if not started or self.state.explore_noprog >= 3 or self.state.level_acts > 800 then
+		if not started or self.state.explore_noprog >= 3 or self.state.level_acts > 400 then
 			self.state.explored = true
 			_M.event("level_explored", {acts=self.state.level_acts, reason=(not started) and "done" or "noprog"})
 		else
