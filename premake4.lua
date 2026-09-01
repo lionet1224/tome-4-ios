@@ -36,6 +36,7 @@ solution "TEngine"
 	end
 	if _OPTIONS.lua == "default" then includedirs{"src/lua"}
 	elseif _OPTIONS.lua == "jit2" then includedirs{"src/luajit2/src", "src/luajit2/dynasm",}
+	elseif _OPTIONS.lua == "jit2ext" then includedirs{"tools/LuaJIT/src"}
 	end
 
 if _OPTIONS.steam then

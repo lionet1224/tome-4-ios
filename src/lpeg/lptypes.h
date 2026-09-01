@@ -19,6 +19,7 @@
 
 
 #define VERSION         "0.11"
+#include <limits.h>
 
 
 #define PATTERN_T	"lpeg-pattern"

@@ -26,7 +26,8 @@ newoption {
 	description = "Virtual Machine to use for Lua, either the default one or a JIT",
 	allowed = {
 		{ "default",	"Default Lua Virtual Machine" },
-		{ "jit2",	"LuaJIT2" },
+		{ "jit2",	"LuaJIT2 (vendored, no arm64)" },
+		{ "jit2ext",	"LuaJIT 2.1 built externally in tools/LuaJIT (arm64/iOS capable)" },
 	}
 }
 newoption {

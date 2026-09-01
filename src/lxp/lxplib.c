@@ -13,6 +13,12 @@
 
 #include "lua.h"
 #include "lauxlib.h"
+
+/* pre-5.1 ref compat macros; removed from LuaJIT's lauxlib.h */
+#ifndef lua_getref
+#define lua_getref(L,ref) lua_rawgeti(L, LUA_REGISTRYINDEX, (ref))
+#define lua_unref(L,ref) luaL_unref(L, LUA_REGISTRYINDEX, (ref))
+#endif
 #if ! defined (LUA_VERSION_NUM) || LUA_VERSION_NUM < 501
 #include "compat-5.1.h"
 #endif
@@ -517,7 +523,7 @@ static int lxp_stop (lua_State *L) {
   return 1;
 }
 
-static const struct luaL_reg lxp_meths[] = {
+static const struct luaL_Reg lxp_meths[] = {
   {"parse", lxp_parse},
   {"close", lxp_close},
   {"__gc", parser_gc},
@@ -530,7 +536,7 @@ static const struct luaL_reg lxp_meths[] = {
   {NULL, NULL}
 };
 
-static const struct luaL_reg lxp_funcs[] = {
+static const struct luaL_Reg lxp_funcs[] = {
   {"new", lxp_make_parser},
   {NULL, NULL}
 };
