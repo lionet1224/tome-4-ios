@@ -83,7 +83,9 @@ int get_number_cpus()
 	return sysinfo.dwNumberOfProcessors;
 }
 
-#elif defined(SELFEXE_MACOSX)
+#elif defined(SELFEXE_MACOSX) || defined(TE4_IOS)
+/* iOS reuses this branch: bundles are flat, so stripping the executable
+ * name yields the .app directory itself, which boot.lua mounts directly */
 #include <mach-o/dyld.h>
 #include <string.h>
 #include <unistd.h>

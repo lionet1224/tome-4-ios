@@ -1301,6 +1301,12 @@ void boot_lua(int state, bool rebooting, int argc, char *argv[])
 		lua_pushboolean(L, TRUE);
 		lua_setglobal(L, "__APPLE__");
 #endif
+#ifdef TE4_IOS
+		// iOS: selfexe is the .app bundle path itself; boot.lua mounts
+		// <bundle>/game directly instead of walking up like on macOS
+		lua_pushboolean(L, TRUE);
+		lua_setglobal(L, "__IOS__");
+#endif
 
 		// Run bootstrapping
 		if (!luaL_loadfile(L, "/bootstrap/boot.lua"))
@@ -1389,6 +1395,10 @@ static void define_core(core_boot_type *core_def, const char *coretype, int id, 
 #undef main
 #endif
 #define main tengine_main
+#endif
+#ifdef TE4_IOS
+/* SDL owns the UIKit application lifecycle; our main becomes SDL_main */
+#include <SDL2/SDL_main.h>
 #endif
 
 /* Cleans up a timer lock.  See function declaration for more info. */

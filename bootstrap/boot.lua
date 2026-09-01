@@ -16,7 +16,10 @@ if __SELFEXE then
 	-- Remove bin/Debug from the path, to make dev easier
 	dir = dir:gsub("bin"..fs.getPathSeparator().."Debug"..fs.getPathSeparator(), "")
 
-	if not __APPLE__ then
+	if __IOS__ then
+		-- iOS: __SELFEXE is the .app bundle directory; game data lives inside it
+		if dir:sub(-1) == fs.getPathSeparator() then dir = dir:sub(1, -2) end
+	elseif not __APPLE__ then
 		-- Now remove executable name
 		dir = dir:gsub("(.*"..fs.getPathSeparator()..").+", "%1")
 	else
