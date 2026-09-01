@@ -45,6 +45,13 @@ function _M.enabled()
 	return config.settings.autopilot and true or false
 end
 
+-- os.exit does nothing on iOS; ask the engine to shut down instead
+function _M.quit(code)
+	_M.state.done = true
+	pcall(os.exit, code or 0)
+	pcall(function() core.game.exit_engine() end)
+end
+
 function _M.godmode()
 	return not config.settings.autopilot_mortal
 end
@@ -236,8 +243,7 @@ function _M.frame()
 			st.last_progress_time = now
 		elseif now - st.last_progress_time > 90 then
 			_M.event("stalled", {seconds=now - st.last_progress_time})
-			st.done = true
-			pcall(os.exit, 3)
+			_M.quit(3)
 		end
 	end
 
@@ -245,8 +251,7 @@ function _M.frame()
 	-- (during module load game.player can be a dead placeholder)
 	if st.ingame and game.player and game.player.dead then
 		_M.event("death", {kills=st.kills})
-		st.done = true
-		pcall(os.exit, 0)
+		_M.quit(0)
 	end
 
 	-- UI overflow detector: any dialog poking outside the screen is a bug
@@ -481,8 +486,7 @@ function _M:onPlayerAct(p)
 		local ent = self:findZoneEntrance(p)
 		if not ent then
 			_M.event("world_tour_complete", {kills=self.state.kills})
-			self.state.done = true
-			pcall(os.exit, 0)
+			_M.quit(0)
 			return
 		end
 		if p.x == ent.x and p.y == ent.y then
@@ -498,10 +502,19 @@ function _M:onPlayerAct(p)
 	self.state.acts = self.state.acts + 1
 	self.state.ingame = true
 
-	-- pick up whatever we are standing on (exercises pickup + stacking)
+	-- pick up whatever we are standing on, item by item (playerPickup opens
+	-- the ShowPickupFloor chooser when several items lie here, which on a
+	-- 402pt screen also overflows - ui_overflow caught that on the sim)
 	if game.level.map:getObject(p.x, p.y, 1) then
-		local ok = pcall(function() p:playerPickup() end)
-		if ok then _M.event("pickup", {}) return end
+		local n = 0
+		local ok = pcall(function()
+			while game.level.map:getObject(p.x, p.y, 1) and n < 20 do
+				if not p:pickupFloor(1, true) then break end
+				n = n + 1
+			end
+		end)
+		if ok and n > 0 then _M.event("pickup", {items=n}) return end
+		-- couldn't pick (full pack, etc.): fall through so we don't loop
 	end
 
 	-- periodic equip churn: wear something wearable from the pack
@@ -638,8 +651,7 @@ function _M:onPlayerAct(p)
 	self.state.stuck_count = self.state.stuck_count + 1
 	if self.state.stuck_count > 200 then
 		_M.event("stuck", {count=self.state.stuck_count})
-		self.state.done = true
-		pcall(os.exit, 3)
+		_M.quit(3)
 	end
 end
 
