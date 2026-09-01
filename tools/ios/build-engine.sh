@@ -21,7 +21,7 @@ TARGET="-target arm64-apple-ios$MIN_IOS-simulator -isysroot $SDKPATH"
 mkdir -p "$OBJ" "$APP"
 
 DEFS=(-DTE4_IOS -DTE4_GLES1 -DTE4CORE_VERSION=17 -DPHYSFS_SUPPORTS_ZIP
-      "-DTENGINE_HOME_PATH=\"Documents/t-engine\"")
+      -DHAVE_MEMMOVE "-DTENGINE_HOME_PATH=\"Documents/t-engine\"")
 INCS=(-I"$ROOT/src" -I"$ROOT/src/luasocket" -I"$ROOT/src/fov" -I"$ROOT/src/expat"
       -I"$ROOT/src/lxp" -I"$ROOT/src/libtcod_import" -I"$ROOT/src/physfs"
       -I"$ROOT/src/zlib" -I"$ROOT/src/bzip2" -I"$ROOT/tools/LuaJIT/src"
@@ -59,9 +59,9 @@ for s in "$ROOT"/src/physfs/*.c "$ROOT"/src/physfs/archivers/*.c \
          "$ROOT"/src/zlib/*.c "$ROOT"/src/bzip2/*.c "$ROOT"/src/fov/*.c \
          "$ROOT"/src/lpeg/*.c "$ROOT"/src/luaprofiler/*.c \
          "$ROOT"/src/libtcod_import/*.c "$ROOT"/src/expat/*.c "$ROOT"/src/lxp/*.c \
-         "$ROOT"/src/luamd5/*.c "$ROOT"/src/lzlib/*.c "$ROOT"/src/luabitop/*.c \
+         "$ROOT"/src/luamd5/*.c "$ROOT"/src/lzlib/*.c \
          "$ROOT"/src/utf8proc/utf8proc.c \
-         "$ROOT"/src/luasocket/auxiliar.c "$ROOT"/src/luasocket/buffer.c \
+         "$ROOT"/src/luasocket/buffer.c \
          "$ROOT"/src/luasocket/except.c "$ROOT"/src/luasocket/inet.c \
          "$ROOT"/src/luasocket/io.c "$ROOT"/src/luasocket/luasocket.c \
          "$ROOT"/src/luasocket/options.c "$ROOT"/src/luasocket/select.c \
@@ -73,11 +73,13 @@ done
 for s in "$ROOT"/src/wfc/*.cpp; do compile "$s"; done
 
 echo "=== linking ==="
-clang++ $TARGET -o "$APP/t-engine" "${OBJS[@]}" \
+clang++ $TARGET -o "$APP/t-engine" "${OBJS[@]}" "$PREFIX/lib/libSDL2main.a" \
 	"$PREFIX/lib/libSDL2.a" "$PREFIX/lib/libSDL2_image.a" "$PREFIX/lib/libSDL2_ttf.a" \
 	"$PREFIX/lib/libpng16.a" "$PREFIX/lib/libvorbisfile.a" "$PREFIX/lib/libvorbis.a" \
 	"$PREFIX/lib/libogg.a" "$PREFIX/lib/libluajit-sim.a" \
+	"$PREFIX/lib/libfreetype.a" \
 	-lz -liconv \
+	-framework ImageIO -framework CoreServices \
 	-framework OpenGLES -framework OpenAL -framework UIKit -framework Foundation \
 	-framework CoreGraphics -framework QuartzCore -framework AVFoundation \
 	-framework GameController -framework CoreMotion -framework CoreHaptics \

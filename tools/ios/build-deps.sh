@@ -31,6 +31,7 @@ CMFLAGS=(
 	-DBUILD_SHARED_LIBS=OFF
 	-DCMAKE_C_FLAGS="-target arm64-apple-ios$MIN_IOS-simulator"
 	-DCMAKE_BUILD_TYPE=Release
+	-DCMAKE_POLICY_VERSION_MINIMUM=3.5
 )
 
 clone() { # name url tag
@@ -50,13 +51,17 @@ if [ ! -f "$PREFIX/lib/libSDL2.a" ]; then
 	clone SDL https://github.com/libsdl-org/SDL.git release-2.30.9
 	cmbuild SDL -DSDL_STATIC=ON -DSDL_SHARED=OFF -DSDL_TEST=OFF
 fi
+SDL2_HINTS=(-DSDL2_DIR="$PREFIX/lib/cmake/SDL2"
+            -DSDL2_INCLUDE_DIR="$PREFIX/include/SDL2"
+            -DSDL2_LIBRARY="$PREFIX/lib/libSDL2.a")
 if [ ! -f "$PREFIX/lib/libSDL2_image.a" ]; then
 	clone SDL_image https://github.com/libsdl-org/SDL_image.git release-2.8.2
-	cmbuild SDL_image -DSDL2IMAGE_SAMPLES=OFF -DSDL2IMAGE_DEPS_SHARED=OFF
+	cmbuild SDL_image -DSDL2IMAGE_SAMPLES=OFF -DSDL2IMAGE_DEPS_SHARED=OFF "${SDL2_HINTS[@]}"
 fi
 if [ ! -f "$PREFIX/lib/libSDL2_ttf.a" ]; then
 	clone SDL_ttf https://github.com/libsdl-org/SDL_ttf.git release-2.22.0
-	cmbuild SDL_ttf -DSDL2TTF_VENDORED=ON -DSDL2TTF_HARFBUZZ=OFF -DSDL2TTF_SAMPLES=OFF
+	(cd "$SRC/SDL_ttf" && git submodule update --init --depth 1 external/freetype)
+	cmbuild SDL_ttf -DSDL2TTF_VENDORED=ON -DSDL2TTF_HARFBUZZ=OFF -DSDL2TTF_SAMPLES=OFF "${SDL2_HINTS[@]}"
 fi
 
 # ---- libpng (engine links it directly for PNG save/load) ----
@@ -72,7 +77,7 @@ if [ ! -f "$PREFIX/lib/libogg.a" ]; then
 fi
 if [ ! -f "$PREFIX/lib/libvorbis.a" ]; then
 	clone vorbis https://github.com/xiph/vorbis.git v1.3.7
-	cmbuild vorbis
+	cmbuild vorbis -DOGG_LIBRARY="$PREFIX/lib/libogg.a" -DOGG_INCLUDE_DIR="$PREFIX/include"
 fi
 
 # ---- LuaJIT (interpreter-focused build for iOS; built out-of-tree copy so
@@ -81,6 +86,7 @@ if [ ! -f "$PREFIX/lib/libluajit-sim.a" ]; then
 	echo "=== LuaJIT (simulator) ==="
 	rm -rf "$SRC/LuaJIT-sim"
 	cp -r "$ROOT/tools/LuaJIT" "$SRC/LuaJIT-sim"
+	export MACOSX_DEPLOYMENT_TARGET=12.0  # LuaJIT's Makefile insists, even cross-building
 	make -C "$SRC/LuaJIT-sim" clean >/dev/null
 	make -C "$SRC/LuaJIT-sim" -j8 DEFAULT_CC=clang \
 		CROSS="$(dirname "$(xcrun --sdk iphonesimulator -f clang)")/" \

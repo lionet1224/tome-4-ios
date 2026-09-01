@@ -55,3 +55,6 @@ game/modules/tome/data/music/
 t-engine.app/Contents/MacOS/t-engine
 brain/.raw/
 brain/.sync/captured.json
+tools/ios/dep-src/
+tools/ios/prefix-sim/
+tools/ios/out/

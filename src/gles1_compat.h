@@ -125,6 +125,8 @@ void te4_stub_Uniform2fvARB(GLint location, GLsizei count, const GLfloat *value)
 void te4_stub_Uniform3fvARB(GLint location, GLsizei count, const GLfloat *value);
 void te4_stub_Uniform4fvARB(GLint location, GLsizei count, const GLfloat *value);
 void te4_stub_Uniform1ivARB(GLint location, GLsizei count, const GLint *value);
+void te4_stub_GetInfoLogARB(GLhandleARB obj, GLsizei maxLength, GLsizei *length, GLcharARB *infoLog);
+void te4_stub_ValidateProgramARB(GLhandleARB programObj);
 
 #define glCreateShaderObjectARB te4_stub_CreateShaderObjectARB
 #define glCreateProgramObjectARB te4_stub_CreateProgramObjectARB
@@ -143,6 +145,8 @@ void te4_stub_Uniform1ivARB(GLint location, GLsizei count, const GLint *value);
 #define glUniform3fvARB te4_stub_Uniform3fvARB
 #define glUniform4fvARB te4_stub_Uniform4fvARB
 #define glUniform1ivARB te4_stub_Uniform1ivARB
+#define glGetInfoLogARB te4_stub_GetInfoLogARB
+#define glValidateProgramARB te4_stub_ValidateProgramARB
 
 #define GL_OBJECT_COMPILE_STATUS_ARB 0x8B81
 #define GL_OBJECT_LINK_STATUS_ARB 0x8B82

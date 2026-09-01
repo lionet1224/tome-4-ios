@@ -235,6 +235,8 @@ void te4_stub_Uniform2fvARB(GLint l, GLsizei c, const GLfloat *v) { }
 void te4_stub_Uniform3fvARB(GLint l, GLsizei c, const GLfloat *v) { }
 void te4_stub_Uniform4fvARB(GLint l, GLsizei c, const GLfloat *v) { }
 void te4_stub_Uniform1ivARB(GLint l, GLsizei c, const GLint *v) { }
+void te4_stub_GetInfoLogARB(GLhandleARB o, GLsizei ml, GLsizei *l, GLcharARB *log) { if (l) *l = 0; if (log && ml > 0) log[0] = 0; }
+void te4_stub_ValidateProgramARB(GLhandleARB p) { }
 
 /* ------------------------------------------------------------------ */
 /* GLU replacement: error strings + the boot-screen planet sphere     */
