@@ -53,6 +53,8 @@ TELE="$(ls -t "$HOME_TE"/tome/autopilot/telemetry-*.jsonl 2>/dev/null | head -1)
 [ -n "${TELE:-}" ] && cp "$TELE" "$RUN/telemetry.jsonl"
 ls "$HOME_TE"/tome/error-logs/*/*.txt 2>/dev/null | tail -3 | while read -r f; do cp "$f" "$RUN/"; done
 
+# in-game screenshots taken by the autopilot every 60s
+mkdir -p "$RUN/shots"; find "$HOME_TE/tome/screenshots" -name '*.png' -newer "$RUN" -exec cp {} "$RUN/shots/" \; 2>/dev/null
 # harvest crash reports from the run window
 find "$HOME/Library/Logs/DiagnosticReports" -name 't-engine-*.ips' -newer "$RUN" -exec cp {} "$RUN/" \; 2>/dev/null
 [ -n "${HUNG:-}" ] && EXIT="HUNG(telemetry stale)"

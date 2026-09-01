@@ -230,6 +230,15 @@ function _M.frame()
 	if st.done then return end
 	local now = os.time()
 
+	-- periodic in-game screenshot (engine glReadPixels -> PNG in
+	-- <module>/screenshots/) so visual glitches like the minimap-rat get
+	-- caught by review, on mac and sim alike
+	if game.level and now - (st.last_shot or 0) >= 60 then
+		st.last_shot = now
+		local ok = pcall(function() game:saveScreenshot() end)
+		_M.event("screenshot", {ok=ok and true or false})
+	end
+
 	if now - st.last_heartbeat >= 5 then
 		st.last_heartbeat = now
 		local p = game.player

@@ -35,7 +35,7 @@ SECS=$((MINUTES * 60))
 HUNG=""
 for i in $(seq 1 "$SECS"); do
 	kill -0 "$LPID" 2>/dev/null || break
-	if [ $((i % 120)) -eq 0 ]; then
+	if [ $((i % 60)) -eq 0 ]; then
 		xcrun simctl io "$DEV" screenshot "$RUN/periodic-$i.png" >/dev/null 2>&1
 	fi
 	if [ $((i % 30)) -eq 0 ] && [ -n "$D0" ]; then
@@ -59,6 +59,7 @@ if [ -n "$D" ]; then
 	ls "$D/Documents/t-engine/4.0/tome/error-logs/"*/*.txt 2>/dev/null | tail -3 | while read -r f; do cp "$f" "$RUN/"; done
 fi
 xcrun simctl io "$DEV" screenshot "$RUN/final.png" >/dev/null 2>&1
+mkdir -p "$RUN/shots"; [ -n "$D" ] && find "$D/Documents/t-engine/4.0/tome/screenshots" -name '*.png' -newer "$RUN" -exec cp {} "$RUN/shots/" \; 2>/dev/null
 
 python3 "$ROOT/tools/telemetry-summary.py" "$RUN/telemetry.jsonl" "$RUN/console.log" 2>/dev/null || true
 echo "[soak-sim] artifacts in $RUN"
