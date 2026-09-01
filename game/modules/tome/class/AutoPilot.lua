@@ -140,7 +140,8 @@ end
 function _M.blockingDialogs()
 	local n = 0
 	for _, d in ipairs(game.dialogs) do
-		if not (d.title and tostring(d.title):find("Running")) then n = n + 1 end
+		local t = d.title and tostring(d.title) or ""
+		if not (t:find("Running") or t:find("Resting")) then n = n + 1 end
 	end
 	return n
 end
@@ -152,10 +153,10 @@ function _M.handleDialog(d)
 	local cls = d.__CLASSNAME or "?"
 	-- auto-explore/run progress popup: dismissing it *stops the run*, so
 	-- leave it while a run is live; once the run is over it just lingers
-	if d.title and tostring(d.title):find("Running") then
+	if d.title and (tostring(d.title):find("Running") or tostring(d.title):find("Resting")) then
 		local p = game.player
 		if p and (p.running or p.resting) then return end
-		_M.event("dialog_dismiss", {dialog=cls, title="Running (stale)"})
+		_M.event("dialog_dismiss", {dialog=cls, title="Running/Resting (stale)"})
 		pcall(function() d.key:triggerVirtual("EXIT") end)
 		return
 	end
