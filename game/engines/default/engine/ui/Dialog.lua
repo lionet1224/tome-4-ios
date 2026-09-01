@@ -357,6 +357,13 @@ end
 title_shadow = true
 
 function _M:init(title, w, h, x, y, alpha, font, showup, skin)
+	-- iOS port: clamp every dialog to the screen. Desktop-sized dialogs
+	-- (800x600 pickup chooser, 600x400 birther, ...) overflow a 402pt phone
+	-- screen and put their buttons off-screen; found by ui_overflow telemetry.
+	if game and game.w and game.h and type(w) == "number" and type(h) == "number" then
+		if w > game.w - 10 then w = game.w - 10 end
+		if h > game.h - 40 then h = game.h - 40 end
+	end
 	if self.force_ui_inside then
 		self._lastui = self.ui
 		Base:changeDefault(self.force_ui_inside)
