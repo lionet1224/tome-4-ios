@@ -35,7 +35,7 @@ SECS=$((MINUTES * 60))
 HUNG=""
 sleep 20  # let the app come up before judging liveness
 for i in $(seq 1 "$SECS"); do
-	pgrep -x t-engine >/dev/null 2>&1 || { echo "[soak-sim] app exited"; break; }
+	pgrep -f 'ToME.app/t-engine' >/dev/null 2>&1 || { echo "[soak-sim] app exited"; break; }
 	if [ $((i % 60)) -eq 0 ]; then
 		xcrun simctl io "$DEV" screenshot "$RUN/periodic-$i.png" >/dev/null 2>&1
 	fi
