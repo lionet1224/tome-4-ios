@@ -16,7 +16,13 @@ main menu, native arm64, plain Lua 5.1.
   for the full patch table). Run: `./t-engine.app/Contents/MacOS/t-engine` from repo root.
 - Brain lives in-repo at `brain/`.
 
-## Active Threads (post-C6: PLAYABLE — character in Trollmire)
+## Active Threads (post-C7: AUTOPILOT SOAK LOOP)
+- Autopilot + telemetry + soak harness landed ([[autopilot-telemetry]]). Mac
+  soak reached level 2, 24 kills, talents/equip/chat exercised. Iterating on
+  stairs descent; then `tools/soak-sim.sh` on the simulator (bundle rebuilt).
+- Run soaks detached (nohup) — background tool tasks get stopped.
+
+## Older (post-C6)
 - Perf phase next: world gen ~10 min / menu demo sluggish (LuaJIT interp on sim;
   real device should JIT-less-but-faster; consider LuaJIT arm64 device JIT).
 - Zoom bug: taps don't register when screen_zoom≠1 despite correct Lua coords.

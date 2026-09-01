@@ -139,8 +139,15 @@ end
 -- close everything else
 function _M.handleDialog(d)
 	local cls = d.__CLASSNAME or "?"
-	-- auto-explore/run progress popup: dismissing it *stops the run*
-	if d.title and tostring(d.title):find("Running") then return end
+	-- auto-explore/run progress popup: dismissing it *stops the run*, so
+	-- leave it while a run is live; once the run is over it just lingers
+	if d.title and tostring(d.title):find("Running") then
+		local p = game.player
+		if p and (p.running or p.resting) then return end
+		_M.event("dialog_dismiss", {dialog=cls, title="Running (stale)"})
+		pcall(function() d.key:triggerVirtual("EXIT") end)
+		return
+	end
 	if cls:find("GetQuantity") then
 		_M.event("quantity_accept", {})
 		if not pcall(function() d:okclick() end) then pcall(function() d.key:triggerVirtual("EXIT") end) end
