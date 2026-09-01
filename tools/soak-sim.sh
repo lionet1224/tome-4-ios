@@ -33,13 +33,14 @@ LPID=$!
 D0="$(xcrun simctl get_app_container "$DEV" $BUNDLE_ID data 2>/dev/null)"
 SECS=$((MINUTES * 60))
 HUNG=""
+sleep 20  # let the app come up before judging liveness
 for i in $(seq 1 "$SECS"); do
-	kill -0 "$LPID" 2>/dev/null || break
+	pgrep -x t-engine >/dev/null 2>&1 || { echo "[soak-sim] app exited"; break; }
 	if [ $((i % 60)) -eq 0 ]; then
 		xcrun simctl io "$DEV" screenshot "$RUN/periodic-$i.png" >/dev/null 2>&1
 	fi
 	if [ $((i % 30)) -eq 0 ] && [ -n "$D0" ]; then
-		TELE="$(ls -t "$D0/Documents/t-engine/4.0/tome/autopilot/"telemetry-*.jsonl 2>/dev/null | head -1)"
+		TELE="$(find "$D0/Documents/t-engine/4.0/tome/autopilot" -name 'telemetry-*.jsonl' -newer "$RUN" 2>/dev/null | head -1)"
 		if [ -n "$TELE" ]; then
 			AGE=$(( $(date +%s) - $(stat -f %m "$TELE") ))
 			if [ "$AGE" -gt 120 ]; then echo "[soak-sim] HUNG: telemetry stale ${AGE}s"; HUNG=1; break; fi
@@ -54,8 +55,8 @@ sleep 2
 
 D="$(xcrun simctl get_app_container "$DEV" $BUNDLE_ID data 2>/dev/null)"
 if [ -n "$D" ]; then
-	TELE="$(ls -t "$D/Documents/t-engine/4.0/tome/autopilot/"telemetry-*.jsonl 2>/dev/null | head -1)"
-	[ -n "${TELE:-}" ] && cp "$TELE" "$RUN/telemetry.jsonl"
+	TELE="$(find "$D/Documents/t-engine/4.0/tome/autopilot" -name 'telemetry-*.jsonl' -newer "$RUN" 2>/dev/null | head -1)"
+	[ -n "${TELE:-}" ] && cp "$TELE" "$RUN/telemetry.jsonl" || echo "[soak-sim] no telemetry from this run"
 	ls "$D/Documents/t-engine/4.0/tome/error-logs/"*/*.txt 2>/dev/null | tail -3 | while read -r f; do cp "$f" "$RUN/"; done
 fi
 xcrun simctl io "$DEV" screenshot "$RUN/final.png" >/dev/null 2>&1

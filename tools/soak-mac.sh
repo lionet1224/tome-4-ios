@@ -29,7 +29,7 @@ HUNG=""
 for i in $(seq 1 "$SECS"); do
 	kill -0 "$PID" 2>/dev/null || break
 	if [ $((i % 30)) -eq 0 ]; then
-		TELE="$(ls -t "$HOME_TE"/tome/autopilot/telemetry-*.jsonl 2>/dev/null | head -1)"
+		TELE="$(find "$HOME_TE/tome/autopilot" -name 'telemetry-*.jsonl' -newer "$RUN" 2>/dev/null | head -1)"
 		if [ -n "$TELE" ]; then
 			AGE=$(( $(date +%s) - $(stat -f %m "$TELE") ))
 			if [ "$AGE" -gt 120 ]; then echo "[soak] HUNG: telemetry stale ${AGE}s"; HUNG=1; break; fi
@@ -49,8 +49,8 @@ fi
 
 cp /tmp/te4_log.txt "$RUN/console.log" 2>/dev/null
 # newest telemetry file from this run
-TELE="$(ls -t "$HOME_TE"/tome/autopilot/telemetry-*.jsonl 2>/dev/null | head -1)"
-[ -n "${TELE:-}" ] && cp "$TELE" "$RUN/telemetry.jsonl"
+TELE="$(find "$HOME_TE/tome/autopilot" -name 'telemetry-*.jsonl' -newer "$RUN" 2>/dev/null | head -1)"
+[ -n "${TELE:-}" ] && cp "$TELE" "$RUN/telemetry.jsonl" || echo "[soak] no telemetry from this run"
 ls "$HOME_TE"/tome/error-logs/*/*.txt 2>/dev/null | tail -3 | while read -r f; do cp "$f" "$RUN/"; done
 
 # in-game screenshots taken by the autopilot every 60s
