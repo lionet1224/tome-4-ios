@@ -19,7 +19,7 @@ trap 'rm -f "$HOME_TE/settings/autopilot.cfg"' EXIT
 export TE4_BUILD_SHA="$SHA"
 
 echo "[soak] $MINUTES min run, build $SHA -> $RUN"
-pkill -x t-engine 2>/dev/null; sleep 1
+pkill -f "tome-ios/t-engine.app/Contents/MacOS/t-engine" 2>/dev/null; sleep 1  # mac binary only: the sim app is also a host process named t-engine
 
 ( cd "$ROOT" && ./t-engine.app/Contents/MacOS/t-engine --flush-stdout ) &
 PID=$!
