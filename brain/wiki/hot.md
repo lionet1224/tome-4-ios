@@ -21,6 +21,8 @@ main menu, native arm64, plain Lua 5.1.
   soak reached level 2, 24 kills, talents/equip/chat exercised. Iterating on
   stairs descent; then `tools/soak-sim.sh` on the simulator (bundle rebuilt).
 - Run soaks detached (nohup) — background tool tasks get stopped.
+- SIM SOAK GREEN: autopilot plays on the simulator (floor 3, plevel 5, 0 Lua
+  errors); first telemetry-found iOS bug = ShowPickupFloor overflow.
 
 ## Older (post-C6)
 - Perf phase next: world gen ~10 min / menu demo sluggish (LuaJIT interp on sim;

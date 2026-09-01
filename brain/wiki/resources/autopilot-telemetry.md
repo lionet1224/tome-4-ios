@@ -64,6 +64,20 @@ ui_overflow(dialog geometry vs screen), zone_change, level_explored,
 take_stairs, enter_zone, world_tour_complete, stalled, stuck, death,
 autopilot_error. Summary tool prints turns/sec, heap trend, zones, deaths.
 
+## Findings from the loop (running list)
+- **iOS UI bug (auto-found):** `mod.dialogs.ShowPickupFloor` is 800x600 on the
+  874x402 phone screen (`ui_overflow`, y=-99). Same class as the Birther clamp.
+  Needs a small-screen sizing fix (dialog-seam work). Autopilot now picks up
+  item-by-item so it doesn't loop on the chooser.
+- Sim perf surprise: 3.9 game-turns/sec on the simulator vs 3.1 on mac desktop
+  during soak — the turn loop is not the bottleneck; world-gen is.
+- Bot self-damage: random talent picker fires self-centred AoE (dazing
+  lightning) → would_have_died from "Adventurer". Policy refinement pending.
+- Sealed vault doors: auto-explore re-targets them forever → now marked
+  `autoexplore_ignore` on the popup.
+- `soak-sim.sh` must `simctl install` before launch (ran a stale install once).
+- `os.exit` is inert on iOS → `core.game.exit_engine()` fallback.
+
 ## Known gaps / next
 - Item *activation* (wands/charms) not automated: can enter targeting mode
   (not a dialog) — needs an escape strategy.
