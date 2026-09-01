@@ -422,9 +422,24 @@ static void bgra_swizzle(unsigned char *px, size_t n)
 
 void te4_glReadPixels_compat(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, void *pixels)
 {
+	/* ES2 glReadPixels only guarantees GL_RGBA/GL_UNSIGNED_BYTE; the engine's
+	 * screenshot path asks for 3-byte RGB/BGR (came back black on iOS) */
 	if (format == TE4_GL_BGRA) {
 		glReadPixels(x, y, width, height, GL_RGBA, type, pixels);
 		bgra_swizzle(pixels, (size_t)width * height);
+	} else if (format == GL_RGB || format == TE4_GL_BGR) {
+		int swap = (format != GL_RGB);
+		size_t n = (size_t)width * height;
+		unsigned char *tmp = malloc(n * 4);
+		glReadPixels(x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
+		unsigned char *dst = pixels;
+		size_t i;
+		for (i = 0; i < n; i++) {
+			dst[i * 3] = tmp[i * 4 + (swap ? 2 : 0)];
+			dst[i * 3 + 1] = tmp[i * 4 + 1];
+			dst[i * 3 + 2] = tmp[i * 4 + (swap ? 0 : 2)];
+		}
+		free(tmp);
 	} else {
 		glReadPixels(x, y, width, height, format, type, pixels);
 	}
