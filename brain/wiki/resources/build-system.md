@@ -77,9 +77,16 @@ Platform glue: `__IOS__` Lua global + boot.lua mount branch, getself reuses
 mach-o branch (flat bundles), physfs had upstream iOS support already,
 SDL_main for UIKit lifecycle. Saves → `Documents/t-engine`.
 
-First-run risk list (check when sim finally boots): OpenAL on sim, GLES1
-context via SDL on sim, engine Lua assuming shaders exist somewhere,
-800x600 window request vs fixed sim screen, LuaJIT interp-only perf.
+**First-contact findings (all fixed, see C4/C5 commits):** modern sims give
+ES 2.0 ONLY → layer rewritten as fixed-function-over-ES2 emulation; stock
+LuaJIT loadfile is stdio-only but the entire engine assumes physfs-aware
+loadfile (DarkGod ships a patched LuaJIT — patch ported to tools/LuaJIT,
+lib-only builds); te4 extends table.sort with field-key comparators (Lua
+wrapper in boot.lua now); iOS has no framebuffer 0 (remap to SDL's screen
+FBO); Info.plist needs UILaunchScreen or you get 480x320 legacy mode;
+SDL_StartTextInput pops the on-screen keyboard (suppressed via hint);
+SDL2main.a provides main; ImageIO+CoreServices frameworks for SDL_image/ttf;
+luasocket auxiliar.c + luabitop are duplicate symbols vs engine/LuaJIT.
 
 ## Gotchas log
 

@@ -7,6 +7,19 @@ tags: [meta, decisions, temporal]
 
 # Decisions Log
 
+## 2026-09-01 — ES2 fixed-function emulation (GLES1 unavailable in practice)
+**Decision:** The compat layer emulates the fixed-function pipeline over OpenGL ES 2.0
+(C matrix stacks + one pos/color/texture shader), replacing the ES 1.1 approach.
+**Rationale:** iOS 26 simulators refuse ES1 contexts (SDL silently hands back 2.0 —
+verified via GL_VERSION). Emulation keeps engine code untouched and is ALSO the base
+needed later for real content shaders. TE4_GLES1 define name kept to avoid churn.
+
+## 2026-09-01 — Maintain DarkGod's LuaJIT physfs patch on modern LuaJIT
+**Decision:** tools/LuaJIT carries the physfs loadfile/package patch (lib-only builds).
+**Rationale:** The engine's entire load chain (C bootstrap + Lua loader + hooks/addons)
+assumes loadfile resolves inside physfs mounts; a Lua-side shim can't cover the C-side
+luaL_loadfile calls. Cost: no standalone luajit CLI from that tree; re-apply on updates.
+
 ## 2026-09-01 — GLES1-first renderer for the simulator milestone
 **Decision:** First iOS boot targets OpenGL ES 1.1 fixed-function (shaderless), not the
 GLES2 shim originally sketched.

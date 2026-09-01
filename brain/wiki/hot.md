@@ -16,12 +16,15 @@ main menu, native arm64, plain Lua 5.1.
   for the full patch table). Run: `./t-engine.app/Contents/MacOS/t-engine` from repo root.
 - Brain lives in-repo at `brain/`.
 
-## Active Threads (updated: autonomy session)
-- **WAITING ON JORDAN: install Xcode from the App Store** (then open once /
-  accept license). Watcher fires the moment the SDK appears; then run
-  `tools/ios/all.sh` → ToME in the simulator.
-- Branch `ios-port` @ C3. GLES1 layer done + verified by syntax; runtime
-  validation needs the sim. Risk list in [[build-system]].
+## Active Threads (post-C5: GAME RENDERS IN SIMULATOR)
+- Branch `ios-port` @ C5. ToME's first-run dialog renders in the iPhone 17
+  simulator (ES2 fixed-function emu). Rebuild+run: `tools/ios/build-engine.sh`
+  then `tools/ios/run-sim.sh`.
+- Next: interactive testing (touch input → menu → new character → dungeon);
+  expect touch-as-mouse quirks, perf tuning (LuaJIT interp on sim), then the
+  touch-UI phase ([[rendering-boundary]] dialog seam).
+- Known cut corners: shaderless (effects off), 3D noise textures disabled,
+  glGetTexImage clamps unsupported formats, sphere planet untested visually.
 
 ## Old threads
 - Verify gameplay (new character, a few dungeon levels) on the baseline.
