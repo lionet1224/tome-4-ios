@@ -183,6 +183,19 @@ function _M.handleDialog(d)
 		pcall(function() d.key:triggerVirtual("EXIT") end)
 		return
 	end
+	-- "Danger..." (descending to a level above our rank) and similar yes/no
+	-- prompts where the bot wants to proceed: press the Yes button
+	local title = d.title and tostring(d.title) or ""
+	if title:find("Danger") then
+		for _, ui in ipairs(d.uis or {}) do
+			local u = ui.ui
+			if u and u.text and tostring(u.text):find("Yes") and u.fct then
+				_M.event("dialog_yes", {dialog=cls, title=title})
+				pcall(function() u.fct() end)
+				return
+			end
+		end
+	end
 	if cls:find("GetQuantity") then
 		_M.event("quantity_accept", {})
 		if not pcall(function() d:okclick() end) then pcall(function() d.key:triggerVirtual("EXIT") end) end
