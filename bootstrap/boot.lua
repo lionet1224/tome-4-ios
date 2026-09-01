@@ -9,6 +9,20 @@ function fs.getHomePath() return old:gsub("T%-Engine", "BoneToBeWild"):gsub("t%-
 
 print("Booting T-Engine from: "..tostring(__SELFEXE))
 
+-- TE4's bundled LuaJIT extends table.sort to accept a field key instead of a
+-- comparator (sorts ascending by elem[key]). Stock LuaJIT lacks that; engine
+-- and module code rely on it (e.g. ActorFOV), so provide it here in Lua.
+do
+	local origsort = table.sort
+	table.sort = function(t, cmp)
+		if cmp ~= nil and type(cmp) ~= "function" then
+			local key = cmp
+			return origsort(t, function(a, b) return a[key] < b[key] end)
+		end
+		return origsort(t, cmp)
+	end
+end
+
 -- Mount the engine, either from a path guessed from SELFEXE, or directly from current dir
 if __SELFEXE then
 	local dir = __SELFEXE

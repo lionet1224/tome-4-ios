@@ -77,6 +77,7 @@ extern int gl_c_vertices_nb, gl_c_texcoords_nb, gl_c_colors_nb;
 extern GLfloat *gl_c_vertices_ptr;
 extern GLfloat *gl_c_texcoords_ptr;
 extern GLfloat *gl_c_colors_ptr;
+#ifndef TE4_GLES1 /* the ES2 emu layer captures pointers itself; no caching macros */
 #define glVertexPointer(nb, t, v, p) \
 { \
 	if ((p) != gl_c_vertices_ptr || (nb) != gl_c_vertices_nb) { glVertexPointer((nb), (t), (v), (p)); gl_c_vertices_ptr=(p); gl_c_vertices_nb = (nb); } \
@@ -89,3 +90,4 @@ extern GLfloat *gl_c_colors_ptr;
 { \
 	if ((p) != gl_c_texcoords_ptr || (nb) != gl_c_colors_nb) { glTexCoordPointer((nb), (t), (v), (p)); gl_c_texcoords_ptr=(p); gl_c_texcoords_nb = (nb); } \
 }
+#endif /* !TE4_GLES1 */

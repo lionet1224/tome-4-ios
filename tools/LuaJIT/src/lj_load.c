@@ -81,8 +81,15 @@ LUA_API int lua_load(lua_State *L, lua_Reader reader, void *data,
   return lua_loadx(L, reader, data, chunkname, NULL);
 }
 
+/* TE4: file IO routed through PhysicsFS, mirroring the patch the engine
+ * carries in its vendored LuaJIT (src/luajit2/src/lj_load.c). The whole
+ * engine — C bootstrap and the Lua-side loader chain — expects loadfile
+ * to resolve paths inside physfs mounts. Standalone luajit CLI no longer
+ * links from this tree; build the libluajit.a target only. */
+#include <physfs.h>
+
 typedef struct FileReaderCtx {
-  FILE *fp;
+  PHYSFS_File *fp;
   char buf[LUAL_BUFFERSIZE];
 } FileReaderCtx;
 
@@ -90,8 +97,8 @@ static const char *reader_file(lua_State *L, void *ud, size_t *size)
 {
   FileReaderCtx *ctx = (FileReaderCtx *)ud;
   UNUSED(L);
-  if (feof(ctx->fp)) return NULL;
-  *size = fread(ctx->buf, 1, sizeof(ctx->buf), ctx->fp);
+  if (PHYSFS_eof(ctx->fp)) return NULL;
+  *size = (size_t)PHYSFS_read(ctx->fp, ctx->buf, 1, sizeof(ctx->buf));
   return *size > 0 ? ctx->buf : NULL;
 }
 
@@ -101,32 +108,21 @@ LUALIB_API int luaL_loadfilex(lua_State *L, const char *filename,
   FileReaderCtx ctx;
   int status;
   const char *chunkname;
-  int err = 0;
   if (filename) {
-    chunkname = lua_pushfstring(L, "@%s", filename);
-    ctx.fp = fopen(filename, "rb");
+    ctx.fp = PHYSFS_openRead(filename);
     if (ctx.fp == NULL) {
-      L->top--;
-      lua_pushfstring(L, "cannot open %s: %s", filename, strerror(errno));
+      lua_pushfstring(L, "cannot open %s", filename);
       return LUA_ERRFILE;
     }
+    chunkname = lua_pushfstring(L, "@%s", filename);
   } else {
-    ctx.fp = stdin;
-    chunkname = "=stdin";
-  }
-  status = lua_loadx(L, reader_file, &ctx, chunkname, mode);
-  if (ferror(ctx.fp)) err = errno;
-  if (filename) {
-    fclose(ctx.fp);
-    L->top--;
-    copyTV(L, L->top-1, L->top);
-  }
-  if (err) {
-    const char *fname = filename ? filename : "stdin";
-    L->top--;
-    lua_pushfstring(L, "cannot read %s: %s", fname, strerror(err));
+    lua_pushliteral(L, "cannot load from stdin with physfs IO");
     return LUA_ERRFILE;
   }
+  status = lua_loadx(L, reader_file, &ctx, chunkname, mode);
+  L->top--;
+  copyTV(L, L->top-1, L->top);
+  PHYSFS_close(ctx.fp);
   return status;
 }
 

@@ -100,6 +100,7 @@ cat > "$APP/Info.plist" <<'EOF'
 	<key>CFBundleShortVersionString</key><string>1.7.2</string>
 	<key>CFBundlePackageType</key><string>APPL</string>
 	<key>LSRequiresIPhoneOS</key><true/>
+	<key>UILaunchScreen</key><dict/>
 	<key>UIRequiresFullScreen</key><true/>
 	<key>UIFileSharingEnabled</key><true/>
 	<key>UISupportedInterfaceOrientations</key>

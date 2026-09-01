@@ -984,6 +984,14 @@ int resizeWindow(int width, int height)
 	GLfloat ratio;
 
 	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+#ifdef TE4_IOS
+	/* SDL defaults to an ES 2.0 context on iOS; the TE4_GLES1 renderer is
+	 * fixed-function, so explicitly request OpenGL ES 1.1 */
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+	SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, "0");
+#endif
 	initGL();
 
 	/* Protect against a divide by zero */
@@ -1132,6 +1140,9 @@ void do_resize(int w, int h, bool fullscreen, bool borderless, float zoom)
 		}
 		SDL_GL_MakeCurrent(window, maincontext);
 		glewInit();
+#ifdef TE4_IOS
+		te4_gles1_capture_default_fbo();
+#endif
 
 		/* Set the window icon. */
 		windowIconSurface = IMG_Load_RW(PHYSFSRWOPS_openRead(WINDOW_ICON_PATH)
@@ -1229,8 +1240,15 @@ void boot_lua(int state, bool rebooting, int argc, char *argv[])
 
 		bool bootstrap_mounted = FALSE;
 		selfexe = get_self_executable(argc, argv);
+#ifdef TE4_IOS
+		printf("[IOS] selfexe='%s'\n", selfexe ? selfexe : "(null)");
+#endif
 		if (selfexe && PHYSFS_mount(selfexe, "/", 1))
 		{
+#ifdef TE4_IOS
+			printf("[IOS] selfexe mounted; /bootstrap exists=%d /bootstrap/boot.lua exists=%d /game exists=%d\n",
+				(int)PHYSFS_exists("/bootstrap"), (int)PHYSFS_exists("/bootstrap/boot.lua"), (int)PHYSFS_exists("/game"));
+#endif
 		}
 		else
 		{
@@ -1337,8 +1355,10 @@ void boot_lua(int state, bool rebooting, int argc, char *argv[])
 		// And run the lua engine pre init scripts
 		if (!luaL_loadfile(L, "/loader/pre-init.lua"))
 			docall(L, 0, 0);
-		else
+		else {
+			printf("ERROR: could not load /loader/pre-init.lua: %s\n", lua_tostring(L, -1));
 			lua_pop(L, 1);
+		}
 
 		create_particles_thread();
 	}
@@ -1364,6 +1384,7 @@ void boot_lua(int state, bool rebooting, int argc, char *argv[])
 		}
 		else
 		{
+			printf("ERROR: could not load /loader/init.lua: %s\n", lua_tostring(L, -1));
 			lua_pop(L, 1);
 		}
 	}

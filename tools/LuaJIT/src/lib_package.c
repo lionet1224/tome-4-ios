@@ -294,12 +294,11 @@ static int lj_cf_package_unloadlib(lua_State *L)
 
 /* ------------------------------------------------------------------------ */
 
+/* TE4: package searches resolve inside physfs mounts (see lj_load.c) */
+#include <physfs.h>
 static int readable(const char *filename)
 {
-  FILE *f = fopen(filename, "r");  /* try to open file */
-  if (f == NULL) return 0;  /* open failed */
-  fclose(f);
-  return 1;
+  return PHYSFS_exists(filename);
 }
 
 static const char *pushnexttemplate(lua_State *L, const char *path)

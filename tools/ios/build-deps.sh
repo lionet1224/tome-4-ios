@@ -87,11 +87,13 @@ if [ ! -f "$PREFIX/lib/libluajit-sim.a" ]; then
 	rm -rf "$SRC/LuaJIT-sim"
 	cp -r "$ROOT/tools/LuaJIT" "$SRC/LuaJIT-sim"
 	export MACOSX_DEPLOYMENT_TARGET=12.0  # LuaJIT's Makefile insists, even cross-building
+	# lib-only target: the physfs-patched loadfile (lj_load.c) makes the
+	# standalone luajit CLI unlinkable, and we never need it
 	make -C "$SRC/LuaJIT-sim" clean >/dev/null
-	make -C "$SRC/LuaJIT-sim" -j8 DEFAULT_CC=clang \
+	make -C "$SRC/LuaJIT-sim/src" -j8 libluajit.a DEFAULT_CC=clang \
 		CROSS="$(dirname "$(xcrun --sdk iphonesimulator -f clang)")/" \
 		TARGET_FLAGS="-isysroot $SDKPATH -target arm64-apple-ios$MIN_IOS-simulator" \
-		TARGET_SYS=iOS amalg >/dev/null
+		TARGET_SYS=iOS XCFLAGS="-I$ROOT/src/physfs" >/dev/null
 	cp "$SRC/LuaJIT-sim/src/libluajit.a" "$PREFIX/lib/libluajit-sim.a"
 fi
 
