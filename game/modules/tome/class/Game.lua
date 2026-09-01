@@ -1940,6 +1940,14 @@ function _M:checkResolutionChange(w, h, ow, oh)
 end
 
 function _M:display(nb_keyframes)
+	-- iOS port: soak-test autopilot (no-op unless enabled)
+	if not self._autopilot_checked then
+		self._autopilot_checked = true
+		local ok, AP = pcall(require, "mod.class.AutoPilot")
+		if ok and AP.enabled() then self._autopilot = AP end
+	end
+	if self._autopilot then self._autopilot.frame() end
+
 	-- If switching resolution, blank everything but the dialog
 	if self.change_res_dialog then engine.GameTurnBased.display(self, nb_keyframes) return end
 

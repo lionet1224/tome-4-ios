@@ -76,6 +76,12 @@ function _M:init()
 	l[#l+1] = {name=_t"Credits", fct=function() game:registerDialog(require("mod.dialogs.Credits").new()) end}
 	l[#l+1] = {name=_t"Exit", fct=function() game:onQuit() end}
 	if config.settings.cheat then l[#l+1] = {name=_t"Reboot", fct=function() util.showMainMenu() end} end
+
+	-- iOS port: autopilot goes straight into New Game
+	if config.settings.autopilot then
+		print("[AUTOPILOT] auto-starting New Game")
+		game:onTickEnd(function() l[1].fct() end)
+	end
 	-- if config.settings.cheat then l[#l+1] = {name="webtest", fct=function() util.browserOpenUrl("http://google.com") end} end
 --	if config.settings.cheat then l[#l+1] = {name="webtest", fct=function() util.browserOpenUrl("asset://te4/html/test.html") end} end
 

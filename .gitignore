@@ -58,3 +58,4 @@ brain/.sync/captured.json
 tools/ios/dep-src/
 tools/ios/prefix-sim/
 tools/ios/out/
+runs/

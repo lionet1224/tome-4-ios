@@ -218,6 +218,30 @@ function _M:init(title, actor, order, at_end, quickbirth, w, h)
 	self:setFocus(self.c_campaign)
 	self:setFocus(self.c_name)
 
+	-- iOS port: autopilot rolls the first unlocked race/class and plays
+	do
+		local ok, AP = pcall(require, "mod.class.AutoPilot")
+		if ok and AP.enabled() then
+			game:onTickEnd(function()
+				local okb, err = pcall(function()
+					self:raceUse(self.all_races[1], 1)
+					self:raceUse(self.all_races[1].nodes[1], 2)
+					self:classUse(self.all_classes[1], 1)
+					self:classUse(self.all_classes[1].nodes[1], 2)
+					AP.event("birther_state", {
+						subrace=tostring(self.descriptors_by_type.subrace),
+						subclass=tostring(self.descriptors_by_type.subclass),
+						race=tostring(self.descriptors_by_type.race),
+						ok_hidden=tostring(self.ui_by_ui[self.c_ok].hidden),
+						r1_basename=tostring(self.all_races[1].nodes and self.all_races[1].nodes[1] and self.all_races[1].nodes[1].basename),
+						r1_locked=tostring(self.all_races[1].nodes and self.all_races[1].nodes[1] and self.all_races[1].nodes[1].locked)})
+					self:atEnd("created")
+				end)
+				if not okb then AP.event("autopilot_error", {err=tostring(err)}) end
+			end)
+		end
+	end
+
 	if not profile.mod.allow_build.tutorial_done then
 		self:setFocus(self.c_tut)
 		self.c_tut.glow = 0.70

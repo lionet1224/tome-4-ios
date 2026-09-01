@@ -1,3 +1,19 @@
+-- iOS port: te4's bundled LuaJIT extends table.sort to accept a field key
+-- (sorts ascending by elem[key]). Stock LuaJIT lacks it and engine+module
+-- code rely on it. Installed here (not bootstrap/boot.lua) because the
+-- desktop dev flow never mounts /bootstrap.
+if not table.__te4_sort_shim then
+	table.__te4_sort_shim = true
+	local origsort = table.sort
+	table.sort = function(t, cmp)
+		if cmp ~= nil and type(cmp) ~= "function" then
+			local key = cmp
+			return origsort(t, function(a, b) return a[key] < b[key] end)
+		end
+		return origsort(t, cmp)
+	end
+end
+
 -- TE4 - T-Engine 4
 -- Copyright (C) 2009 - 2019 Nicolas Casalini
 --
