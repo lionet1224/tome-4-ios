@@ -37,6 +37,7 @@ _M.state = {
 	chat_answers = 0, acts = 0, equips = 0,
 	level_key = nil, level_acts = 0, explore_noprog = 0, explored = false, last_act_turn = -1,
 	arrival = nil, bad_stairs = {}, stairs_tries = 0, stairs_wait = 0,
+	zone_done = {}, levels_seen = {},
 }
 
 -- env vars don't reach module Lua (sandboxed os); the soak harness writes
@@ -411,6 +412,7 @@ local function findStairs()
 	local st = _M.state
 	local lvl = game.level
 	if not lvl then return nil end
+	local leaving = game.zone and st.zone_done[game.zone.short_name]
 	local key = (game.zone and game.zone.short_name or "?")..":"..tostring(lvl.level or 0)
 	if st.stairs_cache and st.stairs_level == key then return st.stairs_cache end
 	local map = lvl.map
@@ -425,11 +427,13 @@ local function findStairs()
 			elseif g.change_zone and not fallback then
 				-- zone exit (worldmap etc.): only if this zone has nothing deeper
 				fallback = {x=x, y=y, cl=cl}
+			elseif cl < 0 and leaving and not fallback then
+				-- zone exhausted: retrace up toward the exit
+				fallback = {x=x, y=y, cl=cl}
 			end
-			-- (cl < 0 without change_zone = up-stairs: never a goal)
 		end
 	end end
-	best = best or fallback
+	if leaving then best = fallback or best else best = best or fallback end
 	st.stairs_cache = best
 	st.stairs_level = key
 	return best
@@ -593,7 +597,11 @@ function _M:onPlayerAct(p)
 	-- per-level bookkeeping
 	local lkey = (game.zone.short_name or "?")..":"..tostring(game.level.level or 0)
 	if lkey ~= self.state.level_key then
-		self.state.level_key, self.state.level_acts, self.state.explore_noprog, self.state.explored = lkey, 0, 0, false
+		local zdone = self.state.zone_done[game.zone.short_name]
+		local seen_before = self.state.levels_seen[lkey]
+		self.state.levels_seen[lkey] = true
+		self.state.level_key, self.state.level_acts, self.state.explore_noprog = lkey, 0, 0
+		self.state.explored = (zdone and seen_before) and true or false
 		self.state.arrival = {x=p.x, y=p.y}
 		self.state.bad_stairs, self.state.stairs_tries, self.state.stairs_wait, self.state.stairs_cache = {}, 0, 0, nil
 	end
@@ -644,6 +652,13 @@ function _M:onPlayerAct(p)
 	end
 
 	local stairs = findStairs()
+	if not stairs and game.zone and not self.state.zone_done[game.zone.short_name] then
+		-- explored, nothing deeper, no exit here: this zone is finished
+		self.state.zone_done[game.zone.short_name] = true
+		self.state.stairs_cache = nil
+		_M.event("zone_done", {})
+		stairs = findStairs()
+	end
 	if stairs then
 		if p.x == stairs.x and p.y == stairs.y then
 			if self.state.stairs_wait > 0 then
