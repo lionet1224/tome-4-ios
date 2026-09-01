@@ -59,6 +59,28 @@ needed for iOS regardless. Watch for te4-local LuaJIT patches when swapping.
 `cd ~/tome-ios && ./t-engine.app/Contents/MacOS/t-engine` → boot menu loads
 (GL context up, max texture 16384, tiles/fonts/music loading, Lua 5.1 VM).
 
+## iOS simulator pipeline (2026-09-01, staged — blocked only on Xcode install)
+
+`tools/ios/`: `build-deps.sh` (SDL2 2.30.9 + SDL2_image + SDL2_ttf/freetype +
+libpng + ogg/vorbis via CMake for arm64-sim, static; LuaJIT cross-built in a
+copy) → `build-engine.sh` (engine minus glew.c + all vendored libs with
+`-DTE4_IOS -DTE4_GLES1`, links, assembles `out/ToME.app` with bootstrap/+game/
+rsynced in) → `run-sim.sh` (simctl boot/install/launch). `all.sh` = one shot.
+Scripts self-locate a fresh Xcode via DEVELOPER_DIR before xcode-select runs.
+
+GLES groundwork validated WITHOUT Xcode: Khronos GLES1 headers vendored at
+`src/ios/`, whole engine core passes `-fsyntax-only -DTE4_GLES1 -DTE4_GLES_CHECK`.
+GLES1 layer: `src/gles1_compat.{h,c}` (GL_QUADS→indexed triangles, OES FBOs,
+viewport-attrib stack, texture-size table, FBO-readback glGetTexImage, GLU
+sphere for the menu planet, shader stubs — ES1 milestone runs shaderless).
+Platform glue: `__IOS__` Lua global + boot.lua mount branch, getself reuses
+mach-o branch (flat bundles), physfs had upstream iOS support already,
+SDL_main for UIKit lifecycle. Saves → `Documents/t-engine`.
+
+First-run risk list (check when sim finally boots): OpenAL on sim, GLES1
+context via SDL on sim, engine Lua assuming shaders exist somewhere,
+800x600 window request vs fixed sim screen, LuaJIT interp-only perf.
+
 ## Gotchas log
 
 - premake4 prints "Generating build/*.make" but writes the **top-level Makefile to

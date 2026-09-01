@@ -3,6 +3,11 @@
 # run build-deps.sh then build-engine.sh first (or just: tools/ios/all.sh).
 set -euo pipefail
 
+# use a freshly installed Xcode even before xcode-select is switched to it
+if ! xcrun --sdk iphonesimulator --show-sdk-path >/dev/null 2>&1 && [ -d /Applications/Xcode.app ]; then
+	export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+fi
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 APP="$ROOT/tools/ios/out/ToME.app"
 BUNDLE_ID=org.te4.tome.dev

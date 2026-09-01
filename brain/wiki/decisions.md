@@ -7,6 +7,14 @@ tags: [meta, decisions, temporal]
 
 # Decisions Log
 
+## 2026-09-01 — GLES1-first renderer for the simulator milestone
+**Decision:** First iOS boot targets OpenGL ES 1.1 fixed-function (shaderless), not the
+GLES2 shim originally sketched.
+**Rationale:** Engine GL usage is already ES1-shaped (client arrays + matrix stack, no
+glBegin) and carries runtime `shaders_active`/`fbo_active` fallback flags — ES1 keeps the
+entire draw path untouched; the compat layer is ~350 lines. GLES2+shaders becomes a later
+quality pass (glow/water effects), not a boot blocker.
+
 ## 2026-09-01 — Native port, not React Native frontend
 **Decision:** Port T-Engine4's renderer (GLES2 + fixed-function shim); do NOT build an external
 state-consuming frontend (React Native or otherwise).

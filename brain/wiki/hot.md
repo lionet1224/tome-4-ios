@@ -16,7 +16,14 @@ main menu, native arm64, plain Lua 5.1.
   for the full patch table). Run: `./t-engine.app/Contents/MacOS/t-engine` from repo root.
 - Brain lives in-repo at `brain/`.
 
-## Active Threads
+## Active Threads (updated: autonomy session)
+- **WAITING ON JORDAN: install Xcode from the App Store** (then open once /
+  accept license). Watcher fires the moment the SDK appears; then run
+  `tools/ios/all.sh` → ToME in the simulator.
+- Branch `ios-port` @ C3. GLES1 layer done + verified by syntax; runtime
+  validation needs the sim. Risk list in [[build-system]].
+
+## Old threads
 - Verify gameplay (new character, a few dungeon levels) on the baseline.
 - Commit baseline patches (needs Jordan's go-ahead; fork repo isn't ours — decide
   where the project repo lives).

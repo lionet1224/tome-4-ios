@@ -4,6 +4,11 @@
 # Idempotent: skips libs whose install artifacts already exist.
 set -euo pipefail
 
+# use a freshly installed Xcode even before xcode-select is switched to it
+if ! xcrun --sdk iphonesimulator --show-sdk-path >/dev/null 2>&1 && [ -d /Applications/Xcode.app ]; then
+	export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+fi
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 IOSDIR="$ROOT/tools/ios"
 SRC="$IOSDIR/dep-src"
