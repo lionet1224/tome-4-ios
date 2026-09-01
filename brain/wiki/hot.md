@@ -16,7 +16,15 @@ main menu, native arm64, plain Lua 5.1.
   for the full patch table). Run: `./t-engine.app/Contents/MacOS/t-engine` from repo root.
 - Brain lives in-repo at `brain/`.
 
-## Active Threads (post-C5: GAME RENDERS IN SIMULATOR)
+## Active Threads (post-C6: PLAYABLE — character in Trollmire)
+- Perf phase next: world gen ~10 min / menu demo sluggish (LuaJIT interp on sim;
+  real device should JIT-less-but-faster; consider LuaJIT arm64 device JIT).
+- Zoom bug: taps don't register when screen_zoom≠1 despite correct Lua coords.
+- Text input: SDL iOS emits no SDL_TEXTINPUT from HID keys with OSK suppressed —
+  need native input strategy (part of touch-UI phase).
+- idb drives the sim: tap coords = screenshot_px/3 (portrait space).
+
+## Old (post-C5)
 - Branch `ios-port` @ C5. ToME's first-run dialog renders in the iPhone 17
   simulator (ES2 fixed-function emu). Rebuild+run: `tools/ios/build-engine.sh`
   then `tools/ios/run-sim.sh`.
