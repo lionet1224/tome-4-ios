@@ -78,6 +78,23 @@ autopilot_error. Summary tool prints turns/sec, heap trend, zones, deaths.
 - `soak-sim.sh` must `simctl install` before launch (ran a stale install once).
 - `os.exit` is inert on iOS → `core.game.exit_engine()` fallback.
 
+### More findings (evening, Fable 5.1 session)
+- **Minimap showed a rat / blank parchment on iOS**: minimap + seens (fog)
+  textures update via `glTexSubImage2D(GL_BGRA)`; ES2 rejects BGRA sub-uploads
+  into RGBA textures → never written, stale VRAM. Fixed: subimage wrapper swizzles.
+- **In-game screenshots black on iOS**: engine reads `glReadPixels(GL_RGB)`;
+  ES2 only guarantees RGBA. Fixed: readback repack in compat.
+- "Danger..." level-change confirm: EXIT = No → stairs blacklisted → stuck.
+  Autopilot presses Yes by button text.
+- Auto-width popups ("Screenshot taken!" 1315px) bypass the init clamp →
+  clamp in `Dialog:resize` too.
+- Harness lessons: never edit a soak script while it runs (bash parses lazily
+  → "syntax error" mid-run) — launch from a snapshot copy; `find -newer` must
+  use a start-stamp file, not the run dir (dir mtime moves with each file);
+  sim liveness via `pgrep t-engine`, not the console pipe; `simctl install`
+  before launch; capture the final frame *before* terminate.
+- Sim soak 4: 15 min clean, floor 3, plevel 5, Prox the Mighty fought.
+
 ## Known gaps / next
 - Item *activation* (wands/charms) not automated: can enter targeting mode
   (not a dialog) — needs an escape strategy.
