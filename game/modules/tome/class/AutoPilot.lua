@@ -36,6 +36,7 @@ _M.state = {
 	visited_zones = {}, visited_stores = {},
 	chat_answers = 0, acts = 0, equips = 0,
 	level_key = nil, level_acts = 0, explore_noprog = 0, explored = false, last_act_turn = -1,
+	arrival = nil, bad_stairs = {}, stairs_tries = 0, stairs_wait = 0,
 }
 
 -- env vars don't reach module Lua (sandboxed os); the soak harness writes
@@ -366,21 +367,22 @@ local function findStairs()
 	local st = _M.state
 	local lvl = game.level
 	if not lvl then return nil end
-	local key = tostring(lvl.uid or 0)
+	local key = (game.zone and game.zone.short_name or "?")..":"..tostring(lvl.level or 0)
 	if st.stairs_cache and st.stairs_level == key then return st.stairs_cache end
 	local map = lvl.map
 	local best, fallback = nil, nil
 	for x = 0, map.w - 1 do for y = 0, map.h - 1 do
 		local g = map(x, y, map.TERRAIN)
-		if g and g.change_level then
+		if g and g.change_level and not st.bad_stairs[x..":"..y] then
 			local cl = g.change_level or 0
 			if not g.change_zone and cl > 0 then
 				-- in-zone stairs going deeper: what we want
 				if not best or cl > best.cl then best = {x=x, y=y, cl=cl} end
-			elseif not fallback then
+			elseif g.change_zone and not fallback then
 				-- zone exit (worldmap etc.): only if this zone has nothing deeper
 				fallback = {x=x, y=y, cl=cl}
 			end
+			-- (cl < 0 without change_zone = up-stairs: never a goal)
 		end
 	end end
 	best = best or fallback
@@ -537,9 +539,11 @@ function _M:onPlayerAct(p)
 	end
 
 	-- per-level bookkeeping
-	local lkey = tostring(game.level.uid or 0)
+	local lkey = (game.zone.short_name or "?")..":"..tostring(game.level.level or 0)
 	if lkey ~= self.state.level_key then
 		self.state.level_key, self.state.level_acts, self.state.explore_noprog, self.state.explored = lkey, 0, 0, false
+		self.state.arrival = {x=p.x, y=p.y}
+		self.state.bad_stairs, self.state.stairs_tries, self.state.stairs_wait, self.state.stairs_cache = {}, 0, 0, nil
 	end
 	self.state.level_acts = self.state.level_acts + 1
 
@@ -547,7 +551,10 @@ function _M:onPlayerAct(p)
 		-- auto-explore's terminal move is "go stand on an exit": if we are on
 		-- a level-change tile with nothing pulling us elsewhere, we're done
 		local here = game.level.map(p.x, p.y, game.level.map.TERRAIN)
-		if here and here.change_level and self.state.level_acts > 5 then
+		local arr = self.state.arrival
+		local on_arrival = arr and arr.x == p.x and arr.y == p.y
+		if here and here.change_level and not on_arrival
+		   and ((here.change_level or 0) > 0 or here.change_zone) and self.state.level_acts > 5 then
 			self.state.explored = true
 			_M.event("level_explored", {acts=self.state.level_acts, reason="at_exit"})
 		end
@@ -587,7 +594,21 @@ function _M:onPlayerAct(p)
 	local stairs = findStairs()
 	if stairs then
 		if p.x == stairs.x and p.y == stairs.y then
-			_M.event("take_stairs", {})
+			if self.state.stairs_wait > 0 then
+				self.state.stairs_wait = self.state.stairs_wait - 1
+				p:useEnergy()
+				return
+			end
+			self.state.stairs_tries = self.state.stairs_tries + 1
+			if self.state.stairs_tries > 3 then
+				_M.event("stairs_dead", {x=stairs.x, y=stairs.y})
+				self.state.bad_stairs[stairs.x..":"..stairs.y] = true
+				self.state.stairs_cache, self.state.stairs_tries = nil, 0
+				p:useEnergy()
+				return
+			end
+			_M.event("take_stairs", {try=self.state.stairs_tries})
+			self.state.stairs_wait = 5
 			game.key:triggerVirtual("CHANGE_LEVEL")
 		elseif not stepToward(p, stairs.x, stairs.y) then
 			p:useEnergy()
