@@ -1,0 +1,12 @@
+{
+  "mode": "para",
+  "configured_at": null,
+  "config": {
+    "para": {
+      "projects_folder": "wiki/projects/",
+      "areas_folder": "wiki/areas/",
+      "resources_folder": "wiki/resources/",
+      "archives_folder": "wiki/archives/"
+    }
+  }
+}

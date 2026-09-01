@@ -1068,6 +1068,18 @@ void do_move(int w, int h) {
 
 }
 
+/* Modern SDL2 forbids mixing SDL_GetWindowSurface with an OpenGL context
+ * (the surface call binds the window to the software renderer, making
+ * SDL_GL_CreateContext fail). The engine only reads screen->w/h/format, so
+ * keep a detached surface mirroring the window size instead. */
+static void update_screen_surface(SDL_Window *win)
+{
+	int sw, sh;
+	SDL_GetWindowSize(win, &sw, &sh);
+	if (screen) SDL_FreeSurface(screen);
+	screen = SDL_CreateRGBSurface(0, sw, sh, 32, 0, 0, 0, 0);
+}
+
 /* @see main.h#do_resize */
 void do_resize(int w, int h, bool fullscreen, bool borderless, float zoom)
 {
@@ -1112,8 +1124,12 @@ void do_resize(int w, int h, bool fullscreen, bool borderless, float zoom)
 		}
 		is_fullscreen = fullscreen;
 		is_borderless = borderless;
-		screen = SDL_GetWindowSurface(window);
+		update_screen_surface(window);
 		maincontext = SDL_GL_CreateContext(window);
+		if (!maincontext) {
+			printf("error creating GL context: %s\n", SDL_GetError());
+			exit(1);
+		}
 		SDL_GL_MakeCurrent(window, maincontext);
 		glewInit();
 
@@ -1178,7 +1194,7 @@ void do_resize(int w, int h, bool fullscreen, bool borderless, float zoom)
 		}
 
 		/* Finally, update the screen info */
-		screen = SDL_GetWindowSurface(window);
+		update_screen_surface(window);
 
 	}
 

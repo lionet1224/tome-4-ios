@@ -66,38 +66,18 @@ project "TEngine"
 	configuration "macosx"
 		files { "../src/mac/SDL*" }
 		includedirs {
-			"/System/Library/Frameworks/OpenGL.framework/Headers",
-			"/System/Library/Frameworks/OpenAL.framework/Headers",
-
-			"/Library/Frameworks/SDL2.framework/Headers",
-			"/Library/Frameworks/SDL2_image.framework/Headers",
-			"/Library/Frameworks/SDL2_ttf.framework/Headers",
-			"/Library/Frameworks/libpng.framework/Headers",
-			"/Library/Frameworks/ogg.framework/Headers",
-			"/Library/Frameworks/vorbis.framework/Headers",
-
-			-- MacPorts paths
-			"/opt/local/include",
-			"/opt/local/include/Vorbis",
-
-			-- Homebrew paths
-			"/usr/local/include",
-			"/usr/local/opt/libpng12/include",
+			-- Homebrew (Apple Silicon)
+			"/opt/homebrew/include",
 		}
 		defines { "USE_TENGINE_MAIN", 'SELFEXE_MACOSX', [[TENGINE_HOME_PATH='"/Library/Application Support/T-Engine/"']]  }
+		libdirs { "/opt/homebrew/lib" }
 		linkoptions {
 			"-framework Cocoa",
 			"-framework OpenGL",
 			"-framework OpenAL",
-
-			"-framework SDL2",
-			"-framework SDL2_image",
-			"-framework SDL2_ttf",
-			"-framework libpng",
-			"-framework ogg",
-			"-framework vorbis",
-			"-Wl,-rpath,'@loader_path/../Frameworks'",
+			"-framework IOKit",
 		}
+		links { "SDL2", "SDL2_image", "SDL2_ttf", "png", "vorbisfile", "vorbis", "ogg" }
 		if _OPTIONS.lua == "jit2" then
 			linkoptions {
 				-- These two options are mandatory for LuaJIT to work
@@ -106,7 +86,7 @@ project "TEngine"
 			}
 		end
 		targetdir "."
-		links { "IOKit" }
+
 
 	configuration "windows"
 		links { "mingw32", "SDL2main", "SDL2", "SDL2_ttf", "SDL2_image", "OpenAL32", "vorbisfile", "opengl32", "glu32", "wsock32", "png" }
@@ -137,7 +117,7 @@ project "TEngine"
 			postbuildcommands { "cp ../bin/Debug/t-engine.exe ../", }
 		else
 			if os.get() ~= "macosx" then postbuildcommands { "cp ../bin/Debug/t-engine ../", }
-			else postbuildcommands { "cp ../build/t-engine.app/Contents/MacOS/t-engine ../mac/base_app/Contents/MacOS", }
+			else postbuildcommands { "cp ../build/t-engine.app/Contents/MacOS/t-engine ../ || true", }
 			end
 		end
 	configuration {"Release"}
@@ -145,7 +125,7 @@ project "TEngine"
 			postbuildcommands { "cp ../bin/Release/t-engine.exe ../", }
 		else
 			if os.get() ~= "macosx" then postbuildcommands { "cp ../bin/Release/t-engine ../", }
-			else postbuildcommands { "cp ../build/t-engine.app/Contents/MacOS/t-engine ../mac/base_app/Contents/MacOS", }
+			else postbuildcommands { "cp ../build/t-engine.app/Contents/MacOS/t-engine ../ || true", }
 			end
 		end
 

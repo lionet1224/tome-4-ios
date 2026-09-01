@@ -39,11 +39,7 @@
 #include <time.h>
 #include <locale.h>
 
-#ifdef __APPLE__
-#include <libpng/png.h>
-#else
 #include <png.h>
-#endif
 
 extern SDL_Window *window;
 

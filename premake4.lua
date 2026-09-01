@@ -88,12 +88,13 @@ configuration "macosx"
 	premake.gcc.cc  = 'clang'
 	premake.gcc.cxx = 'clang++'
 
-	buildoptions { "-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk", "-mmacosx-version-min=10.7" }
+	-- modern clang makes these hard errors; the 2010-era vendored libs trip them constantly
+	buildoptions { "-Wno-implicit-function-declaration", "-Wno-deprecated-declarations", "-Wno-deprecated-non-prototype", "-Wno-incompatible-function-pointer-types", "-Wno-incompatible-pointer-types", "-Wno-int-conversion" }
+
 	includedirs {
-                        "/Library/Frameworks/SDL2.framework/Headers",
-                        "/Library/Frameworks/SDL2_image.framework/Headers",
-                        "/Library/Frameworks/SDL2_ttf.framework/Headers",
+                        "/opt/homebrew/include",
 	}
+	libdirs { "/opt/homebrew/lib" }
 
 configuration "Debug"
 	defines { }

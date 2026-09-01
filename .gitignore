@@ -50,3 +50,8 @@ t-engine-debug.exe
 t-engine-debug_1.7b.exe
 # music is not redistributed here (drop the official music folder in for a build with music)
 game/modules/tome/data/music/
+# ios-port working artifacts
+/t-engine
+t-engine.app/Contents/MacOS/t-engine
+brain/.raw/
+brain/.sync/captured.json

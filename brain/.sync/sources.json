@@ -1,0 +1,6 @@
+{
+  "engagement": "ToME-iOS",
+  "github": { "repos": [ { "repo": "cinornu/t-engine4-i18n_korean", "default_branch": "master", "last_sync": null } ] },
+  "aws": { "profile": "tome-ios-ro", "account_id": "PLACEHOLDER_ACCOUNT_ID", "regions": ["us-east-1"], "last_sync": null },
+  "egress": { "web_research_enabled": false }
+}
