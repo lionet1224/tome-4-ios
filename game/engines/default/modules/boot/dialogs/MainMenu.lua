@@ -78,6 +78,7 @@ function _M:init()
 	if config.settings.cheat then l[#l+1] = {name=_t"Reboot", fct=function() util.showMainMenu() end} end
 
 	-- iOS port: autopilot goes straight into New Game
+	print("[AUTOPILOT-CHECK] settings.autopilot =", tostring(config.settings.autopilot), "build =", tostring(config.settings.autopilot_build))
 	if config.settings.autopilot then
 		print("[AUTOPILOT] auto-starting New Game")
 		game:onTickEnd(function() l[1].fct() end)

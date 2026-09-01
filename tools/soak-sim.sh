@@ -25,7 +25,9 @@ fi
 
 echo "[soak-sim] $MINUTES min run, build $SHA -> $RUN"
 xcrun simctl terminate "$DEV" $BUNDLE_ID 2>/dev/null
-xcrun simctl launch --console-pty "$DEV" $BUNDLE_ID > "$RUN/console.log" 2>&1 &
+# install the current bundle (data container + settings persist across installs)
+xcrun simctl install "$DEV" "$ROOT/tools/ios/out/ToME.app" || { echo "install failed"; exit 1; }
+xcrun simctl launch --console-pty "$DEV" $BUNDLE_ID --flush-stdout > "$RUN/console.log" 2>&1 &
 LPID=$!
 
 D0="$(xcrun simctl get_app_container "$DEV" $BUNDLE_ID data 2>/dev/null)"
