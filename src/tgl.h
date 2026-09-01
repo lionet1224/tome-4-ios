@@ -1,4 +1,6 @@
-#ifdef __APPLE__
+#ifdef TE4_GLES1
+#include "gles1_compat.h" /* has an include guard; usually arrives via display_sdl.h */
+#elif defined(__APPLE__)
 #include <OpenGL/gl.h>
 #include <OpenGL/glu.h>
 // #include <OpenGL/glext.h>
@@ -64,10 +66,12 @@ extern GLuint gl_c_shader;
 
 
 extern int nb_draws;
+#ifndef TE4_GLES1 /* the GLES1 shim's te4_glDrawArrays counts nb_draws itself */
 #define glDrawArrays(a, b, c) \
 	{ \
 	glDrawArrays((a), (b), (c)); nb_draws++; \
 	}
+#endif
 
 extern int gl_c_vertices_nb, gl_c_texcoords_nb, gl_c_colors_nb;
 extern GLfloat *gl_c_vertices_ptr;

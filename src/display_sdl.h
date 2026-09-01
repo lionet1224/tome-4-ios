@@ -22,7 +22,11 @@
 #define DISPLAY_SDL_H
 
 #include "tSDL.h"
+#ifdef TE4_GLES1
+#include "gles1_compat.h"
+#else
 #include "glew.h"
+#endif
 #include "tgl.h"
 
 #ifdef __cplusplus
