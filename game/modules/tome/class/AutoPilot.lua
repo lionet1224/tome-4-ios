@@ -160,6 +160,22 @@ function _M.handleDialog(d)
 		pcall(function() d.key:triggerVirtual("EXIT") end)
 		return
 	end
+	-- sealed vault door popup: tell auto-explore to stop targeting the door
+	if d.title and tostring(d.title):find("sealed door") then
+		local p = game.player
+		if p and game.level then
+			local map = game.level.map
+			for dx = -1, 1 do for dy = -1, 1 do
+				local g = map(p.x + dx, p.y + dy, map.TERRAIN)
+				if g and (g.door_opened or g.is_door or g.door_sealed) then
+					map.attrs(p.x + dx, p.y + dy, "autoexplore_ignore", true)
+				end
+			end end
+		end
+		_M.event("dialog_dismiss", {dialog=cls, title="sealed door (ignored)"})
+		pcall(function() d.key:triggerVirtual("EXIT") end)
+		return
+	end
 	if cls:find("GetQuantity") then
 		_M.event("quantity_accept", {})
 		if not pcall(function() d:okclick() end) then pcall(function() d.key:triggerVirtual("EXIT") end) end
