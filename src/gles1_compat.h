@@ -114,6 +114,7 @@ void te4_glClearDepth(GLdouble d);
 #define glDisable te4_glDisable
 #define glDrawArrays te4_glDrawArrays
 #define glTexImage2D te4_glTexImage2D
+#define glTexSubImage2D te4_glTexSubImage2D
 #define glPushAttrib te4_glPushAttrib
 #define glPopAttrib te4_glPopAttrib
 #define glGetTexLevelParameteriv te4_glGetTexLevelParameteriv

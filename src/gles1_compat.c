@@ -378,6 +378,29 @@ void te4_glTexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei 
 	if (level == 0) tex_record(gl_c_texture, width, height);
 }
 
+/* ES2 rejects BGRA sub-uploads into RGBA textures; the minimap and the
+ * seens (fog) textures update through this path with GL_BGRA every frame,
+ * so without this they never get written (stale VRAM showed as a "rat") */
+void te4_glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void *pixels)
+{
+	if (format == TE4_GL_BGRA && pixels) {
+		size_t n = (size_t)width * height;
+		unsigned char *tmp = malloc(n * 4);
+		const unsigned char *src = pixels;
+		size_t i;
+		for (i = 0; i < n; i++) {
+			tmp[i * 4] = src[i * 4 + 2];
+			tmp[i * 4 + 1] = src[i * 4 + 1];
+			tmp[i * 4 + 2] = src[i * 4];
+			tmp[i * 4 + 3] = src[i * 4 + 3];
+		}
+		glTexSubImage2D(target, level, xoffset, yoffset, width, height, GL_RGBA, type, tmp);
+		free(tmp);
+		return;
+	}
+	glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels);
+}
+
 void te4_glGetTexLevelParameteriv(GLenum target, GLint level, GLenum pname, GLint *params)
 {
 	GLint w = 0, h = 0;
