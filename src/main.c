@@ -352,6 +352,11 @@ bool on_event(SDL_Event *event)
 		return TRUE;
 	case SDL_KEYDOWN:
 	case SDL_KEYUP:
+#ifdef TE4_IOS
+		if (event->type == SDL_KEYDOWN)
+			printf("[IOS-INPUT] KEY sym=%d scan=%d handler=%d\n",
+				(int)event->key.keysym.sym, (int)event->key.keysym.scancode, current_keyhandler != LUA_NOREF);
+#endif
 		if (current_keyhandler != LUA_NOREF)
 		{
 			lua_rawgeti(L, LUA_REGISTRYINDEX, current_keyhandler);
@@ -405,6 +410,13 @@ bool on_event(SDL_Event *event)
 		return TRUE;
 	case SDL_MOUSEBUTTONDOWN:
 	case SDL_MOUSEBUTTONUP:
+#ifdef TE4_IOS
+		printf("[IOS-INPUT] %s btn=%d raw=(%d,%d) zoom=%.2f -> lua=(%.0f,%.0f) handler=%d\n",
+			event->type == SDL_MOUSEBUTTONDOWN ? "DOWN" : "UP", event->button.button,
+			event->button.x, event->button.y, screen_zoom,
+			event->button.x / screen_zoom, event->button.y / screen_zoom,
+			current_mousehandler != LUA_NOREF);
+#endif
 		if (event->type == SDL_MOUSEBUTTONDOWN) SDL_SetCursor(mouse_cursor_down);
 		else SDL_SetCursor(mouse_cursor);
 

@@ -78,7 +78,9 @@ function _M:init(title, actor, order, at_end, quickbirth, w, h)
 	self.selected_cosmetic_options = nil
 	self.tiles = Tiles.new(64, 64, nil, nil, true, nil)
 
-	Dialog.init(self, title and title or _t"Character Creation", w or 600, h or 400)
+	-- iOS port: clamp to screen so the bottom button row stays reachable on
+	-- short displays (dialog frame + title need ~45px of the height)
+	Dialog.init(self, title and title or _t"Character Creation", math.min(w or 600, game.w - 10), math.min(h or 400, game.h - 45))
 
 	self.obj_list = Object:loadList("/data/general/objects/objects.lua")
 	self.obj_list_by_name = {}
@@ -100,7 +102,9 @@ function _M:init(title, actor, order, at_end, quickbirth, w, h)
 	self.c_extra_options = Button.new{text=_t"Extra Options", fct=function() self:extraOptions() end}
 	self.c_extra_options.hide = not game.extra_birth_option_defs or #game.extra_birth_option_defs == 0
 
-	self.c_name = Textbox.new{title=_t"Name: ", text=(not config.settings.cheat and game.player_name == "player") and "" or game.player_name, chars=30, max_len=50, fct=function()
+	-- iOS port: default a name instead of empty; typing needs the on-screen
+	-- keyboard which the port suppresses for now
+	self.c_name = Textbox.new{title=_t"Name: ", text=(not config.settings.cheat and game.player_name == "player") and "Adventurer" or game.player_name, chars=30, max_len=50, fct=function()
 		if config.settings.cheat then self:makeDefault() end
 	end, on_change=function() self:setDescriptor() end, on_mouse = function(button) if button == "right" then self:randomName() end end}
 

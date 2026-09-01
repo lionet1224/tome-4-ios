@@ -757,10 +757,22 @@ function _M:resolve(t, last, on_entity, key_chain)
 	end
 
 	-- Then we handle it, this is because resolvers can modify the list with their returns, or handlers, so we must make sure to not modify the list we are iterating over
+	-- iOS port: pairs() order differs between LuaJIT builds, and game data
+	-- depends on value resolvers (e.g. mbonus_level on 'chance') resolving
+	-- before function resolvers that read those fields. Iterate in a
+	-- deterministic order with "generic" resolvers last.
+	local ordered_keys = {}
+	for k in pairs(list) do ordered_keys[#ordered_keys+1] = k end
+	table.sort(ordered_keys, function(a, b)
+		local ea, eb = list[a], list[b]
+		local ga = type(ea) == "table" and ea.__resolver == "generic"
+		local gb = type(eb) == "table" and eb.__resolver == "generic"
+		if ga ~= gb then return gb end
+		return tostring(a) < tostring(b)
+	end)
 	local r
-	for k, e in pairs(list) do
---		if type(e) == "table" and e.__resolver then
---		end
+	for _, k in ipairs(ordered_keys) do
+		local e = list[k]
 		if type(e) == "table" and e.__resolver and (not e.__resolve_last or last) then
 			if not resolvers.calc[e.__resolver] then error("missing resolver "..e.__resolver.." on entity "..tostring(t).." key "..table.concat(key_chain, ".")) end
 			r = resolvers.calc[e.__resolver](e, on_entity or self, self, t, k, key_chain)
