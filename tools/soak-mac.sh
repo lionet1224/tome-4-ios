@@ -9,7 +9,7 @@ MINUTES="${1:-10}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 RUN="$ROOT/runs/mac-$STAMP"
 HOME_TE="$HOME/Library/Application Support/T-Engine/4.0"
-mkdir -p "$RUN"
+mkdir -p "$RUN"; touch "$RUN/.start"
 
 SHA="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 # module Lua can't see env vars; enable via settings file
@@ -29,7 +29,7 @@ HUNG=""
 for i in $(seq 1 "$SECS"); do
 	kill -0 "$PID" 2>/dev/null || break
 	if [ $((i % 30)) -eq 0 ]; then
-		TELE="$(find "$HOME_TE/tome/autopilot" -name 'telemetry-*.jsonl' -newer "$RUN" 2>/dev/null | head -1)"
+		TELE="$(find "$HOME_TE/tome/autopilot" -name 'telemetry-*.jsonl' -newer "$RUN/.start" 2>/dev/null | head -1)"
 		if [ -n "$TELE" ]; then
 			AGE=$(( $(date +%s) - $(stat -f %m "$TELE") ))
 			if [ "$AGE" -gt 120 ]; then echo "[soak] HUNG: telemetry stale ${AGE}s"; HUNG=1; break; fi
@@ -49,14 +49,14 @@ fi
 
 cp /tmp/te4_log.txt "$RUN/console.log" 2>/dev/null
 # newest telemetry file from this run
-TELE="$(find "$HOME_TE/tome/autopilot" -name 'telemetry-*.jsonl' -newer "$RUN" 2>/dev/null | head -1)"
+TELE="$(find "$HOME_TE/tome/autopilot" -name 'telemetry-*.jsonl' -newer "$RUN/.start" 2>/dev/null | head -1)"
 [ -n "${TELE:-}" ] && cp "$TELE" "$RUN/telemetry.jsonl" || echo "[soak] no telemetry from this run"
 ls "$HOME_TE"/tome/error-logs/*/*.txt 2>/dev/null | tail -3 | while read -r f; do cp "$f" "$RUN/"; done
 
 # in-game screenshots taken by the autopilot every 60s
-mkdir -p "$RUN/shots"; find "$HOME_TE/tome/screenshots" -name '*.png' -newer "$RUN" -exec cp {} "$RUN/shots/" \; 2>/dev/null
+mkdir -p "$RUN/shots"; find "$HOME_TE/tome/screenshots" -name '*.png' -newer "$RUN/.start" -exec cp {} "$RUN/shots/" \; 2>/dev/null
 # harvest crash reports from the run window
-find "$HOME/Library/Logs/DiagnosticReports" -name 't-engine-*.ips' -newer "$RUN" -exec cp {} "$RUN/" \; 2>/dev/null
+find "$HOME/Library/Logs/DiagnosticReports" -name 't-engine-*.ips' -newer "$RUN/.start" -exec cp {} "$RUN/" \; 2>/dev/null
 [ -n "${HUNG:-}" ] && EXIT="HUNG(telemetry stale)"
 echo "[soak] finished: $EXIT"
 python3 "$ROOT/tools/telemetry-summary.py" "$RUN/telemetry.jsonl" "$RUN/console.log" 2>/dev/null || true

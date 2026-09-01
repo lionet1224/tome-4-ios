@@ -453,6 +453,10 @@ end
 
 function _M:resize(w, h, nogen)
 	local gamew, gameh = core.display.size()
+	-- iOS port: auto-sized dialogs (simplePopup with long text, ...) bypass
+	-- the init clamp; keep every dialog on-screen here too
+	if w > gamew - 10 then w = gamew - 10 end
+	if h > gameh - 40 then h = gameh - 40 end
 	self.w, self.h = math.floor(w), math.floor(h)
 	self.display_x = math.floor(self.force_x or (gamew - self.w) / 2)
 	self.display_y = math.floor(self.force_y or (gameh - self.h) / 2)

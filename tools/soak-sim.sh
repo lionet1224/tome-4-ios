@@ -10,7 +10,7 @@ MINUTES="${1:-15}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 RUN="$ROOT/runs/sim-$STAMP"
 BUNDLE_ID=org.te4.tome.dev
-mkdir -p "$RUN"
+mkdir -p "$RUN"; touch "$RUN/.start"
 
 DEV="$(xcrun simctl list devices booted | grep -oE '[0-9A-F-]{36}' | head -1 || true)"
 [ -n "$DEV" ] || { echo "no booted simulator"; exit 1; }
@@ -40,7 +40,7 @@ for i in $(seq 1 "$SECS"); do
 		xcrun simctl io "$DEV" screenshot "$RUN/periodic-$i.png" >/dev/null 2>&1
 	fi
 	if [ $((i % 30)) -eq 0 ] && [ -n "$D0" ]; then
-		TELE="$(find "$D0/Documents/t-engine/4.0/tome/autopilot" -name 'telemetry-*.jsonl' -newer "$RUN" 2>/dev/null | head -1)"
+		TELE="$(find "$D0/Documents/t-engine/4.0/tome/autopilot" -name 'telemetry-*.jsonl' -newer "$RUN/.start" 2>/dev/null | head -1)"
 		if [ -n "$TELE" ]; then
 			AGE=$(( $(date +%s) - $(stat -f %m "$TELE") ))
 			if [ "$AGE" -gt 120 ]; then echo "[soak-sim] HUNG: telemetry stale ${AGE}s"; HUNG=1; break; fi
@@ -48,19 +48,19 @@ for i in $(seq 1 "$SECS"); do
 	fi
 	sleep 1
 done
-find "$HOME/Library/Logs/DiagnosticReports" -name 't-engine-*.ips' -newer "$RUN" -exec cp {} "$RUN/" \; 2>/dev/null
+find "$HOME/Library/Logs/DiagnosticReports" -name 't-engine-*.ips' -newer "$RUN/.start" -exec cp {} "$RUN/" \; 2>/dev/null
 [ -n "${HUNG:-}" ] && echo "[soak-sim] run ended HUNG"
+xcrun simctl io "$DEV" screenshot "$RUN/final.png" >/dev/null 2>&1
 xcrun simctl terminate "$DEV" $BUNDLE_ID 2>/dev/null
 sleep 2
 
 D="$(xcrun simctl get_app_container "$DEV" $BUNDLE_ID data 2>/dev/null)"
 if [ -n "$D" ]; then
-	TELE="$(find "$D/Documents/t-engine/4.0/tome/autopilot" -name 'telemetry-*.jsonl' -newer "$RUN" 2>/dev/null | head -1)"
+	TELE="$(find "$D/Documents/t-engine/4.0/tome/autopilot" -name 'telemetry-*.jsonl' -newer "$RUN/.start" 2>/dev/null | head -1)"
 	[ -n "${TELE:-}" ] && cp "$TELE" "$RUN/telemetry.jsonl" || echo "[soak-sim] no telemetry from this run"
 	ls "$D/Documents/t-engine/4.0/tome/error-logs/"*/*.txt 2>/dev/null | tail -3 | while read -r f; do cp "$f" "$RUN/"; done
 fi
-xcrun simctl io "$DEV" screenshot "$RUN/final.png" >/dev/null 2>&1
-mkdir -p "$RUN/shots"; [ -n "$D" ] && find "$D/Documents/t-engine/4.0/tome/screenshots" -name '*.png' -newer "$RUN" -exec cp {} "$RUN/shots/" \; 2>/dev/null
+mkdir -p "$RUN/shots"; [ -n "$D" ] && find "$D/Documents/t-engine/4.0/tome/screenshots" -name '*.png' -newer "$RUN/.start" -exec cp {} "$RUN/shots/" \; 2>/dev/null
 
 python3 "$ROOT/tools/telemetry-summary.py" "$RUN/telemetry.jsonl" "$RUN/console.log" 2>/dev/null || true
 echo "[soak-sim] artifacts in $RUN"
