@@ -16,7 +16,16 @@ main menu, native arm64, plain Lua 5.1.
   for the full patch table). Run: `./t-engine.app/Contents/MacOS/t-engine` from repo root.
 - Brain lives in-repo at `brain/`.
 
-## Active Threads (late evening 2026-09-01)
+## Active Threads (morning 2026-09-02)
+- Save/resume tooling landed: `tools/soak-resume.sh runs/<dir>` replays an archived
+  save; saves were level-less until frame() stopped ticking inside changeLevel.
+- Mac crash hunt: ASan blocked (Homebrew SDL2 dynapi alert at load); running the
+  `--symbols` build + MallocScribble/GuardEdges instead. Sim audio disabled in
+  harness (CoreAudio SIGABRT in the simulator).
+- Disk: soak loops filled the disk overnight; guards + retention in soak-forever.
+- Next: touch controls phase (zoom-scale click bug first), see log.
+
+## Earlier (late evening 2026-09-01)
 - **World tour on both platforms**: mac AND sim each clear Trollmire → Kor'Pul →
   Norgos' Lair → Scintillating Caves → Rhaloren Camp in ~10 min (plevel 12-13,
   ~400-500 kills, 0 Lua errors). Soak speed ~10× (no move anim, multi-tick/frame).
