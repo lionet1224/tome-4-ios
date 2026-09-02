@@ -576,8 +576,8 @@ function _M:onPlayerAct(p)
 	self.state.ingame = true
 
 	-- asleep/stunned-out: actions fail without spending energy; pass the turn
-	if p:attr("sleep") or p:attr("stunned") and not p:canAct() then
-		_M.event("pass_turn", {reason=p:attr("sleep") and "sleep" or "stunned"})
+	if p:attr("sleep") then
+		_M.event("pass_turn", {reason="sleep"})
 		p:useEnergy()
 		return
 	end
