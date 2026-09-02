@@ -235,6 +235,8 @@ function _M.touchTick()
 	local t = _M.touch
 	if t and not t.moved and not t.fired and core.game.getTime() - t.t0 >= _M.LONG_PRESS_MS then
 		t.fired = true
+		-- SDL delivers the synthesized left-up BEFORE the finger-up: flag now
+		_M.suppress_next_up = true
 		print("[TOUCH] long-press -> right click at", t.x, t.y)
 		local m = _M.current
 		if m then
