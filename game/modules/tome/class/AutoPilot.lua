@@ -295,7 +295,7 @@ function _M.frame()
 		if game.turn ~= st.last_turn then
 			st.last_turn = game.turn
 			st.last_progress_time = now
-		elseif now - st.last_progress_time > 10 and st.ingame and _M.blockingDialogs() == 0
+		elseif now - st.last_progress_time > 3 and st.ingame and _M.blockingDialogs() == 0
 		       and game.player and not game.player.dead then
 			-- generic self-unstick: something is silently refusing to act;
 			-- burn a turn so whatever blocks us (projectile, effect) passes
@@ -574,6 +574,13 @@ function _M:onPlayerAct(p)
 
 	self.state.acts = self.state.acts + 1
 	self.state.ingame = true
+
+	-- asleep/stunned-out: actions fail without spending energy; pass the turn
+	if p:attr("sleep") or p:attr("stunned") and not p:canAct() then
+		_M.event("pass_turn", {reason=p:attr("sleep") and "sleep" or "stunned"})
+		p:useEnergy()
+		return
+	end
 
 	-- pick up whatever we are standing on, item by item (playerPickup opens
 	-- the ShowPickupFloor chooser when several items lie here, which on a
