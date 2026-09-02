@@ -23,7 +23,14 @@ main menu, native arm64, plain Lua 5.1.
   `--symbols` build + MallocScribble/GuardEdges instead. Sim audio disabled in
   harness (CoreAudio SIGABRT in the simulator).
 - Disk: soak loops filled the disk overnight; guards + retention in soak-forever.
-- Next: touch controls phase (zoom-scale click bug first), see log.
+- Phone: first install done via tools/ios/install-device.sh (needs the profile trusted
+  on the phone: Settings > General > VPN & Device Management). Refresh = re-run the
+  script (needs ~1.1GB free: out-dev + DerivedData copies of the 527MB bundle).
+- Touch buttons (Rest/Explore/Pick up/Level/Char) in the Minimalist toolbar row.
+  Next controls: verify on phone, escape/back in dialogs, text input, bigger UI
+  (zoom≠1 click bug parked: C path and Mouse zones are consistent; needs a sim probe).
+- Soaks stopped 2026-09-02 morning (loading verified). Disk stays tight: 6.1GB
+  Xcode DeviceSupport cache appeared on first phone connect.
 
 ## Earlier (late evening 2026-09-01)
 - **World tour on both platforms**: mac AND sim each clear Trollmire → Kor'Pul →
