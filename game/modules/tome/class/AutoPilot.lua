@@ -341,7 +341,17 @@ function _M.frame()
 	-- headless drive: with no human input the C loop stops requesting
 	-- ticks (its idle optimization waits for SDL events). Tick from the
 	-- display callback instead - the engine itself notes this is valid.
-	if game.tick then pcall(function() game:tick() end) end
+	-- run several game ticks per frame (time-bounded) so resting, fighting
+	-- and walking all advance at the same brisk pace instead of one turn per
+	-- rendered frame
+	if game.tick then
+		local t0 = os.clock()
+		local n = 0
+		repeat
+			local ok = pcall(function() game:tick() end)
+			n = n + 1
+		until not ok or n >= 12 or (os.clock() - t0) > 0.02
+	end
 end
 
 -- ---------------------------------------------------------------- levelup
