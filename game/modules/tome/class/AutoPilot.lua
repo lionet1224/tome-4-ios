@@ -201,13 +201,25 @@ function _M.handleDialog(d)
 	-- prompts where the bot wants to proceed: press the Yes button
 	local title = d.title and tostring(d.title) or ""
 	if title:find("Danger") or title:find("sealed door") then
+		-- prefer a Yes/Open/Ok button; otherwise the first button is the
+		-- positive one in the engine's prompt helpers
+		local first
 		for _, ui in ipairs(d.uis or {}) do
 			local u = ui.ui
-			if u and u.text and tostring(u.text):find("Yes") and u.fct then
-				_M.event("dialog_yes", {dialog=cls, title=title})
-				pcall(function() u.fct() end)
-				return
+			if u and u.fct and u.text then
+				local t = tostring(u.text)
+				if t:find("Yes") or t:find("Open") or t:find("Ok") then
+					_M.event("dialog_yes", {dialog=cls, title=title, button=t})
+					pcall(function() u.fct() end)
+					return
+				end
+				first = first or u
 			end
+		end
+		if first then
+			_M.event("dialog_yes", {dialog=cls, title=title, button=tostring(first.text)})
+			pcall(function() first.fct() end)
+			return
 		end
 	end
 	if cls:find("GetQuantity") then
