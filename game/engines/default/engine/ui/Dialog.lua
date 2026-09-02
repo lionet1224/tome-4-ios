@@ -525,6 +525,7 @@ function _M:generate()
 	if __IOS__ and not self.no_close_box then
 		self.close_box = {w=34, h=34}
 		self.close_box.x, self.close_box.y = self.display_x + self.w - self.close_box.w - 2, self.display_y + 2
+		print("[TOUCH] close box at", self.close_box.x, self.close_box.y, tostring(self.title))
 		if not self.close_box_tex then self.close_box_tex = self:drawFontLine(self.font_bold, "X", nil, 255, 255, 255) end
 		self.mouse:registerZone(self.close_box.x, self.close_box.y, self.close_box.w, self.close_box.h, function(button, x, y, xrel, yrel, bx, by, event)
 			if button == "left" and event == "button" then print("[TOUCH] close box", tostring(self.title)) self.key:triggerVirtual("EXIT") end

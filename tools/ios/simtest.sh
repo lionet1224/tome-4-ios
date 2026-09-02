@@ -38,14 +38,22 @@ check "drag -> pan" '\[TOUCH\] drag'
 $TAP tap 1142 616 >/dev/null; sleep 3; shot 04-levelup
 check "touch row Level" '\[TOUCH\] button\s+LEVELUP'
 # 4. close box
-CB=$(grep 'DLG-CLOSE' "$LOG" | tail -1); X=$(echo "$CB" | awk -F'\t' '{print $3}'); Y=$(echo "$CB" | awk -F'\t' '{print $4}')
+CB=$(grep 'TOUCH\] close box at' "$LOG" | tail -1); X=$(echo "$CB" | awk -F'\t' '{print $2}'); Y=$(echo "$CB" | awk -F'\t' '{print $3}')
 [ -n "$X" ] && { $TAP tap $((X+17)) $((Y+17)) >/dev/null; sleep 2; shot 05-closed; }
 check "dialog close box" '\[TOUCH\] close box'
 # 5. escape key path (HID) opens the game menu, again closes it
 ~/.local/bin/idb ui key 41 --udid "$UD" >/dev/null 2>&1; sleep 2; shot 06-gamemenu
 ~/.local/bin/idb ui key 41 --udid "$UD" >/dev/null 2>&1; sleep 1
-# 6. touch row: Rest / Explore
-$TAP tap 1014 616 >/dev/null; sleep 3; shot 07-rest
+# 6. touch row (tiles right to left: Rest 1334, Explore 1270, Pick up 1206, Level 1142, Char 1078; y 616)
+$TAP tap 1334 616 >/dev/null; sleep 3; shot 07-rest
 check "touch row Rest" '\[TOUCH\] button\s+REST'
+$TAP tap 1078 616 >/dev/null; sleep 3; shot 08-char
+check "touch row Char" '\[TOUCH\] button\s+SHOW_CHARACTER_SHEET'
+CB=$(grep 'TOUCH\] close box at' "$LOG" | tail -1); X=$(echo "$CB" | awk -F'\t' '{print $2}'); Y=$(echo "$CB" | awk -F'\t' '{print $3}')
+[ -n "$X" ] && { $TAP tap $((X+17)) $((Y+17)) >/dev/null; sleep 2; shot 09-char-closed; }
+$TAP tap 1206 616 >/dev/null; sleep 3; shot 10-pickup
+check "touch row Pick up" '\[TOUCH\] button\s+PICKUP_FLOOR'
+$TAP tap 1270 616 >/dev/null; sleep 4; shot 11-explore
+check "touch row Explore" '\[TOUCH\] button\s+RUN_AUTO'
 echo "lua errors: $(grep -c 'Lua Error' "$LOG")"
 echo "frames in $OUT"
