@@ -3154,6 +3154,11 @@ static int sdl_get_png_screenshot(lua_State *L)
 	int aw, ah;
 
 	SDL_GetWindowSize(window, &aw, &ah);
+#ifdef TE4_IOS
+	/* logical coords -> pixels; the framebuffer is the drawable size */
+	x *= screen_zoom; y *= screen_zoom; width *= screen_zoom; height *= screen_zoom;
+	SDL_GL_GetDrawableSize(window, &aw, &ah);
+#endif
 
 	/* Y coordinate must be reversed for OpenGL. */
 	y = ah - (y + height);
