@@ -38,6 +38,7 @@ _M.state = {
 	level_key = nil, level_acts = 0, explore_noprog = 0, explored = false, last_act_turn = -1,
 	arrival = nil, bad_stairs = {}, stairs_tries = 0, stairs_wait = 0,
 	zone_done = {}, levels_seen = {},
+	fight_uid = nil, fight_acts = 0, ignore_uids = {},
 }
 
 -- env vars don't reach module Lua (sandboxed os); the soak harness writes
@@ -205,8 +206,15 @@ function _M.handleDialog(d)
 	-- answer it positively instead of cancelling forever
 	local st = _M.state
 	if st.last_dialog_title == title then st.dialog_repeat = (st.dialog_repeat or 0) + 1 else st.dialog_repeat = 0 end
+	if st.dialog_repeat >= 30 then
+		-- a dialog we keep answering and that keeps coming back = stuck; end the
+		-- run with a clear reason instead of spinning until someone notices
+		_M.event("stall_dialog", {title=title, dialog=tostring(d.__CLASSNAME), repeats=st.dialog_repeat})
+		_M.quit(3)
+		return
+	end
 	st.last_dialog_title = title
-	if title:find("Danger") or title:find("sealed door") or title:find("Transmogrification") or st.dialog_repeat >= 2 then
+	if title:find("Danger") or title:find("sealed door") or title == "Transmogrification Chest" or st.dialog_repeat >= 2 then
 		-- prefer a Yes/Open/Ok button; otherwise the first button is the
 		-- positive one in the engine's prompt helpers
 		local first
@@ -290,7 +298,8 @@ function _M.frame()
 		if p and not p.dead then
 			_M.event("heartbeat", {life=math.floor(p.life or 0), max_life=math.floor(p.max_life or 0),
 				plevel=p.level or 0, kills=st.kills, chats=st.chat_answers, acts=st.acts,
-				mem_kb=math.floor(collectgarbage("count"))})
+				mem_kb=math.floor(collectgarbage("count")),
+				unused_stats=p.unused_stats or 0, unused_talents=p.unused_talents or 0, unused_generics=p.unused_generics or 0})
 		end
 		if game.turn ~= st.last_turn then
 			st.last_turn = game.turn
@@ -511,6 +520,31 @@ local function stepToward(p, tx, ty)
 end
 
 -- try a real activated talent on the target; falls back to a melee bump
+-- score an item for the upgrade pass: weapons by the engine's own stat-aware
+-- damage estimate (a mindstar is worthless to a Berserker), the rest by price
+local function itemScore(p, o)
+	if not o then return -1 end
+	if o.combat and o.combat.dam and not o.archery and not o.archery_ammo then
+		local ok, d = pcall(function() return p:combatDamage(o.combat) end)
+		if ok and d then return 1000 + d * 10 end
+	end
+	local ok, price = pcall(function() return o:getPrice() end)
+	return ok and tonumber(price) or 0
+end
+
+-- wear `o` (pack slot idx) the way Player:doWear does: the replaced item goes
+-- back in the pack (the old churn dropped it into nothing = lost gear)
+local function wearFromPack(p, inven, idx, o)
+	pcall(function() p:removeObject(inven, idx, true) end)
+	local ok, ro = pcall(function() return p:wearObject(o, true, false) end)
+	if ok and ro then
+		if type(ro) == "table" then pcall(function() p:addObject(inven, ro) end) end
+		return true
+	end
+	pcall(function() p:addObject(inven, o) end)
+	return false
+end
+
 local function tryCombatTalent(p, target)
 	if rng.percent(50) then return false end -- half the time, plain attacks
 	local cands = {}
@@ -597,27 +631,40 @@ function _M:onPlayerAct(p)
 		-- couldn't pick (full pack, etc.): fall through so we don't loop
 	end
 
-	-- periodic equip churn: wear something wearable from the pack
-	-- (exercises wear/takeoff + stat recomputation, a classic bug nest)
+	-- equipment: every 40 acts wear the best upgrade in the pack (weapons by
+	-- the engine's stat-aware damage estimate, the rest by price); every 200
+	-- acts with no upgrade, random churn to exercise wear/takeoff anyway
 	if self.state.acts % 40 == 0 then
 		local inven = p:getInven(p.INVEN_INVEN)
 		if inven then
-			local wearables = {}
+			local best, bestgain
 			for i, o in ipairs(inven) do
-				if o:wornInven() then wearables[#wearables+1] = {o=o, idx=i} end
-			end
-			if #wearables > 0 then
-				local pick = wearables[rng.range(1, #wearables)]
-				-- same order as the game's doWear: remove, wear, restore on failure
-				pcall(function() p:removeObject(inven, pick.idx, true) end)
-				local ok, worn = pcall(function() return p:wearObject(pick.o, true, false) end)
-				if ok and worn then
-					self.state.equips = self.state.equips + 1
-					_M.event("equip", {name=pick.o.name or "?"})
-				else
-					pcall(function() p:addObject(inven, pick.o) end)
+				local wi = o:wornInven()
+				if wi then
+					local worn = p:getInven(wi)
+					local gain = itemScore(p, o) - itemScore(p, worn and worn[1])
+					if gain > 0 and (not bestgain or gain > bestgain) then best, bestgain = {o=o, idx=i}, gain end
 				end
-				return
+			end
+			if best then
+				if wearFromPack(p, inven, best.idx, best.o) then
+					self.state.equips = self.state.equips + 1
+					_M.event("equip", {name=best.o.name or "?", upgrade=true, gain=math.floor(bestgain)})
+					return
+				end
+			elseif self.state.acts % 200 == 0 then
+				local wearables = {}
+				for i, o in ipairs(inven) do
+					if o:wornInven() then wearables[#wearables+1] = {o=o, idx=i} end
+				end
+				if #wearables > 0 then
+					local pick = wearables[rng.range(1, #wearables)]
+					if wearFromPack(p, inven, pick.idx, pick.o) then
+						self.state.equips = self.state.equips + 1
+						_M.event("equip", {name=pick.o.name or "?"})
+						return
+					end
+				end
 			end
 		end
 	end
@@ -625,11 +672,31 @@ function _M:onPlayerAct(p)
 	-- handling before it can be automated safely
 
 	local hostiles = p:spotHostiles(true)
-	if #hostiles > 0 then
-		local best, bd
-		for _, h in ipairs(hostiles) do
+	local best, bd
+	for _, h in ipairs(hostiles) do
+		if not self.state.ignore_uids[h.actor.uid] then
 			local d = core.fov.distance(p.x, p.y, h.x, h.y)
 			if not bd or d < bd then best, bd = h, d end
+		end
+	end
+	if best then
+		-- stalemate: same target for 150 acts and it's still alive (e.g. a
+		-- vampire out-healing our damage). Log it; in god mode smite it so the
+		-- tour continues, otherwise ignore it and move on.
+		local st = self.state
+		if st.fight_uid == best.actor.uid then st.fight_acts = st.fight_acts + 1 else st.fight_uid, st.fight_acts = best.actor.uid, 0 end
+		if st.fight_acts >= 150 then
+			local w = p:getInven(p.INVEN_MAINHAND); w = w and w[1]
+			_M.event("stalemate", {target=best.actor.name or "?", acts=st.fight_acts, target_life=math.floor(best.actor.life or 0),
+				weapon=w and w.name or "none", godmode=_M.godmode()})
+			st.fight_uid, st.fight_acts = nil, 0
+			if _M.godmode() then
+				_M.event("godmode_kill", {target=best.actor.name or "?"})
+				pcall(function() best.actor:die(p) end)
+			else
+				st.ignore_uids[best.actor.uid] = true
+			end
+			return
 		end
 		if tryCombatTalent(p, best.actor) then return end
 		if bd <= 1 then
@@ -640,6 +707,7 @@ function _M:onPlayerAct(p)
 		end
 		return
 	end
+	self.state.fight_uid, self.state.fight_acts = nil, 0
 
 	if keepSustainsUp(p) then return end
 
