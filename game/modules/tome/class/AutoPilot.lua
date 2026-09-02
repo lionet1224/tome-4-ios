@@ -194,7 +194,7 @@ function _M.handleDialog(d)
 	-- "Danger..." (descending to a level above our rank) and similar yes/no
 	-- prompts where the bot wants to proceed: press the Yes button
 	local title = d.title and tostring(d.title) or ""
-	if title:find("Danger") then
+	if title:find("Danger") or title:find("sealed door") then
 		for _, ui in ipairs(d.uis or {}) do
 			local u = ui.ui
 			if u and u.text and tostring(u.text):find("Yes") and u.fct then
