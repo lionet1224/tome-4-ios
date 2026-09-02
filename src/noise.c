@@ -204,7 +204,7 @@ static int noise_texture2d(lua_State *L)
 	auxiliar_setclass(L, "gl{texture}", -1);
 
 	glGenTextures(1, t);
-	glBindTexture(GL_TEXTURE_2D, *t);
+	tfglBindTexture(GL_TEXTURE_2D, *t);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);

@@ -438,7 +438,7 @@ static void web_mutex_unlock(void *mutex) {
 static void *web_make_texture(int w, int h) {
 	GLuint *tex = malloc(sizeof(GLuint));
 	glGenTextures(1, tex);
-	glBindTexture(GL_TEXTURE_2D, *tex);
+	tfglBindTexture(GL_TEXTURE_2D, *tex);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
