@@ -325,6 +325,18 @@ function _M.frame()
 	if st.done then return end
 	if coroutine.running() then return end
 	if (st.changing_level or 0) > 0 then return end
+	-- per-level game-turn cap, checked per frame: the act-based cap does not
+	-- see turns spent inside a run (sim: 130k turns/min auto-exploring in
+	-- circles on old-forest L4 with only "Running..." popups)
+	if game.zone and game.level and game.player then
+		local lk = tostring(game.zone.short_name)..":"..tostring(game.level.level)
+		if st.turncap_key ~= lk then st.turncap_key, st.turncap_turn0 = lk, game.turn end
+		if not st.explored and game.turn - (st.turncap_turn0 or game.turn) > 40000 then
+			_M.event("level_explored", {reason="turn_cap", turns=game.turn - st.turncap_turn0})
+			st.explored = true
+			pcall(function() game.player:runStop("autopilot turn cap") end)
+		end
+	end
 	local now = os.time()
 
 	-- periodic in-game screenshot (engine glReadPixels -> PNG in
