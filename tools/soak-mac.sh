@@ -27,6 +27,8 @@ mkdir -p "$HOME_TE/settings"
 printf 'autopilot = true\nautopilot_build = "%s"\n' "$SHA" > "$HOME_TE/settings/autopilot.cfg"
 trap 'rm -f "$HOME_TE/settings/autopilot.cfg"' EXIT
 export TE4_BUILD_SHA="$SHA"
+# AddressSanitizer build (premake --asan): report to $RUN/asan.<pid>, abort on first error
+export ASAN_OPTIONS="abort_on_error=1:halt_on_error=1:detect_leaks=0:log_path=$RUN/asan:print_stats=0"
 
 echo "[soak] $MINUTES min run, build $SHA -> $RUN"
 pkill -9 -f "MacOS/t-engine" 2>/dev/null; sleep 1  # SIGKILL: the engine ignores TERM. mac binary only (launched by relative path); the sim app is ToME.app/t-engine
@@ -67,7 +69,7 @@ TELE="$(tele_for_run "$HOME_TE/tome/autopilot")"
 ls "$HOME_TE"/tome/error-logs/*/*.txt 2>/dev/null | tail -3 | while read -r f; do cp "$f" "$RUN/"; done
 
 # in-game screenshots taken by the autopilot every 60s
-mkdir -p "$RUN/shots"; find "$HOME_TE/tome/screenshots" -name '*.png' -newer "$RUN/.start" -exec cp {} "$RUN/shots/" \; 2>/dev/null
+mkdir -p "$RUN/shots"; find "$HOME_TE/tome/screenshots" -name '*.png' -newer "$RUN/.start" -exec mv {} "$RUN/shots/" \; 2>/dev/null
 # harvest crash reports from the run window
 sleep 4  # the .ips lands a few seconds after the crash
 find "$HOME/Library/Logs/DiagnosticReports" -name 't-engine-*.ips' -newer "$RUN/.start" -exec cp {} "$RUN/" \; 2>/dev/null

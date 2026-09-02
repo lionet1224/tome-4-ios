@@ -71,7 +71,7 @@ if [ -n "$D" ]; then
 	[ -n "${TELE:-}" ] && cp "$TELE" "$RUN/telemetry.jsonl" || echo "[soak-sim] no telemetry from this run"
 	ls "$D/Documents/t-engine/4.0/tome/error-logs/"*/*.txt 2>/dev/null | tail -3 | while read -r f; do cp "$f" "$RUN/"; done
 fi
-mkdir -p "$RUN/shots"; [ -n "$D" ] && find "$D/Documents/t-engine/4.0/tome/screenshots" -name '*.png' -newer "$RUN/.start" -exec cp {} "$RUN/shots/" \; 2>/dev/null
+mkdir -p "$RUN/shots"; [ -n "$D" ] && find "$D/Documents/t-engine/4.0/tome/screenshots" -name '*.png' -newer "$RUN/.start" -exec mv {} "$RUN/shots/" \; 2>/dev/null
 
 python3 "$ROOT/tools/telemetry-summary.py" "$RUN/telemetry.jsonl" "$RUN/console.log" 2>/dev/null || true
 echo "[soak-sim] artifacts in $RUN"
