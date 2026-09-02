@@ -520,6 +520,17 @@ function _M:generate()
 		self.mouse:registerZone(self.display_x + self.frame.ox1, self.display_y + self.frame.ox2, self.frame.w, self.frame.h, function(...) self:no_focus() end)
 		self.mouse:registerZone(self.display_x, self.display_y, self.w, self.h, function(...) self:mouseEvent(...) end)
 	end
+	-- iOS port: a close box at the top-right of every dialog (there is no
+	-- Escape key on a phone; registered last so it is tested first)
+	if __IOS__ and not self.no_close_box then
+		self.close_box = {w=34, h=34}
+		self.close_box.x, self.close_box.y = self.display_x + self.w - self.close_box.w - 2, self.display_y + 2
+		if not self.close_box_tex then self.close_box_tex = self:drawFontLine(self.font_bold, "X", nil, 255, 255, 255) end
+		self.mouse:registerZone(self.close_box.x, self.close_box.y, self.close_box.w, self.close_box.h, function(button, x, y, xrel, yrel, bx, by, event)
+			if button == "left" and event == "button" then self.key:triggerVirtual("EXIT") end
+			return true
+		end, nil, "dlg_close_box")
+	end
 	self.key.receiveKey = function(_, ...) self:keyEvent(...) end
 	self.key:addCommands{
 		_TAB = function() self:moveFocus(1) end,
@@ -987,6 +998,11 @@ function _M:toScreen(x, y, nb_keyframes)
 		end
 		self:textureToScreen(self.title_tex, x + (self.w - self.title_tex.w) / 2 + self.frame.title_x, y + self.frame.title_y)
 		if self.title_shadow and shader then shader:use(false) end
+	end
+	if self.close_box and self.close_box_tex then
+		local cb = self.close_box
+		core.display.drawQuad(x + self.w - cb.w - 2, y + 2, cb.w, cb.h, 60, 20, 20, 200)
+		self:textureToScreen(self.close_box_tex, x + self.w - cb.w - 2 + (cb.w - self.close_box_tex.w) / 2, y + 2 + (cb.h - self.close_box_tex.h) / 2)
 	end
 
 	self:innerDisplayBack(x, y, nb_keyframes, tx, ty)

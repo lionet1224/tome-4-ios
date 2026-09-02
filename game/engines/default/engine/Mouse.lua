@@ -257,15 +257,43 @@ local function touchToScreen(x, y)
 	return x, y
 end
 
+-- * two-finger tap = Escape (the EXIT keybind of whatever has the keyboard:
+--   closes dialogs/menus, cancels targeting, opens the game menu in play)
+_M.fingers = {}
+_M.nb_fingers = 0
+
+function _M.escape()
+	local k = engine.KeyBind and engine.KeyBind.current or (engine.Key and engine.Key.current)
+	if k and k.triggerVirtual then k:triggerVirtual("EXIT") end
+end
+
 function _M:receiveTouch(fingerId, x, y, dx, dy, pressure, isup)
 	if not isup then
-		local sx, sy = touchToScreen(x, y)
-		_M.touch = {x=sx, y=sy, t0=core.game.getTime(), moved=false, fired=false}
+		if not _M.fingers[fingerId] then _M.nb_fingers = _M.nb_fingers + 1 end
+		_M.fingers[fingerId] = true
+		if _M.nb_fingers >= 2 then
+			-- second finger: this is a multi-touch gesture, not a tap/long-press
+			if _M.touch then _M.touch.moved = true end
+			_M.multi = {t0=core.game.getTime(), fired=false}
+		else
+			local sx, sy = touchToScreen(x, y)
+			_M.touch = {x=sx, y=sy, t0=core.game.getTime(), moved=false, fired=false}
+		end
 	else
-		local t = _M.touch
-		_M.touch = nil
-		if t and t.fired then _M.suppress_next_up = true end
-		_M.park_cursor = 2 -- frames; after the synthesized mouse-up has been delivered
+		if _M.fingers[fingerId] then _M.fingers[fingerId] = nil _M.nb_fingers = math.max(0, _M.nb_fingers - 1) end
+		local m = _M.multi
+		if m and not m.fired and core.game.getTime() - m.t0 < 600 then
+			m.fired = true
+			_M.suppress_next_up = true -- the synthesized left click of the first finger
+			_M.escape()
+		end
+		if _M.nb_fingers == 0 then
+			local t = _M.touch
+			_M.touch = nil
+			_M.multi = nil
+			if t and t.fired then _M.suppress_next_up = true end
+			_M.park_cursor = 2 -- frames; after the synthesized mouse-up has been delivered
+		end
 	end
 	return self:receiveTouchOrig(fingerId, x, y, dx, dy, pressure, isup)
 end
