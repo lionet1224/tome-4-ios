@@ -29,6 +29,9 @@ SHA="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 DPRE="$(xcrun simctl get_app_container "$DEV" $BUNDLE_ID data 2>/dev/null)"
 if [ -n "$DPRE" ]; then
 	mkdir -p "$DPRE/Documents/t-engine/4.0/settings"
+	# audio off: CoreAudio inside the simulator aborts the process (SIGABRT ~9s
+	# after launch, when the boot-menu music starts) as of 2026-09-02
+	printf 'audio.enable = false\naudio.music_volume = 0\naudio.effects_volume = 0\n' > "$DPRE/Documents/t-engine/4.0/settings/audio.cfg"
 	printf 'autopilot = true\nautopilot_build = "%s"\n' "$SHA" > "$DPRE/Documents/t-engine/4.0/settings/autopilot.cfg"
 	[ -n "${RESUME:-}" ] && printf 'autopilot_resume = "%s"\n' "$RESUME" >> "$DPRE/Documents/t-engine/4.0/settings/autopilot.cfg" && echo "[soak-sim] resuming save $RESUME"
 	trap 'rm -f "$DPRE/Documents/t-engine/4.0/settings/autopilot.cfg"' EXIT
