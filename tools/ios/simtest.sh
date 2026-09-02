@@ -23,10 +23,12 @@ xcrun simctl terminate "$UD" org.te4.tome.dev 2>/dev/null
 xcrun simctl launch --console-pty "$UD" org.te4.tome.dev --flush-stdout > "$LOG" 2>&1 &
 sleep 85; shot 01-ingame
 check "character created (birth-only autopilot)" '"birther_state"|AUTOPILOT\] active'
-# orientation calibration: tap the far top-left of the map and read the engine coords back
-N0=$(grep -cE 'IOS-INPUT\] UP' "$LOG"); $TAP tap 300 60 >/dev/null; sleep 2
+# orientation calibration: tap the player frame (HUD, harmless; also dismisses a
+# Running popup) and read the engine coords back
+N0=$(grep -cE 'IOS-INPUT\] UP' "$LOG"); $TAP tap 60 100 >/dev/null; sleep 2
 RAW=$(grep -E 'IOS-INPUT\] UP' "$LOG" | sed -n "$((N0+1))p" | grep -oE 'lua=\([0-9.]+,[0-9.]+\)')
-echo "calibration tap -> $RAW (expected near (300,60); if mirrored, flip orient in ~/.tome-simtap.json)"
+echo "calibration tap -> $RAW (expected near (60,100); if mirrored, flip orient in ~/.tome-simtap.json)"
+$TAP tap 60 100 >/dev/null; sleep 2   # settle: no dialog, character idle
 # 1. long-press on the character's tile area = right click menu
 $TAP tap 700 320 --long >/dev/null; sleep 2; shot 02-longpress
 check "long-press -> right click" '\[TOUCH\] long-press'
