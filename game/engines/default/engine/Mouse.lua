@@ -292,10 +292,10 @@ function _M:receiveTouch(fingerId, x, y, dx, dy, pressure, isup)
 			_M.escape()
 		end
 		if _M.nb_fingers == 0 then
-			local t = _M.touch
 			_M.touch = nil
 			_M.multi = nil
-			if t and t.fired then _M.suppress_next_up = true end
+			-- (the long-press click was already swallowed when it fired: the
+			-- synthesized mouse-up precedes this finger-up)
 			_M.park_cursor = 2 -- frames; after the synthesized mouse-up has been delivered
 		end
 	end
