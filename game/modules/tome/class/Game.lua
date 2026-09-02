@@ -109,6 +109,7 @@ function _M:run()
 end
 
 function _M:runReal()
+	print("[AP-LOAD] runReal() begin level=", self.level and true or false, "player=", self.player and true or false)
 	self.delayed_log_damage = {}
 	self.delayed_log_messages = {}
 	self.calendar = Calendar.new("/data/calendar_allied.lua", "Today is the %s %s of the %s year of the Age of Ascendancy of Maj'Eyal.\nThe time is %02d:%02d.", 122, 167, 11)
@@ -178,6 +179,7 @@ function _M:runReal()
 	self.shake_y = 0
 
 	self.inited = true
+	print("[AP-LOAD] runReal() inited level=", self.level and true or false)
 
 	if self.level and self.level.map then
 		self.nicer_tiles:postProcessLevelTilesOnLoad(self.level)
@@ -432,6 +434,7 @@ function _M:setupPermadeath(p)
 end
 
 function _M:loaded()
+	print("[AP-LOAD] loaded() begin level=", self.level and true or false, "zone=", self.zone and self.zone.short_name)
 	engine.GameTurnBased.loaded(self)
 	engine.interface.GameMusic.loaded(self)
 	engine.interface.GameSound.loaded(self)
@@ -467,6 +470,7 @@ function _M:loaded()
 	self:onTickEnd(function() self:updateCurrentChar() end)
 
 	if self.zone and self.zone.on_loaded then self.zone.on_loaded(self.level.level) end
+	print("[AP-LOAD] loaded() end level=", self.level and true or false)
 end
 
 function _M:computeAttachementSpotsFromTable(ta)
