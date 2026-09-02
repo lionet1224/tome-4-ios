@@ -46,6 +46,7 @@ for i in $(seq 1 "$SECS"); do
 		if [ -n "$TELE" ]; then
 			AGE=$(( $(date +%s) - $(stat -f %m "$TELE") ))
 			if [ "$AGE" -gt 120 ]; then echo "[soak] HUNG: telemetry stale ${AGE}s"; HUNG=1; break; fi
+		elif [ "$i" -ge 180 ]; then echo "[soak] HUNG: no telemetry ${i}s after launch"; HUNG=1; break
 			if grep -q '"session_end"' "$TELE"; then echo "[soak] autopilot ended the run"; pkill -9 -f "MacOS/t-engine"; break; fi
 		fi
 	fi
