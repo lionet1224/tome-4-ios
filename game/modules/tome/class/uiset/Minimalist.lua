@@ -1964,18 +1964,20 @@ function _M:displayToolbar(scale, bx, by)
 				tb.tex = {surf:glTexture()}; tb.tw, tb.th = surf:getSize()
 				tb.alpha = 0.6
 			end
-			local tx, ty = -i * tb_bg[6], 5 * tb_bg[7]
-			tb_bg[1]:toScreenFull(tx, ty, tb_bg[6], tb_bg[7], tb_bg[2], tb_bg[3], 1, 1, 1, 1)
-			tb.tex[1]:toScreenFull(tx + (tb_bg[6] - tb.tw) / 2, ty + (tb_bg[7] - tb.th) / 2, tb.tw, tb.th, tb.tex[2], tb.tex[3], 1, 1, 1, tb.alpha)
+			-- twice the toolbar icon size: finger-sized targets even at 2x zoom
+			local bw, bh = tb_bg[6] * 2, tb_bg[7] * 2
+			local tx, ty = -i * bw, 6 * tb_bg[7] - bh
+			tb_bg[1]:toScreenFull(tx, ty, bw, bh, tb_bg[2], tb_bg[3], 1, 1, 1, 1)
+			tb.tex[1]:toScreenFull(tx + (bw - tb.tw * 1.5) / 2, ty + (bh - tb.th * 1.5) / 2, tb.tw * 1.5, tb.th * 1.5, tb.tex[2], tb.tex[3], 1, 1, 1, tb.alpha)
 			local zone = "tb_touch_"..tb.key
-			if not game.mouse:updateZone(zone, bx + tx * scale, by + ty * scale, tb_bg[6], tb_bg[7], nil, scale) then
+			if not game.mouse:updateZone(zone, bx + tx * scale, by + ty * scale, bw, bh, nil, scale) then
 				game.mouse:unregisterZone(zone)
 				local desc_fct = function(button, mx, my, xrel, yrel, bx, by, event)
 					if event == "out" then tb.alpha = 0.6 return else tb.alpha = 1 end
 					game.tooltip_x, game.tooltip_y = 1, 1; game:tooltipDisplayAtMap(game.w, game.h, tb.tip)
 					if button == "left" and not xrel and not yrel and event == "button" then game.key:triggerVirtual(tb.key) end
 				end
-				game.mouse:registerZone(bx + tx * scale, by + ty * scale, tb_bg[6], tb_bg[7], desc_fct, nil, zone, true, scale)
+				game.mouse:registerZone(bx + tx * scale, by + ty * scale, bw, bh, desc_fct, nil, zone, true, scale)
 			end
 		end
 	end

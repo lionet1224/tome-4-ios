@@ -76,6 +76,10 @@ mouse_cursor = true
 display_fps = 30
 gamma_correction = 120
 font_scale = 100
+-- iOS port: render at native pixels with a 2x UI scale and 150% fonts (a
+-- 1398x645 logical screen on a Plus-size phone: desktop dialogs fit, text
+-- stays readable). settings/*.cfg files still override these.
+if __IOS__ then screen_zoom = 2 font_scale = 150 end
 mouse_move = true
 censor_boot = true
 chat.filter = {}
