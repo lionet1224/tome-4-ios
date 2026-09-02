@@ -49,13 +49,16 @@ end
 
 -- os.exit does nothing on iOS; ask the engine to shut down instead
 function _M.quit(code)
+	if _M.state.done then return end
+	-- done first: the save below redraws from the main thread, which re-enters
+	-- frame() -> the same stuck dialog -> quit() -> save ... (stack overflow)
+	_M.state.done = true
 	-- persist the exact state for repro (tools/soak-resume.sh), then end
 	if game and game.saveGame and game.player and not game.player.dead then
 		local ok, err = pcall(function() game:saveGame(); savefile_pipe:forceWait() end)
 		_M.event("saved", {name=game.save_name, ok=ok and true or false, err=(not ok) and tostring(err) or nil})
 	end
 	_M.event("session_end", {code=code or 0, save=game and game.save_name})
-	_M.state.done = true
 	pcall(os.exit, code or 0)
 	pcall(function() core.game.exit_engine() end)
 end
@@ -284,7 +287,10 @@ function _M.handleDialog(d)
 		local pick = rng.range(1, #d.list)
 		-- the same chat 3x in a row: random answers keep reopening it, so take
 		-- the last one (by convention the goodbye/leave answer)
-		if (_M.state.dialog_repeat or 0) >= 3 then pick = #d.list end
+		-- the same chat 3x in a row: cycle through the answers (the hermit's 2-answer
+		-- chat reopened 29x on the "last" answer); if none ends it, stall_dialog ends the run
+		local rep = _M.state.dialog_repeat or 0
+		if rep >= 3 then pick = (rep % #d.list) + 1 end
 		_M.event("chat_answer", {dialog=cls, pick=pick, of=#d.list, repeat_n=_M.state.dialog_repeat or 0})
 		local ok = pcall(function() d:use(d.list[pick]) end)
 		if ok then return end
