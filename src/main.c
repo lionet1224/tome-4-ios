@@ -68,6 +68,7 @@ char *override_home = NULL;
 int g_argc = 0;
 char **g_argv;
 float screen_zoom = 1;
+float dpi_scale = 1; /* iOS: drawable pixels per window point (touch coords arrive in points) */
 SDL_Window *window = NULL;
 SDL_Surface *windowIconSurface = NULL;
 SDL_GLContext maincontext; /* Our opengl context handle */
@@ -452,8 +453,8 @@ bool on_event(SDL_Event *event)
 				lua_concat(L, 2);
 				break;
 			}
-			lua_pushnumber(L, event->button.x / screen_zoom);
-			lua_pushnumber(L, event->button.y / screen_zoom);
+			lua_pushnumber(L, event->button.x * dpi_scale / screen_zoom);
+			lua_pushnumber(L, event->button.y * dpi_scale / screen_zoom);
 			lua_pushboolean(L, (event->type == SDL_MOUSEBUTTONUP) ? TRUE : FALSE);
 			docall(L, 5, 0);
 		}
@@ -477,16 +478,16 @@ bool on_event(SDL_Event *event)
 				else if (event->wheel.x > 0) lua_pushstring(L, "wheelleft");
 				else if (event->wheel.x < 0) lua_pushstring(L, "wheelright");
 				else lua_pushstring(L, "wheelnone");
-				lua_pushnumber(L, x / screen_zoom);
-				lua_pushnumber(L, y / screen_zoom);
+				lua_pushnumber(L, x * dpi_scale / screen_zoom);
+				lua_pushnumber(L, y * dpi_scale / screen_zoom);
 				lua_pushboolean(L, i);
 				docall(L, 5, 0);
 			}
 		}
 		return TRUE;
 	case SDL_MOUSEMOTION:
-		mousex = event->motion.x / screen_zoom;
-		mousey = event->motion.y / screen_zoom;
+		mousex = event->motion.x * dpi_scale / screen_zoom;
+		mousey = event->motion.y * dpi_scale / screen_zoom;
 
 		if (current_mousehandler != LUA_NOREF)
 		{
@@ -501,10 +502,10 @@ bool on_event(SDL_Event *event)
 			else if (event->motion.state & SDL_BUTTON(4)) lua_pushstring(L, "wheelup");
 			else if (event->motion.state & SDL_BUTTON(5)) lua_pushstring(L, "wheeldown");
 			else lua_pushstring(L, "none");
-			lua_pushnumber(L, event->motion.x / screen_zoom);
-			lua_pushnumber(L, event->motion.y / screen_zoom);
-			lua_pushnumber(L, event->motion.xrel);
-			lua_pushnumber(L, event->motion.yrel);
+			lua_pushnumber(L, event->motion.x * dpi_scale / screen_zoom);
+			lua_pushnumber(L, event->motion.y * dpi_scale / screen_zoom);
+			lua_pushnumber(L, event->motion.xrel * dpi_scale / screen_zoom);
+			lua_pushnumber(L, event->motion.yrel * dpi_scale / screen_zoom);
 			docall(L, 6, 0);
 		}
 		return TRUE;
@@ -1104,6 +1105,16 @@ static void update_screen_surface(SDL_Window *win)
 {
 	int sw, sh;
 	SDL_GetWindowSize(win, &sw, &sh);
+#ifdef TE4_IOS
+	{
+		/* render at native pixels: the engine's screen is the drawable size */
+		int dw, dh;
+		SDL_GL_GetDrawableSize(win, &dw, &dh);
+		if (dw > 0 && sw > 0) dpi_scale = (float)dw / (float)sw;
+		if (dw > 0 && dh > 0) { sw = dw; sh = dh; }
+		printf("[IOS-DPI] window %dx%d pt, drawable %dx%d px, scale %.2f, zoom %.2f\n", sw, sh, dw, dh, dpi_scale, screen_zoom);
+	}
+#endif
 	if (screen) SDL_FreeSurface(screen);
 	screen = SDL_CreateRGBSurface(0, sw, sh, 32, 0, 0, 0, 0);
 }
@@ -1142,6 +1153,9 @@ void do_resize(int w, int h, bool fullscreen, bool borderless, float zoom)
 				(start_xpos == -1) ? SDL_WINDOWPOS_CENTERED : start_xpos,
 				(start_ypos == -1) ? SDL_WINDOWPOS_CENTERED : start_ypos, w, h,
 				SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL
+#ifdef TE4_IOS
+				| SDL_WINDOW_ALLOW_HIGHDPI
+#endif
 				| (!borderless ? SDL_WINDOW_RESIZABLE : 0)
 				| (fullscreen ? SDL_WINDOW_FULLSCREEN : 0)
 				| (borderless ? SDL_WINDOW_BORDERLESS : 0)
@@ -1231,6 +1245,9 @@ void do_resize(int w, int h, bool fullscreen, bool borderless, float zoom)
 
 	/* Check and see if SDL honored our resize request */
 	SDL_GetWindowSize(window, &aw, &ah);
+#ifdef TE4_IOS
+	SDL_GL_GetDrawableSize(window, &aw, &ah);
+#endif
 	printf("[DO RESIZE] Got: %dx%d (%d, %d)\n", aw, ah, is_fullscreen, borderless);
 	SDL_GL_MakeCurrent(window, maincontext);
 	resizeWindow(aw, ah);
