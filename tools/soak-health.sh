@@ -14,7 +14,11 @@ stat_one() { # name dir
 	local t1 t2; t1=$(echo "$hb" | grep -oE '"turn":[0-9]+' | cut -d: -f2); t2=$(echo "$hb2" | grep -oE '"turn":[0-9]+' | cut -d: -f2)
 	local zone lvl pl kills; zone=$(echo "$hb" | grep -oE '"zone":"[^"]*"' | cut -d'"' -f4); lvl=$(echo "$hb" | grep -oE '"lvl":[0-9]+' | cut -d: -f2)
 	pl=$(echo "$hb" | grep -oE '"plevel":[0-9]+' | cut -d: -f2); kills=$(echo "$hb" | grep -oE '"kills":[0-9]+' | cut -d: -f2)
+	local a1 a2; a1=$(echo "$hb" | grep -oE '"acts":[0-9]+' | cut -d: -f2); a2=$(echo "$hb2" | grep -oE '"acts":[0-9]+' | cut -d: -f2)
 	local moving="MOVING"; [ "${t1:-0}" -le "${t2:-0}" ] && moving="STALLED(turn ${t1:-?} for ~2min)"
+	[ "${a1:-0}" -le "${a2:-0}" ] && [ "${#hb2}" -gt 0 ] && moving="STALLED(no player acts for ~2min, turn ${t1:-?})"
+	local junk; junk=$(tail -100 "$f" | grep -cE '"ev":"(pass_turn|dialog_yes|dialog_dismiss|dialog_seen|unstick|would_have_died|use_talent|heartbeat)"')
+	[ "$junk" -ge 97 ] && moving="LOOPING($(tail -100 "$f" | grep -oE '"ev":"[a-z_]+"' | sort | uniq -c | sort -rn | head -1 | awk '{print $2}' | tr -d '"'))"
 	[ "$age" -gt 120 ] && moving="DEAD(telemetry ${age}s old)"
 	echo "$1: $moving | $zone L$lvl plevel $pl kills $kills | run age $(( ( $(date +%s) - $(basename "$f" .jsonl | sed s/telemetry-//) ) / 60 ))min"
 	echo "   errors: lua=$(grep -c '"lua_error"' "$f") stalls=$(grep -cE '"(stall_dialog|stalemate)"' "$f") unstick=$(grep -c '"unstick"' "$f") overflow=$(grep -c '"ui_overflow"' "$f")"

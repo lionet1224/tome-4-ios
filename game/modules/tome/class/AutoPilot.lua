@@ -610,11 +610,19 @@ function _M:onPlayerAct(p)
 	self.state.ingame = true
 
 	-- asleep/stunned-out: actions fail without spending energy; pass the turn
-	if p:attr("sleep") then
+	if p:attr("sleep") and not p:attr("lucid_dreamer") then -- lucid dreamers (Eye of the Dreaming One) act while asleep
+		self.state.sleep_passes = (self.state.sleep_passes or 0) + 1
+		if self.state.sleep_passes >= 300 then
+			-- sleep that never ends (an item/effect we don't know about): end the run with a reason
+			_M.event("stall_sleep", {passes=self.state.sleep_passes})
+			_M.quit(3)
+			return
+		end
 		_M.event("pass_turn", {reason="sleep"})
 		p:useEnergy()
 		return
 	end
+	self.state.sleep_passes = 0
 
 	-- pick up whatever we are standing on, item by item (playerPickup opens
 	-- the ShowPickupFloor chooser when several items lie here, which on a
