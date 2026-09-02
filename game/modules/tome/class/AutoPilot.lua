@@ -693,6 +693,7 @@ function _M:onPlayerAct(p)
 		-- tour continues, otherwise ignore it and move on.
 		local st = self.state
 		if st.fight_uid == best.actor.uid then st.fight_acts = st.fight_acts + 1 else st.fight_uid, st.fight_acts = best.actor.uid, 0 end
+		st.fight_idle = 0
 		if st.fight_acts >= 150 then
 			local w = p:getInven(p.INVEN_MAINHAND); w = w and w[1]
 			_M.event("stalemate", {target=best.actor.name or "?", acts=st.fight_acts, target_life=math.floor(best.actor.life or 0),
@@ -715,7 +716,13 @@ function _M:onPlayerAct(p)
 		end
 		return
 	end
-	self.state.fight_uid, self.state.fight_acts = nil, 0
+	-- a target that flickers in and out of view (unreachable across water,
+	-- around a corner) must not reset the stalemate counter every time it
+	-- vanishes: only forget it after 20 acts with nothing hostile in sight
+	if self.state.fight_uid then
+		self.state.fight_idle = (self.state.fight_idle or 0) + 1
+		if self.state.fight_idle > 20 then self.state.fight_uid, self.state.fight_acts, self.state.fight_idle = nil, 0, 0 end
+	end
 
 	if keepSustainsUp(p) then return end
 
