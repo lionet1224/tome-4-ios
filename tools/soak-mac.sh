@@ -29,6 +29,9 @@ printf 'autopilot = true\nautopilot_build = "%s"\n' "$SHA" > "$HOME_TE/settings/
 trap 'rm -f "$HOME_TE/settings/autopilot.cfg"' EXIT
 export TE4_BUILD_SHA="$SHA"
 # AddressSanitizer build (premake --asan): report to $RUN/asan.<pid>, abort on first error
+# libmalloc debug (no dyld interposition needed, unlike ASan which trips SDL's
+# dynapi guard): scribble freed/allocated memory, guard pages around blocks
+export MallocScribble=1 MallocPreScribble=1 MallocGuardEdges=1 MallocCheckHeapStart=1000 MallocCheckHeapEach=5000
 export ASAN_OPTIONS="abort_on_error=1:halt_on_error=1:detect_leaks=0:log_path=$RUN/asan:print_stats=0"
 
 echo "[soak] $MINUTES min run, build $SHA -> $RUN"

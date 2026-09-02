@@ -85,9 +85,11 @@ cppconfig = function(what)
 	-- links { "stdc++" }
 end
 
+newoption { trigger = "symbols", description = "Keep debug symbols in the Release build (crash symbolication)" }
 newoption { trigger = "asan", description = "Build with -g -fsanitize=address (mac soak crash hunting)" }
 
 configuration "macosx"
+	if _OPTIONS.symbols then buildoptions { "-g", "-fno-omit-frame-pointer" } linkoptions { "-g" } end
 	if _OPTIONS.asan then
 		buildoptions { "-g", "-fno-omit-frame-pointer", "-fsanitize=address" }
 		linkoptions { "-g", "-fsanitize=address" }
