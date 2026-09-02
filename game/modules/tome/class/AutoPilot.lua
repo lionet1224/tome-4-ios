@@ -195,9 +195,7 @@ function _M.handleDialog(d)
 				end
 			end end
 		end
-		_M.event("dialog_dismiss", {dialog=cls, title="sealed door (ignored)"})
-		pcall(function() d.key:triggerVirtual("EXIT") end)
-		return
+		-- fall through: the prompt is a yes/no, answered Yes below (opens the vault)
 	end
 	-- "Danger..." (descending to a level above our rank) and similar yes/no
 	-- prompts where the bot wants to proceed: press the Yes button
