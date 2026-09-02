@@ -818,8 +818,10 @@ function _M:no_focus()
 end
 
 function _M:mouseEvent(button, x, y, xrel, yrel, bx, by, event)
-	-- Look for focus
-	for i = 1, #self.uis do
+	-- Look for focus. Reverse order: when elements overlap (a dialog clamped
+	-- to a small screen pushes its bottom buttons up into the text zone) the
+	-- one drawn last, i.e. on top, must get the click - not the text zone.
+	for i = #self.uis, 1, -1 do
 		local ui = self.uis[i]
 		if (ui.ui.can_focus or ui.ui.can_focus_mouse) and bx >= ui.x and bx <= ui.x + ui.ui.w and by >= ui.y and by <= ui.y + ui.ui.h then
 			self:setFocus(i, "mouse")
