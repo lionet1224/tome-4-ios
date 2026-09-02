@@ -144,6 +144,7 @@ function _M.setup()
 		end
 		if self == game.player and _M.godmode() then
 			_M.state.would_have_died = _M.state.would_have_died + 1
+			_M.state.level_cheat_deaths = (_M.state.level_cheat_deaths or 0) + 1
 			_M.event("would_have_died", {source=(src and src.name) or "?", count=_M.state.would_have_died})
 			self.life = self.max_life
 			self.dead = false
@@ -199,10 +200,10 @@ function _M.handleDialog(d)
 		end
 		-- fall through: the prompt is a yes/no, answered Yes below (opens the vault)
 		local st = _M.state
-		if st.last_dialog_title == title and (st.dialog_repeat or 0) >= 5 and game.zone then
+		if st.last_dialog_title == tostring(d.title) and (st.dialog_repeat or 0) >= 5 and game.zone then
 			-- a lever door (door_player_stop) never opens from the prompt; stop
 			-- bumping it: level finished, zone done, leave
-			_M.event("blocked_level", {title=title, repeats=st.dialog_repeat})
+			_M.event("blocked_level", {title=tostring(d.title), repeats=st.dialog_repeat})
 			st.explored = true
 			st.zone_done[game.zone.short_name] = true
 			st.dialog_repeat = 0
@@ -750,6 +751,14 @@ function _M:onPlayerAct(p)
 		local st = self.state
 		if st.fight_uid == best.actor.uid then st.fight_acts = st.fight_acts + 1 else st.fight_uid, st.fight_acts = best.actor.uid, 0 end
 		st.fight_idle = 0
+		st.level_cheat_deaths = st.level_cheat_deaths or 0
+		if _M.godmode() and st.level_cheat_deaths >= 1500 then
+			_M.event("godmode_purge", {level_cheat_deaths=st.level_cheat_deaths, n=#hostiles})
+			for _, h in ipairs(hostiles) do pcall(function() h.actor:die(p) end) end
+			st.level_cheat_deaths = 0
+			st.fight_uid, st.fight_acts = nil, 0
+			return
+		end
 		if st.fight_acts >= 150 then
 			local w = p:getInven(p.INVEN_MAINHAND); w = w and w[1]
 			_M.event("stalemate", {target=best.actor.name or "?", acts=st.fight_acts, target_life=math.floor(best.actor.life or 0),
@@ -804,6 +813,7 @@ function _M:onPlayerAct(p)
 		local seen_before = self.state.levels_seen[lkey]
 		self.state.levels_seen[lkey] = true
 		self.state.level_key, self.state.level_acts, self.state.explore_noprog = lkey, 0, 0
+		self.state.level_cheat_deaths = 0
 		self.state.explored = (zdone and seen_before) and true or false
 		self.state.arrival = {x=p.x, y=p.y}
 		self.state.bad_stairs, self.state.stairs_tries, self.state.stairs_wait, self.state.stairs_cache = {}, 0, 0, nil
