@@ -138,6 +138,21 @@ function _M.setup()
 	-- count engine ticks to see whether the game loop is alive at all
 	local Game = require "mod.class.Game"
 	local oldtick = Game.tick
+	-- resume debugging: does the loaded game have a level around loaded()/run()?
+	if not Game.__ap_load_wrapped then
+		Game.__ap_load_wrapped = true
+		for _, fn in ipairs({"loaded", "runReal", "prerun"}) do
+			local orig = Game[fn]
+			if orig then
+				Game[fn] = function(self, ...)
+					_M.event("load_hook", {fn=fn, when="before", level=self.level and true or false, zone=self.zone and self.zone.short_name})
+					local r = {orig(self, ...)}
+					_M.event("load_hook", {fn=fn, when="after", level=self.level and true or false, zone=self.zone and self.zone.short_name})
+					return unpack(r)
+				end
+			end
+		end
+	end
 	-- who saves? (resume debugging: a save fires right after loading a game)
 	if not Game.__ap_save_wrapped then
 		Game.__ap_save_wrapped = true
