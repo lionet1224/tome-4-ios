@@ -16,7 +16,17 @@ main menu, native arm64, plain Lua 5.1.
   for the full patch table). Run: `./t-engine.app/Contents/MacOS/t-engine` from repo root.
 - Brain lives in-repo at `brain/`.
 
-## Active Threads (post-C7: AUTOPILOT SOAK LOOP — WORLD TOUR WORKS)
+## Active Threads (late evening 2026-09-01)
+- Soak speed ~10× (no move anim, multi-tick/frame): mac clears Trollmire 1-4 +
+  worldmap + Kor'Pul L2 in ~4 min. Stall classes fixed tonight: stale popup
+  cancelling rest, vault door / rock bump-prompts (recurring dialog → first
+  button), projectile-in-view spin, sleep effect (pass turns), generic 3s
+  self-unstick. Minimap fixed (raw glBindTexture cache desync).
+- Harness: SIGKILL by path, telemetry by filename epoch, snapshot scripts.
+- Watch next: "Command Staff" dialog recurrence on staff equip; Lua heap growth
+  at zone loads; MM-DBG instrumentation still in map.c (remove).
+
+## Earlier (post-C7: AUTOPILOT SOAK LOOP — WORLD TOUR WORKS)
 - Mac soak: Trollmire 1-4 → zone_done → worldmap → Ruins of Kor'Pul (wiki order),
   plevel 6, 136 kills, 0 Lua errors. Heap jumps at zone loads, plateaus between.
 - Sim: 15-min runs clean; **minimap fixed** (raw glBindTexture calls bypassed the
