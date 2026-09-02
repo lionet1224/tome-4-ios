@@ -162,9 +162,14 @@ function _M.handleDialog(d)
 	-- auto-explore/run progress popup: dismissing it *stops the run*, so
 	-- leave it while a run is live; once the run is over it just lingers
 	if d.title and (tostring(d.title):find("Running") or tostring(d.title):find("Resting")) then
+		-- keep the popup that belongs to the *current* activity; a leftover
+		-- one (e.g. "Running..." while resting) makes the engine abort the
+		-- rest every turn with "dialog is displayed"
 		local p = game.player
-		if p and (p.running or p.resting) then return end
-		_M.event("dialog_dismiss", {dialog=cls, title="Running/Resting (stale)"})
+		local t = tostring(d.title)
+		local live = p and ((t:find("Running") and p.running) or (t:find("Resting") and p.resting))
+		if live then return end
+		_M.event("dialog_dismiss", {dialog=cls, title=t.." (stale)"})
 		pcall(function() d.key:triggerVirtual("EXIT") end)
 		return
 	end
