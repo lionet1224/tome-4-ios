@@ -17,8 +17,10 @@ main menu, native arm64, plain Lua 5.1.
 - Brain lives in-repo at `brain/`.
 
 ## Active Threads (late evening 2026-09-01)
-- Soak speed ~10× (no move anim, multi-tick/frame): mac clears Trollmire 1-4 +
-  worldmap + Kor'Pul L2 in ~4 min. Stall classes fixed tonight: stale popup
+- **World tour on both platforms**: mac AND sim each clear Trollmire → Kor'Pul →
+  Norgos' Lair → Scintillating Caves → Rhaloren Camp in ~10 min (plevel 12-13,
+  ~400-500 kills, 0 Lua errors). Soak speed ~10× (no move anim, multi-tick/frame).
+  Stall classes fixed tonight: stale popup
   cancelling rest, vault door / rock bump-prompts (recurring dialog → first
   button), projectile-in-view spin, sleep effect (pass turns), generic 3s
   self-unstick. Minimap fixed (raw glBindTexture cache desync).
