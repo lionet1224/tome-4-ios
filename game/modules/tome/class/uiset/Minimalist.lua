@@ -1945,6 +1945,39 @@ function _M:displayToolbar(scale, bx, by)
 	end
 	x, y = self:toolbarOrientStep(orient, bx, by, scale, x, y, tb_bg[6], tb_bg[7])
 
+	-- iOS port: touch buttons for the keyboard-only actions. Same look as the
+	-- toolbar icons (background tile + label), each fires a virtual keybind.
+	if config.settings.touch_buttons ~= false then
+		self.touch_buttons = self.touch_buttons or {
+			{key="REST", label=_t"Rest", tip=_t"Rest until healed"},
+			{key="RUN_AUTO", label=_t"Explore", tip=_t"Auto-explore the level"},
+			{key="PICKUP_FLOOR", label=_t"Pick up", tip=_t"Pick up what is on the floor"},
+			{key="LEVELUP", label=_t"Level", tip=_t"Spend level-up points"},
+			{key="SHOW_CHARACTER_SHEET", label=_t"Char", tip=_t"Character sheet"},
+		}
+		for i, tb in ipairs(self.touch_buttons) do
+			if not tb.tex then
+				local font = self.init_font_mono or self.init_font or require("engine.FontPackage"):get("default")
+				local surf = core.display.drawStringBlendedNewSurface(font, tb.label, 255, 255, 255)
+				tb.tex = {surf:glTexture()}; tb.tw, tb.th = surf:getSize()
+				tb.alpha = 0.6
+			end
+			tb_bg[1]:toScreenFull(x, y, tb_bg[6], tb_bg[7], tb_bg[2], tb_bg[3], 1, 1, 1, 1)
+			tb.tex[1]:toScreenFull(x + (tb_bg[6] - tb.tw) / 2, y + (tb_bg[7] - tb.th) / 2, tb.tw, tb.th, tb.tex[2], tb.tex[3], 1, 1, 1, tb.alpha)
+			local zone = "tb_touch_"..tb.key
+			if not game.mouse:updateZone(zone, bx + x * scale, by + y * scale, tb_bg[6], tb_bg[7], nil, scale) then
+				game.mouse:unregisterZone(zone)
+				local desc_fct = function(button, mx, my, xrel, yrel, bx, by, event)
+					if event == "out" then tb.alpha = 0.6 return else tb.alpha = 1 end
+					game.tooltip_x, game.tooltip_y = 1, 1; game:tooltipDisplayAtMap(game.w, game.h, tb.tip)
+					if button == "left" and not xrel and not yrel and event == "button" then game.key:triggerVirtual(tb.key) end
+				end
+				game.mouse:registerZone(bx + x * scale, by + y * scale, tb_bg[6], tb_bg[7], desc_fct, nil, zone, true, scale)
+			end
+			x, y = self:toolbarOrientStep(orient, bx, by, scale, x, y, tb_bg[6], tb_bg[7])
+		end
+	end
+
 	-- Any hooks
 	local hd = {"UISet:Minimalist:Toolbar", x=x, y=y, bx=bx, by=by, orient=orient, scale=scale, tb_bg=tb_bg}
 	if self:triggerHook(hd) then 

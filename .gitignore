@@ -62,3 +62,4 @@ runs/
 tools/ios/xcode/DerivedData/
 tools/ios/out-dev/
 tools/ios/out/
+xcuserdata/
