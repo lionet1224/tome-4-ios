@@ -138,6 +138,15 @@ function _M.setup()
 	-- count engine ticks to see whether the game loop is alive at all
 	local Game = require "mod.class.Game"
 	local oldtick = Game.tick
+	-- who saves? (resume debugging: a save fires right after loading a game)
+	if not Game.__ap_save_wrapped then
+		Game.__ap_save_wrapped = true
+		local osave = Game.saveGame
+		Game.saveGame = function(self, ...)
+			_M.event("save_call", {level=self.level and true or false, trace=debug.traceback("", 2):gsub("\n%s*", " | "):sub(1, 700)})
+			return osave(self, ...)
+		end
+	end
 	Game.tick = function(self, ...)
 		_M.state.ticks = (_M.state.ticks or 0) + 1
 		return oldtick(self, ...)
