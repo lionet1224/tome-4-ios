@@ -10,13 +10,18 @@ fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 IOSDIR="$ROOT/tools/ios"
-PREFIX="$IOSDIR/prefix-sim"
-OUT="$IOSDIR/out"
+PLATFORM="${PLATFORM:-sim}"   # sim (simulator) or dev (device)
+case "$PLATFORM" in
+	sim) SDK=iphonesimulator; TRIPLE_SUFFIX="-simulator"; OUT="$IOSDIR/out";;
+	dev) SDK=iphoneos; TRIPLE_SUFFIX=""; OUT="$IOSDIR/out-dev";;
+	*) echo "PLATFORM must be sim or dev"; exit 1;;
+esac
+PREFIX="$IOSDIR/prefix-$PLATFORM"
 OBJ="$OUT/obj"
 APP="$OUT/ToME.app"
 MIN_IOS=14.0
-SDKPATH="$(xcrun --sdk iphonesimulator --show-sdk-path)"
-TARGET="-target arm64-apple-ios$MIN_IOS-simulator -isysroot $SDKPATH"
+SDKPATH="$(xcrun --sdk $SDK --show-sdk-path)"
+TARGET="-target arm64-apple-ios$MIN_IOS$TRIPLE_SUFFIX -isysroot $SDKPATH"
 
 mkdir -p "$OBJ" "$APP"
 
@@ -76,7 +81,7 @@ echo "=== linking ==="
 clang++ $TARGET -o "$APP/t-engine" "${OBJS[@]}" "$PREFIX/lib/libSDL2main.a" \
 	"$PREFIX/lib/libSDL2.a" "$PREFIX/lib/libSDL2_image.a" "$PREFIX/lib/libSDL2_ttf.a" \
 	"$PREFIX/lib/libpng16.a" "$PREFIX/lib/libvorbisfile.a" "$PREFIX/lib/libvorbis.a" \
-	"$PREFIX/lib/libogg.a" "$PREFIX/lib/libluajit-sim.a" \
+	"$PREFIX/lib/libogg.a" "$PREFIX/lib/libluajit-$PLATFORM.a" \
 	"$PREFIX/lib/libfreetype.a" \
 	-lz -liconv \
 	-framework ImageIO -framework CoreServices \
