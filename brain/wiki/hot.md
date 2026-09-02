@@ -26,7 +26,11 @@ main menu, native arm64, plain Lua 5.1.
 - Phone: first install done via tools/ios/install-device.sh (needs the profile trusted
   on the phone: Settings > General > VPN & Device Management). Refresh = re-run the
   script (needs ~1.1GB free: out-dev + DerivedData copies of the 527MB bundle).
-- Touch buttons (Rest/Explore/Pick up/Level/Char) in the Minimalist toolbar row.
+- Touch layer done: long-press = right click, drag = pan, cursor parked after tap,
+  finger-sized touch row (Rest/Explore/Pick up/Level/Char). Native-pixel rendering
+  with zoom 2 + font 150% is the iOS default (dialogs fit). Dialog hit-test is
+  reverse-order (topmost wins). Test loop: Plus sim + idb taps/keys, prints
+  patched into the installed bundle, autopilot_birth_only for a character.
   Next controls: verify on phone, escape/back in dialogs, text input, bigger UI
   (zoom≠1 click bug parked: C path and Mouse zones are consistent; needs a sim probe).
 - Soaks stopped 2026-09-02 morning (loading verified). Disk stays tight: 6.1GB
