@@ -123,6 +123,15 @@ autopilot_error. Summary tool prints turns/sec, heap trend, zones, deaths.
 - Heap: 31→55MB in Trollmire, jumps at zone loads (→129MB by Kor'Pul);
   plateaus between → zone caching, not a per-turn leak (keep watching).
 
+- **Why dialogs "stick"**: the generic answer is EXIT, which for yes/no prompts
+  is *No*; bump-prompts (vault door, "huge loose rock" in Trollmire 4, ...)
+  then re-fire on the next step. Policy now: a dialog whose title recurs
+  back-to-back gets its first (positive) button; Danger/sealed door always do.
+- Speed: `tome.smooth_move=0`, `Map.smooth_scroll=0`, and a time-bounded
+  multi-tick per frame (≤12 ticks / 20 ms) give uniform fast pacing.
+- Mac harness: engine ignores SIGTERM → SIGKILL by `MacOS/t-engine` at start
+  and timeout, else instances pile up (the user saw two).
+
 ## Known gaps / next
 - Item *activation* (wands/charms) not automated: can enter targeting mode
   (not a dialog) — needs an escape strategy.
