@@ -138,28 +138,21 @@ function _M.setup()
 	-- count engine ticks to see whether the game loop is alive at all
 	local Game = require "mod.class.Game"
 	local oldtick = Game.tick
-	-- resume debugging: does the loaded game have a level around loaded()/run()?
-	if not Game.__ap_load_wrapped then
-		Game.__ap_load_wrapped = true
-		for _, fn in ipairs({"loaded", "runReal", "prerun"}) do
-			local orig = Game[fn]
-			if orig then
-				Game[fn] = function(self, ...)
-					_M.event("load_hook", {fn=fn, when="before", level=self.level and true or false, zone=self.zone and self.zone.short_name})
-					local r = {orig(self, ...)}
-					_M.event("load_hook", {fn=fn, when="after", level=self.level and true or false, zone=self.zone and self.zone.short_name})
-					return unpack(r)
-				end
-			end
-		end
-	end
-	-- who saves? (resume debugging: a save fires right after loading a game)
-	if not Game.__ap_save_wrapped then
-		Game.__ap_save_wrapped = true
-		local osave = Game.saveGame
-		Game.saveGame = function(self, ...)
-			_M.event("save_call", {level=self.level and true or false, trace=debug.traceback("", 2):gsub("\n%s*", " | "):sub(1, 700)})
-			return osave(self, ...)
+	-- never run game logic while a level change is in progress: ToME clears
+	-- game.level, generates the new one with progress redraws, and each redraw
+	-- reaches frame(); ticking there fired the tick-end autosave with
+	-- game.level == nil (saves without a level = unresumable) and ran
+	-- tick/save code inside level generation (heap corruption on the mac)
+	if not Game.__ap_change_wrapped then
+		Game.__ap_change_wrapped = true
+		local ochange = Game.changeLevel
+		Game.changeLevel = function(self, ...)
+			local st = _M.state
+			st.changing_level = (st.changing_level or 0) + 1
+			local res = {pcall(ochange, self, ...)}
+			st.changing_level = st.changing_level - 1
+			if not res[1] then error(res[2], 0) end
+			return unpack(res, 2)
 		end
 	end
 	Game.tick = function(self, ...)
@@ -331,6 +324,7 @@ function _M.frame()
 	if not st.started then _M.setup() end
 	if st.done then return end
 	if coroutine.running() then return end
+	if (st.changing_level or 0) > 0 then return end
 	local now = os.time()
 
 	-- periodic in-game screenshot (engine glReadPixels -> PNG in
