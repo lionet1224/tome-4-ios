@@ -95,6 +95,19 @@ autopilot_error. Summary tool prints turns/sec, heap trend, zones, deaths.
   before launch; capture the final frame *before* terminate.
 - Sim soak 4: 15 min clean, floor 3, plevel 5, Prox the Mighty fought.
 
+- **iOS renderbuffer is not preserved between frames**: undrawn screen regions
+  show stale pixels (grey band under the map; the minimap "rat" was the same
+  effect for a never-written texture). Fix: clear the screen FBO every frame
+  in main.c under TE4_IOS.
+- **The sim app and the mac binary are both host processes named `t-engine`**:
+  `pkill -x t-engine` in the mac harness killed the sim soak (soak 5 "exited").
+  Harnesses now kill/check by path (`MacOS/t-engine` vs `ToME.app/t-engine`).
+- No `setsid` on macOS; detached soaks = `nohup … & disown`. A process-group
+  sweep (session teardown / stop-all) still kills them — telemetry survives,
+  recover results with `tools/telemetry-summary.py` on the newest jsonl.
+- Verified: Danger→Yes descends (Trollmire 4), zone_done retraces up; sim
+  ui_overflow silent after the Dialog clamp; in-game screenshots real on iOS.
+
 ## Known gaps / next
 - Item *activation* (wands/charms) not automated: can enter targeting mode
   (not a dialog) — needs an escape strategy.
