@@ -85,12 +85,12 @@ function _M:init()
 		local found
 		for _, m in ipairs(Module:listSavefiles()) do
 			for _, save in ipairs(m.savefiles or {}) do
-				if m.short_name == "tome" and save.base_name == want then found = {mod=m.versions and m.versions[1] or m, save=save} end
+				if m.short_name == "tome" and save.short_name and save.short_name:lower() == want:lower() then found = {mod=m.versions and m.versions[1] or m, save=save} end
 			end
 		end
 		if found then
 			print("[AUTOPILOT] resuming save", want)
-			game:onTickEnd(function() Module:instanciate(found.mod, found.save.base_name, false) end)
+			game:onTickEnd(function() Module:instanciate(found.mod, found.save.short_name, false) end)
 		else
 			print("[AUTOPILOT] resume save not found:", want, "- starting New Game")
 			game:onTickEnd(function() l[1].fct() end)
