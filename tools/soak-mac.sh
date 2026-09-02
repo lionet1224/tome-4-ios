@@ -29,7 +29,7 @@ trap 'rm -f "$HOME_TE/settings/autopilot.cfg"' EXIT
 export TE4_BUILD_SHA="$SHA"
 
 echo "[soak] $MINUTES min run, build $SHA -> $RUN"
-pkill -f "MacOS/t-engine" 2>/dev/null; sleep 1  # mac binary only (launched by relative path); the sim app is ToME.app/t-engine
+pkill -9 -f "MacOS/t-engine" 2>/dev/null; sleep 1  # SIGKILL: the engine ignores TERM. mac binary only (launched by relative path); the sim app is ToME.app/t-engine
 
 ( cd "$ROOT" && ./t-engine.app/Contents/MacOS/t-engine --flush-stdout ) &
 PID=$!
