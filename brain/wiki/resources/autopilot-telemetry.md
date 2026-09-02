@@ -108,6 +108,21 @@ autopilot_error. Summary tool prints turns/sec, heap trend, zones, deaths.
 - Verified: Danger→Yes descends (Trollmire 4), zone_done retraces up; sim
   ui_overflow silent after the Dialog clamp; in-game screenshots real on iOS.
 
+- Mac harness timeout killed only its subshell → **orphaned engine instances**
+  kept playing and writing telemetry; the orphan's file then got selected
+  (mtime-based) and, once killed, looked "stale" → false HUNG on the healthy
+  run. Fixes: kill by `MacOS/t-engine` pattern at timeout/start; select
+  telemetry by **filename epoch ≥ run start** (`tele_for_run`).
+- "sealed door" popup = vault door yes/no (`door_player_check`); EXIT = No,
+  then our own A* path re-bumps the door → loop. Answer Yes (opens vaults).
+- Rest cancelled every turn ("dialog is displayed" ×772): a stale "Running…"
+  popup survives into the rest; dismiss popups that don't match the current
+  activity.
+- Minimap on iOS: binding verified correct (mm=cache=bound); data-level
+  diagnostics staged (distinct colours written) — pending soak 9.
+- Heap: 31→55MB in Trollmire, jumps at zone loads (→129MB by Kor'Pul);
+  plateaus between → zone caching, not a per-turn leak (keep watching).
+
 ## Known gaps / next
 - Item *activation* (wands/charms) not automated: can enter targeting mode
   (not a dialog) — needs an escape strategy.
