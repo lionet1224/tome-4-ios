@@ -12,9 +12,16 @@ fi
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 IOSDIR="$ROOT/tools/ios"
 SRC="$IOSDIR/dep-src"
-PREFIX="$IOSDIR/prefix-sim"
+# PLATFORM=sim (default) builds for the arm64 simulator, PLATFORM=dev for a real device
+PLATFORM="${PLATFORM:-sim}"
+case "$PLATFORM" in
+	sim) SDK=iphonesimulator; TRIPLE_SUFFIX="-simulator";;
+	dev) SDK=iphoneos; TRIPLE_SUFFIX="";;
+	*) echo "PLATFORM must be sim or dev"; exit 1;;
+esac
+PREFIX="$IOSDIR/prefix-$PLATFORM"
 MIN_IOS=14.0
-SDKPATH="$(xcrun --sdk iphonesimulator --show-sdk-path)" || {
+SDKPATH="$(xcrun --sdk $SDK --show-sdk-path)" || {
 	echo "ERROR: iphonesimulator SDK not found. Install full Xcode from the App Store,"
 	echo "open it once to accept the license, then: sudo xcode-select -s /Applications/Xcode.app"
 	exit 1
@@ -29,7 +36,7 @@ CMFLAGS=(
 	-DCMAKE_INSTALL_PREFIX="$PREFIX"
 	-DCMAKE_PREFIX_PATH="$PREFIX"
 	-DBUILD_SHARED_LIBS=OFF
-	-DCMAKE_C_FLAGS="-target arm64-apple-ios$MIN_IOS-simulator"
+	-DCMAKE_C_FLAGS="-target arm64-apple-ios$MIN_IOS$TRIPLE_SUFFIX"
 	-DCMAKE_BUILD_TYPE=Release
 	-DCMAKE_POLICY_VERSION_MINIMUM=3.5
 )
@@ -41,9 +48,9 @@ clone() { # name url tag
 cmbuild() { # name extra-flags...
 	local name="$1"; shift
 	echo "=== $name ==="
-	cmake -S "$SRC/$name" -B "$SRC/$name/build-sim" "${CMFLAGS[@]}" "$@" >/dev/null
-	cmake --build "$SRC/$name/build-sim" -j8 >/dev/null
-	cmake --install "$SRC/$name/build-sim" >/dev/null
+	cmake -S "$SRC/$name" -B "$SRC/$name/build-$PLATFORM" "${CMFLAGS[@]}" "$@" >/dev/null
+	cmake --build "$SRC/$name/build-$PLATFORM" -j8 >/dev/null
+	cmake --install "$SRC/$name/build-$PLATFORM" >/dev/null
 }
 
 # ---- SDL2 + satellites ----
@@ -82,20 +89,20 @@ fi
 
 # ---- LuaJIT (interpreter-focused build for iOS; built out-of-tree copy so
 #      the macOS build in tools/LuaJIT stays intact) ----
-if [ ! -f "$PREFIX/lib/libluajit-sim.a" ]; then
-	echo "=== LuaJIT (simulator) ==="
-	rm -rf "$SRC/LuaJIT-sim"
-	cp -r "$ROOT/tools/LuaJIT" "$SRC/LuaJIT-sim"
+if [ ! -f "$PREFIX/lib/libluajit-$PLATFORM.a" ]; then
+	echo "=== LuaJIT ($PLATFORM) ==="
+	rm -rf "$SRC/LuaJIT-$PLATFORM"
+	cp -r "$ROOT/tools/LuaJIT" "$SRC/LuaJIT-$PLATFORM"
 	export MACOSX_DEPLOYMENT_TARGET=12.0  # LuaJIT's Makefile insists, even cross-building
 	# lib-only target: the physfs-patched loadfile (lj_load.c) makes the
 	# standalone luajit CLI unlinkable, and we never need it
-	make -C "$SRC/LuaJIT-sim" clean >/dev/null
-	make -C "$SRC/LuaJIT-sim/src" -j8 libluajit.a DEFAULT_CC=clang \
-		CROSS="$(dirname "$(xcrun --sdk iphonesimulator -f clang)")/" \
-		TARGET_FLAGS="-isysroot $SDKPATH -target arm64-apple-ios$MIN_IOS-simulator" \
+	make -C "$SRC/LuaJIT-$PLATFORM" clean >/dev/null
+	make -C "$SRC/LuaJIT-$PLATFORM/src" -j8 libluajit.a DEFAULT_CC=clang \
+		CROSS="$(dirname "$(xcrun --sdk $SDK -f clang)")/" \
+		TARGET_FLAGS="-isysroot $SDKPATH -target arm64-apple-ios$MIN_IOS$TRIPLE_SUFFIX" \
 		TARGET_SYS=iOS XCFLAGS="-I$ROOT/src/physfs" >/dev/null
-	cp "$SRC/LuaJIT-sim/src/libluajit.a" "$PREFIX/lib/libluajit-sim.a"
+	cp "$SRC/LuaJIT-$PLATFORM/src/libluajit.a" "$PREFIX/lib/libluajit-$PLATFORM.a"
 fi
 
-echo "OK: all simulator deps in $PREFIX"
+echo "OK: all $PLATFORM deps in $PREFIX"
 ls "$PREFIX/lib"
