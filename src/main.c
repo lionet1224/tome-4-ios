@@ -670,6 +670,14 @@ void call_draw(int nb_keyframes)
 	// Notify the particles threads that there are new keyframes
 	if (!anims_paused) thread_particle_new_keyframes(nb_keyframes);
 
+#ifdef TE4_IOS
+	/* iOS does not preserve the renderbuffer between frames: any screen
+	 * region the engine never draws shows stale/undefined pixels (desktop
+	 * drivers happen to leave black). Clear the screen framebuffer per frame. */
+	te4_glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClearColor(0, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+#endif
 	if (current_game != LUA_NOREF)
 	{
 		lua_rawgeti(L, LUA_REGISTRYINDEX, current_game);
