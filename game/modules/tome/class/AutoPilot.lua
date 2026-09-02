@@ -630,8 +630,18 @@ function _M:onPlayerAct(p)
 
 	if keepSustainsUp(p) then return end
 
+	-- a projectile in view (no actor) makes rest/explore refuse to start;
+	-- spend the turn so it passes instead of re-issuing forever
+	local threats = p:spotHostiles(false)
+	if #threats > 0 then
+		_M.event("wait_projectile", {n=#threats})
+		p:useEnergy()
+		return
+	end
+
 	if p.life < p.max_life * 0.7 then
 		p:restInit()
+		if not p.resting then p:useEnergy() end -- rest refused: don't spin
 		return
 	end
 
