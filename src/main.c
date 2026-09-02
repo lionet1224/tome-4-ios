@@ -519,8 +519,8 @@ bool on_event(SDL_Event *event)
 			lua_remove(L, -2);
 			lua_rawgeti(L, LUA_REGISTRYINDEX, current_mousehandler);
 			lua_pushnumber(L, event->tfinger.fingerId);
-			lua_pushnumber(L, event->tfinger.x / screen_zoom);
-			lua_pushnumber(L, event->tfinger.y / screen_zoom);
+			lua_pushnumber(L, event->tfinger.x /* normalized 0..1 */);
+			lua_pushnumber(L, event->tfinger.y /* normalized 0..1 */);
 			lua_pushnumber(L, event->tfinger.dx);
 			lua_pushnumber(L, event->tfinger.dy);
 			lua_pushnumber(L, event->tfinger.pressure);
@@ -537,8 +537,8 @@ bool on_event(SDL_Event *event)
 			lua_remove(L, -2);
 			lua_rawgeti(L, LUA_REGISTRYINDEX, current_mousehandler);
 			lua_pushnumber(L, event->tfinger.fingerId);
-			lua_pushnumber(L, event->tfinger.x / screen_zoom);
-			lua_pushnumber(L, event->tfinger.y / screen_zoom);
+			lua_pushnumber(L, event->tfinger.x /* normalized 0..1 */);
+			lua_pushnumber(L, event->tfinger.y /* normalized 0..1 */);
 			lua_pushnumber(L, event->tfinger.dx);
 			lua_pushnumber(L, event->tfinger.dy);
 			lua_pushnumber(L, event->tfinger.pressure);
