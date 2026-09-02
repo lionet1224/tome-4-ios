@@ -1967,8 +1967,11 @@ function _M:displayToolbar(scale, bx, by)
 			-- twice the toolbar icon size: finger-sized targets even at 2x zoom
 			local bw, bh = tb_bg[6] * 2, tb_bg[7] * 2
 			local tx, ty = -i * bw, 6 * tb_bg[7] - bh
-			tb_bg[1]:toScreenFull(tx, ty, bw, bh, tb_bg[2], tb_bg[3], 1, 1, 1, 1)
-			tb.tex[1]:toScreenFull(tx + (bw - tb.tw * 1.5) / 2, ty + (bh - tb.th * 1.5) / 2, tb.tw * 1.5, tb.th * 1.5, tb.tex[2], tb.tex[3], 1, 1, 1, tb.alpha)
+			-- toScreenFull(x, y, w, h, texw, texh) maps a w x h region onto a texw x
+			-- texh texture: scale the texture size with the drawn size or it wraps
+			tb_bg[1]:toScreenFull(tx, ty, bw, bh, tb_bg[2] * 2, tb_bg[3] * 2, 1, 1, 1, 1)
+			local lw, lh = tb.tw * 1.5, tb.th * 1.5
+			tb.tex[1]:toScreenFull(tx + (bw - lw) / 2, ty + (bh - lh) / 2, lw, lh, tb.tex[2] * 1.5, tb.tex[3] * 1.5, 1, 1, 1, tb.alpha)
 			local zone = "tb_touch_"..tb.key
 			if not game.mouse:updateZone(zone, bx + tx * scale, by + ty * scale, bw, bh, nil, scale) then
 				game.mouse:unregisterZone(zone)
