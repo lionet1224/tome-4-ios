@@ -26,7 +26,7 @@ main menu, native arm64, plain Lua 5.1.
   self-unstick. Minimap fixed (raw glBindTexture cache desync).
 - Harness: SIGKILL by path, telemetry by filename epoch, snapshot scripts.
 - Watch next: "Command Staff" dialog recurrence on staff equip; Lua heap growth
-  at zone loads; MM-DBG instrumentation still in map.c (remove).
+  at zone loads (~25 MB/zone; persistent levels stay resident, not a leak). MM-DBG removed (d47454a2, needs rebuild).
 
 ## Earlier (post-C7: AUTOPILOT SOAK LOOP — WORLD TOUR WORKS)
 - Mac soak: Trollmire 1-4 → zone_done → worldmap → Ruins of Kor'Pul (wiki order),
