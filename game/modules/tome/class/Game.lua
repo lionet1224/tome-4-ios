@@ -2628,6 +2628,29 @@ function _M:setupMouse(reset)
 
 	self.mouse:registerZone(Map.display_x, Map.display_y, Map.viewport.width, Map.viewport.height, function(button, mx, my, xrel, yrel, bx, by, event, extra)
 		if not self.uiset:isLocked() or not game.level then return end
+		-- iOS port: drag with one finger = pan the camera; the click SDL
+		-- synthesizes when the finger lifts after a pan is swallowed
+		if button == "left" and event == "motion" and xrel and yrel then
+			local pan = self.touch_pan or {dx=0, dy=0, moved=false}
+			self.touch_pan = pan
+			pan.dx, pan.dy = pan.dx + xrel, pan.dy + yrel
+			if math.abs(pan.dx) > 8 or math.abs(pan.dy) > 8 or pan.moved then
+				pan.moved = true
+				local map = self.level.map
+				local tw, th = map.tile_w * (map.zoom or 1), map.tile_h * (map.zoom or 1)
+				local sx, sy = math.floor(pan.dx / tw), math.floor(pan.dy / th)
+				if sx ~= 0 or sy ~= 0 then
+					map:setScroll(map.mx - sx, map.my - sy)
+					pan.dx, pan.dy = pan.dx - sx * tw, pan.dy - sy * th
+				end
+			end
+			return
+		end
+		if button == "left" and event == "button" and self.touch_pan then
+			local moved = self.touch_pan.moved
+			self.touch_pan = nil
+			if moved then return end
+		end
 
 		local tmx, tmy = game.level.map:getMouseTile(mx, my)
 		if core.shader.allow("adv") and outline then

@@ -323,6 +323,7 @@ function _M.frame()
 	local st = _M.state
 	if not st.started then _M.setup() end
 	if st.done then return end
+	if config.settings.autopilot_birth_only and st.ingame then return end
 	if coroutine.running() then return end
 	if (st.changing_level or 0) > 0 then return end
 	-- per-level game-turn cap, checked per frame: the act-based cap does not
