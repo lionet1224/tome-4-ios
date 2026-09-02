@@ -104,6 +104,14 @@ function _M.setup()
 
 	local sha = config.settings.autopilot_build or "dev"
 	print("[AUTOPILOT] active, god="..tostring(_M.godmode()))
+
+	-- soak speed: no per-tile movement animation or smooth map scrolling
+	-- (walking was ~8 frames per step; fighting had no such cost)
+	pcall(function()
+		config.settings.tome.smooth_move = 0
+		config.settings.tome.twitch_move = false
+		require("engine.Map").smooth_scroll = 0
+	end)
 	_M.event("session_start", {build=sha, platform=(__IOS__ and "ios" or "desktop"), god=_M.godmode()})
 
 	local Player = require "mod.class.Player"
