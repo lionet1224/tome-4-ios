@@ -2635,6 +2635,7 @@ function _M:setupMouse(reset)
 			self.touch_pan = pan
 			pan.dx, pan.dy = pan.dx + xrel, pan.dy + yrel
 			if math.abs(pan.dx) > 8 or math.abs(pan.dy) > 8 or pan.moved then
+				if not pan.moved then print("[TOUCH] drag -> pan") end
 				pan.moved = true
 				local map = self.level.map
 				local tw, th = map.tile_w * (map.zoom or 1), map.tile_h * (map.zoom or 1)

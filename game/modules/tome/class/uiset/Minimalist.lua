@@ -1978,7 +1978,7 @@ function _M:displayToolbar(scale, bx, by)
 				local desc_fct = function(button, mx, my, xrel, yrel, bx, by, event)
 					if event == "out" then tb.alpha = 0.6 return else tb.alpha = 1 end
 					game.tooltip_x, game.tooltip_y = 1, 1; game:tooltipDisplayAtMap(game.w, game.h, tb.tip)
-					if button == "left" and not xrel and not yrel and event == "button" then game.key:triggerVirtual(tb.key) end
+					if button == "left" and not xrel and not yrel and event == "button" then print("[TOUCH] button", tb.key) game.key:triggerVirtual(tb.key) end
 				end
 				game.mouse:registerZone(bx + tx * scale, by + ty * scale, bw, bh, desc_fct, nil, zone, true, scale)
 			end

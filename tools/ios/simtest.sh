@@ -24,26 +24,28 @@ xcrun simctl launch --console-pty "$UD" org.te4.tome.dev --flush-stdout > "$LOG"
 sleep 85; shot 01-ingame
 check "character created (birth-only autopilot)" '"birther_state"|AUTOPILOT\] active'
 # orientation calibration: tap the far top-left of the map and read the engine coords back
-$TAP tap 300 60 >/dev/null; sleep 2
-RAW=$(grep -E 'IOS-INPUT\] UP' "$LOG" | tail -1 | grep -oE 'lua=\([0-9.]+,[0-9.]+\)')
+N0=$(grep -cE 'IOS-INPUT\] UP' "$LOG"); $TAP tap 300 60 >/dev/null; sleep 2
+RAW=$(grep -E 'IOS-INPUT\] UP' "$LOG" | sed -n "$((N0+1))p" | grep -oE 'lua=\([0-9.]+,[0-9.]+\)')
 echo "calibration tap -> $RAW (expected near (300,60); if mirrored, flip orient in ~/.tome-simtap.json)"
 # 1. long-press on the character's tile area = right click menu
 $TAP tap 700 320 --long >/dev/null; sleep 2; shot 02-longpress
-check "long-press opens the Actions menu" 'MapMenu|Actions'
+check "long-press -> right click" '\[TOUCH\] long-press'
 $TAP tap 1350 40 >/dev/null; sleep 1   # tap outside = close
 # 2. drag pans the camera (trace [PAN] only present in instrumented builds; use setScroll marker instead)
 $TAP swipe 700 320 500 320 >/dev/null; sleep 2; shot 03-pan
+check "drag -> pan" '\[TOUCH\] drag'
 # 3. touch row: Level
 $TAP tap 1142 616 >/dev/null; sleep 3; shot 04-levelup
-check "touch row Level opens the level-up dialog" 'tb_touch_LEVELUP|Levelup'
+check "touch row Level" '\[TOUCH\] button\s+LEVELUP'
 # 4. close box
 CB=$(grep 'DLG-CLOSE' "$LOG" | tail -1); X=$(echo "$CB" | awk -F'\t' '{print $3}'); Y=$(echo "$CB" | awk -F'\t' '{print $4}')
 [ -n "$X" ] && { $TAP tap $((X+17)) $((Y+17)) >/dev/null; sleep 2; shot 05-closed; }
+check "dialog close box" '\[TOUCH\] close box'
 # 5. escape key path (HID) opens the game menu, again closes it
 ~/.local/bin/idb ui key 41 --udid "$UD" >/dev/null 2>&1; sleep 2; shot 06-gamemenu
 ~/.local/bin/idb ui key 41 --udid "$UD" >/dev/null 2>&1; sleep 1
 # 6. touch row: Rest / Explore
 $TAP tap 1014 616 >/dev/null; sleep 3; shot 07-rest
-check "touch row Rest" 'tb_touch_REST|Rest'
+check "touch row Rest" '\[TOUCH\] button\s+REST'
 echo "lua errors: $(grep -c 'Lua Error' "$LOG")"
 echo "frames in $OUT"

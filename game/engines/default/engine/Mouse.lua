@@ -235,6 +235,7 @@ function _M.touchTick()
 	local t = _M.touch
 	if t and not t.moved and not t.fired and core.game.getTime() - t.t0 >= _M.LONG_PRESS_MS then
 		t.fired = true
+		print("[TOUCH] long-press -> right click at", t.x, t.y)
 		local m = _M.current
 		if m then
 			m:receiveMouseMotion("none", t.x, t.y, 0, 0)
@@ -263,6 +264,7 @@ _M.fingers = {}
 _M.nb_fingers = 0
 
 function _M.escape()
+	print("[TOUCH] two-finger tap -> EXIT")
 	local k = engine.KeyBind and engine.KeyBind.current or (engine.Key and engine.Key.current)
 	if k and k.triggerVirtual then k:triggerVirtual("EXIT") end
 end
