@@ -527,10 +527,8 @@ function _M:generate()
 		self.close_box.x, self.close_box.y = self.display_x + self.w - self.close_box.w - 2, self.display_y + 2
 		print("[TOUCH] close box at", self.close_box.x, self.close_box.y, tostring(self.title))
 		if not self.close_box_tex then self.close_box_tex = self:drawFontLine(self.font_bold, "X", nil, 255, 255, 255) end
-		self.mouse:registerZone(self.close_box.x, self.close_box.y, self.close_box.w, self.close_box.h, function(button, x, y, xrel, yrel, bx, by, event)
-			if button == "left" and event == "button" then print("[TOUCH] close box", tostring(self.title)) self.key:triggerVirtual("EXIT") end
-			return true
-		end, nil, "dlg_close_box")
+		-- hit-tested in mouseEvent (dialog-relative), so a dialog that moves
+		-- after generate() keeps a working close box
 	end
 	self.key.receiveKey = function(_, ...) self:keyEvent(...) end
 	self.key:addCommands{
@@ -830,6 +828,10 @@ function _M:no_focus()
 end
 
 function _M:mouseEvent(button, x, y, xrel, yrel, bx, by, event)
+	if self.close_box and bx >= self.w - self.close_box.w - 2 and bx <= self.w and by >= 0 and by <= self.close_box.h + 2 then
+		if button == "left" and event == "button" then print("[TOUCH] close box", tostring(self.title)) self.key:triggerVirtual("EXIT") end
+		return
+	end
 	-- Look for focus. Reverse order: when elements overlap (a dialog clamped
 	-- to a small screen pushes its bottom buttons up into the text zone) the
 	-- one drawn last, i.e. on top, must get the click - not the text zone.

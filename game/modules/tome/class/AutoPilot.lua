@@ -688,6 +688,7 @@ local function keepSustainsUp(p)
 end
 
 function _M:onPlayerAct(p)
+	if config.settings.autopilot_birth_only and self.state.ingame then return end
 	if not game.level or not game.zone then return end
 	if p.dead then return end
 	if p.resting or p.running then return end
