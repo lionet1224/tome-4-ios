@@ -1246,7 +1246,16 @@ void do_resize(int w, int h, bool fullscreen, bool borderless, float zoom)
 	/* Check and see if SDL honored our resize request */
 	SDL_GetWindowSize(window, &aw, &ah);
 #ifdef TE4_IOS
-	SDL_GL_GetDrawableSize(window, &aw, &ah);
+	{
+		/* always recompute the point->pixel factor here: the GL context exists
+		 * now, and not every resize path refreshes the screen surface */
+		int dw = 0, dh = 0;
+		SDL_GL_GetDrawableSize(window, &dw, &dh);
+		if (dw > 0 && aw > 0) dpi_scale = (float)dw / (float)aw;
+		if (dw > 0 && dh > 0) { aw = dw; ah = dh; }
+		if (screen && (screen->w != aw || screen->h != ah)) { SDL_FreeSurface(screen); screen = SDL_CreateRGBSurface(0, aw, ah, 32, 0, 0, 0, 0); }
+		printf("[IOS-DPI] drawable %dx%d, scale %.2f, zoom %.2f\n", aw, ah, dpi_scale, screen_zoom);
+	}
 #endif
 	printf("[DO RESIZE] Got: %dx%d (%d, %d)\n", aw, ah, is_fullscreen, borderless);
 	SDL_GL_MakeCurrent(window, maincontext);
