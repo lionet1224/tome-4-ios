@@ -59,3 +59,6 @@ tools/ios/dep-src/
 tools/ios/prefix-sim/
 tools/ios/out/
 runs/
+tools/ios/xcode/DerivedData/
+tools/ios/out-dev/
+tools/ios/out/
