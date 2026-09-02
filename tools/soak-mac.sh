@@ -19,7 +19,7 @@ trap 'rm -f "$HOME_TE/settings/autopilot.cfg"' EXIT
 export TE4_BUILD_SHA="$SHA"
 
 echo "[soak] $MINUTES min run, build $SHA -> $RUN"
-pkill -f "tome-ios/t-engine.app/Contents/MacOS/t-engine" 2>/dev/null; sleep 1  # mac binary only: the sim app is also a host process named t-engine
+pkill -f "MacOS/t-engine" 2>/dev/null; sleep 1  # mac binary only (launched by relative path); the sim app is ToME.app/t-engine
 
 ( cd "$ROOT" && ./t-engine.app/Contents/MacOS/t-engine --flush-stdout ) &
 PID=$!
@@ -39,8 +39,10 @@ for i in $(seq 1 "$SECS"); do
 done
 if kill -0 "$PID" 2>/dev/null; then
 	echo "[soak] time up, stopping"
+	pkill -f "MacOS/t-engine" 2>/dev/null   # the engine itself, not just the subshell
 	kill "$PID" 2>/dev/null
 	sleep 2
+	pkill -9 -f "MacOS/t-engine" 2>/dev/null
 	kill -9 "$PID" 2>/dev/null
 	EXIT="timeout"
 else
