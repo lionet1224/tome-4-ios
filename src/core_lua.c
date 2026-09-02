@@ -429,6 +429,15 @@ static int lua_flush_key_events(lua_State *L)
 
 static int lua_key_unicode(lua_State *L)
 {
+	bool on = lua_isboolean(L, 1) && lua_toboolean(L, 1);
+#ifdef TE4_IOS
+	/* text boxes toggle this on focus: show/hide the on-screen keyboard with
+	 * it (globally the hint stays off so the keyboard never pops at boot) */
+	SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, on ? "1" : "0");
+	if (on) SDL_StartTextInput(); else SDL_StopTextInput();
+	printf("[IOS-OSK] %s\n", on ? "show" : "hide");
+	return 0;
+#endif
 	if (lua_isboolean(L, 1)) SDL_StartTextInput();
 	else SDL_StopTextInput();
 	return 0;
