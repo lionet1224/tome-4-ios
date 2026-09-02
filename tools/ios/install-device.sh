@@ -11,9 +11,11 @@ DEV=$(xcrun devicectl list devices 2>/dev/null | grep -E "connected|available" |
 [ -z "$DEV" ] && { echo "no connected iPhone (plug it in, unlock, trust this Mac)"; exit 1; }
 XDEST=$(cd "$XC" && xcodebuild -project ToME.xcodeproj -scheme ToME -showdestinations 2>/dev/null | grep 'platform:iOS, arch' | grep -oE 'id:[0-9A-F-]+' | cut -d: -f2 | head -1)
 echo "[install] device $DEV (xcode dest $XDEST)"
+rm -rf "$XC/DerivedData/Build/Products/Release-iphoneos/ToME.app"  # force embed + codesign to rerun
 (cd "$XC" && xcodebuild -project ToME.xcodeproj -scheme ToME -configuration Release -destination "id=$XDEST" -allowProvisioningUpdates -derivedDataPath "$XC/DerivedData" build | grep -E 'error:|BUILD (SUCCEEDED|FAILED)|embedded engine')
 APP=$(find "$XC/DerivedData" -name 'ToME.app' -path '*Release-iphoneos*' -maxdepth 6 | head -1)
 [ -z "$APP" ] && { echo "no built app found"; exit 1; }
+codesign -dv "$APP" 2>&1 | grep -q TeamIdentifier || { echo "app is not signed - aborting"; exit 1; }
 xcrun devicectl device install app --device "$DEV" "$APP"
 xcrun devicectl device process launch --device "$DEV" org.te4.tome.dev || true
 echo "[install] done: Tales of Maj'Eyal is on the phone"
