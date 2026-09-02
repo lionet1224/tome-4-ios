@@ -1957,7 +1957,7 @@ function _M:displayToolbar(scale, bx, by)
 		}
 		for i, tb in ipairs(self.touch_buttons) do
 			if not tb.tex then
-				local font = self.init_font_mono or self.init_font or require("engine.FontPackage"):get("default")
+				local font = FontPackage:get("default", true)
 				local surf = core.display.drawStringBlendedNewSurface(font, tb.label, 255, 255, 255)
 				tb.tex = {surf:glTexture()}; tb.tw, tb.th = surf:getSize()
 				tb.alpha = 0.6
