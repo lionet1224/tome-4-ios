@@ -276,7 +276,10 @@ function _M.handleDialog(d)
 	if cls:find("Chat") and d.list and #d.list > 0 and d.use then
 		_M.state.chat_answers = _M.state.chat_answers + 1
 		local pick = rng.range(1, #d.list)
-		_M.event("chat_answer", {dialog=cls, pick=pick, of=#d.list})
+		-- the same chat 3x in a row: random answers keep reopening it, so take
+		-- the last one (by convention the goodbye/leave answer)
+		if (_M.state.dialog_repeat or 0) >= 3 then pick = #d.list end
+		_M.event("chat_answer", {dialog=cls, pick=pick, of=#d.list, repeat_n=_M.state.dialog_repeat or 0})
 		local ok = pcall(function() d:use(d.list[pick]) end)
 		if ok then return end
 	end
@@ -563,6 +566,7 @@ local function manageWeight(p)
 			end
 		end
 		if not worst then break end
+		worst.__ap_dropped = true
 		local okd = pcall(function() p:dropFloor(inven, wi, false, true) end)
 		if not okd then break end
 		dropped = dropped + 1
@@ -668,12 +672,22 @@ function _M:onPlayerAct(p)
 	-- 402pt screen also overflows - ui_overflow caught that on the sim)
 	if manageWeight(p) then return end
 	local light = true
-	pcall(function() light = p:getEncumbrance() < p:getMaxEncumbrance() * 0.9 end)
+	pcall(function() light = p:getEncumbrance() < p:getMaxEncumbrance() * 0.75 end)
 	if light and game.level.map:getObject(p.x, p.y, 1) then
 		local n = 0
 		local ok = pcall(function()
-			while game.level.map:getObject(p.x, p.y, 1) and n < 20 do
-				if not p:pickupFloor(1, true) then break end
+			local map = game.level.map
+			while n < 20 do
+				-- first floor item we did not drop ourselves
+				local idx, i = nil, 1
+				while true do
+					local o = map:getObject(p.x, p.y, i)
+					if not o then break end
+					if not o.__ap_dropped then idx = i break end
+					i = i + 1
+				end
+				if not idx then break end
+				if not p:pickupFloor(idx, true) then break end
 				n = n + 1
 			end
 		end)
