@@ -30,7 +30,9 @@ echo "calibration tap -> $RAW (expected near (300,60); if mirrored, flip orient 
 # 1. long-press on the character's tile area = right click menu
 $TAP tap 700 320 --long >/dev/null; sleep 2; shot 02-longpress
 check "long-press -> right click" '\[TOUCH\] long-press'
-$TAP tap 1350 40 >/dev/null; sleep 1   # tap outside = close
+CB=$(grep 'TOUCH\] close box at' "$LOG" | tail -1); X=$(echo "$CB" | awk -F'\t' '{print $2}'); Y=$(echo "$CB" | awk -F'\t' '{print $3}')
+[ -n "$X" ] && { $TAP tap $((X+17)) $((Y+17)) >/dev/null; sleep 1; }   # close the Actions menu via its close box
+check "Actions menu closed by its close box" '\[TOUCH\] close box\s+Actions'
 # 2. drag pans the camera (trace [PAN] only present in instrumented builds; use setScroll marker instead)
 $TAP swipe 700 320 500 320 >/dev/null; sleep 2; shot 03-pan
 check "drag -> pan" '\[TOUCH\] drag'
@@ -47,6 +49,8 @@ check "dialog close box" '\[TOUCH\] close box'
 # 6. touch row (tiles right to left: Rest 1334, Explore 1270, Pick up 1206, Level 1142, Char 1078; y 616)
 $TAP tap 1334 616 >/dev/null; sleep 3; shot 07-rest
 check "touch row Rest" '\[TOUCH\] button\s+REST'
+~/.local/bin/idb ui key 41 --udid "$UD" >/dev/null 2>&1; sleep 1   # Escape stops resting
+~/.local/bin/idb ui key 41 --udid "$UD" >/dev/null 2>&1; sleep 1   # and closes the game menu if it opened instead
 $TAP tap 1078 616 >/dev/null; sleep 3; shot 08-char
 check "touch row Char" '\[TOUCH\] button\s+SHOW_CHARACTER_SHEET'
 CB=$(grep 'TOUCH\] close box at' "$LOG" | tail -1); X=$(echo "$CB" | awk -F'\t' '{print $2}'); Y=$(echo "$CB" | awk -F'\t' '{print $3}')
