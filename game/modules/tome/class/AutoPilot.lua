@@ -206,7 +206,7 @@ function _M.handleDialog(d)
 	local st = _M.state
 	if st.last_dialog_title == title then st.dialog_repeat = (st.dialog_repeat or 0) + 1 else st.dialog_repeat = 0 end
 	st.last_dialog_title = title
-	if title:find("Danger") or title:find("sealed door") or st.dialog_repeat >= 2 then
+	if title:find("Danger") or title:find("sealed door") or title:find("Transmogrification") or st.dialog_repeat >= 2 then
 		-- prefer a Yes/Open/Ok button; otherwise the first button is the
 		-- positive one in the engine's prompt helpers
 		local first
