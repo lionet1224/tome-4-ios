@@ -85,7 +85,13 @@ cppconfig = function(what)
 	-- links { "stdc++" }
 end
 
+newoption { trigger = "asan", description = "Build with -g -fsanitize=address (mac soak crash hunting)" }
+
 configuration "macosx"
+	if _OPTIONS.asan then
+		buildoptions { "-g", "-fno-omit-frame-pointer", "-fsanitize=address" }
+		linkoptions { "-g", "-fsanitize=address" }
+	end
 	premake.gcc.cc  = 'clang'
 	premake.gcc.cxx = 'clang++'
 
