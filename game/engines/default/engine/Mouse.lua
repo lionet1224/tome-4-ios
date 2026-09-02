@@ -250,9 +250,17 @@ function _M.touchTick()
 	end
 end
 
+-- SDL reports finger positions as 0..1 fractions of the window
+local function touchToScreen(x, y)
+	local w, h = core.display.size()
+	if x <= 1 and y <= 1 then return x * w, y * h end
+	return x, y
+end
+
 function _M:receiveTouch(fingerId, x, y, dx, dy, pressure, isup)
 	if not isup then
-		_M.touch = {x=x, y=y, t0=core.game.getTime(), moved=false, fired=false}
+		local sx, sy = touchToScreen(x, y)
+		_M.touch = {x=sx, y=sy, t0=core.game.getTime(), moved=false, fired=false}
 	else
 		local t = _M.touch
 		_M.touch = nil
@@ -275,7 +283,10 @@ end
 -- @param pressure
 function _M:receiveTouchMotion(fingerId, x, y, dx, dy, pressure)
 	local t = _M.touch
-	if t and (math.abs(x - t.x) > _M.TOUCH_MOVE_TOLERANCE or math.abs(y - t.y) > _M.TOUCH_MOVE_TOLERANCE) then t.moved = true end
+	if t then
+		local sx, sy = touchToScreen(x, y)
+		if math.abs(sx - t.x) > _M.TOUCH_MOVE_TOLERANCE or math.abs(sy - t.y) > _M.TOUCH_MOVE_TOLERANCE then t.moved = true end
+	end
 	return self:receiveTouchMotionOrig(fingerId, x, y, dx, dy, pressure)
 end
 
