@@ -543,6 +543,34 @@ local function itemScore(p, o)
 	return ok and tonumber(price) or 0
 end
 
+-- over the weight limit you cannot move (and moves fail without spending a
+-- turn = spin). Drop the least valuable items per unit of weight until we are
+-- back under 80%; quest/plot items stay.
+local function manageWeight(p)
+	local ok, enc, max = pcall(function() return p:getEncumbrance(), p:getMaxEncumbrance() end)
+	if not ok or not enc or not max or enc <= max * 0.9 then return false end
+	local inven = p:getInven(p.INVEN_INVEN)
+	if not inven then return false end
+	local dropped, guard = 0, 0
+	while p:getEncumbrance() > max * 0.8 and guard < 30 do
+		guard = guard + 1
+		local worst, wi, wscore
+		for i, o in ipairs(inven) do
+			if not o.quest and not o.plot and (o.encumber or 0) > 0 then
+				local price = 0; pcall(function() price = o:getPrice() or 0 end)
+				local sc = price / (o.encumber * (o:getNumber() or 1))
+				if not wscore or sc < wscore then worst, wi, wscore = o, i, sc end
+			end
+		end
+		if not worst then break end
+		local okd = pcall(function() p:dropFloor(inven, wi, false, true) end)
+		if not okd then break end
+		dropped = dropped + 1
+	end
+	if dropped > 0 then _M.event("drop", {items=dropped, weight=math.floor(p:getEncumbrance()), max=math.floor(max)}) end
+	return dropped > 0
+end
+
 -- wear `o` (pack slot idx) the way Player:doWear does: the replaced item goes
 -- back in the pack (the old churn dropped it into nothing = lost gear)
 local function wearFromPack(p, inven, idx, o)
@@ -638,7 +666,10 @@ function _M:onPlayerAct(p)
 	-- pick up whatever we are standing on, item by item (playerPickup opens
 	-- the ShowPickupFloor chooser when several items lie here, which on a
 	-- 402pt screen also overflows - ui_overflow caught that on the sim)
-	if game.level.map:getObject(p.x, p.y, 1) then
+	if manageWeight(p) then return end
+	local light = true
+	pcall(function() light = p:getEncumbrance() < p:getMaxEncumbrance() * 0.9 end)
+	if light and game.level.map:getObject(p.x, p.y, 1) then
 		local n = 0
 		local ok = pcall(function()
 			while game.level.map:getObject(p.x, p.y, 1) and n < 20 do
