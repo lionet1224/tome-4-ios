@@ -2373,7 +2373,8 @@ static int gl_scissor(lua_State *L)
 		float w = luaL_checknumber(L, 4);
 		float h = luaL_checknumber(L, 5);
 		y = screen->h / screen_zoom - y - h;
-		glScissor(x, y, w, h);
+		/* GL scissor is in pixels; the engine passes logical units */
+		glScissor(x * screen_zoom, y * screen_zoom, w * screen_zoom, h * screen_zoom);
 	} else glDisable(GL_SCISSOR_TEST);
 	return 0;
 }
