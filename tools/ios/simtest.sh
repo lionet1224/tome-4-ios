@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Touch-UI regression run on the Plus-size simulator. Launches the game with a
+# fresh auto-birthed character (autopilot_birth_only), then drives every touch
+# interaction we support and captures a frame after each. Prints PASS/FAIL per
+# step from the console trace; frames land in $OUT for eyeballing.
+# Usage: tools/ios/simtest.sh [UDID]   (needs idb: pipx install fb-idb)
+set -u
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+UD="${1:-$(xcrun simctl list devices | grep -E 'Plus.*Booted' | grep -oE '[0-9A-F-]{36}' | head -1)}"
+[ -z "$UD" ] && { echo "no booted Plus simulator"; exit 1; }
+OUT="$ROOT/runs/simtest-$(date +%Y%m%d-%H%M%S)"; mkdir -p "$OUT"
+LOG="$OUT/console.log"; TAP="python3 $ROOT/tools/ios/simtap.py $UD"
+D=$(xcrun simctl get_app_container "$UD" org.te4.tome.dev data)
+mkdir -p "$D/Documents/t-engine/4.0/settings"
+printf 'audio.enable = false\naudio.music_volume = 0\naudio.effects_volume = 0\n' > "$D/Documents/t-engine/4.0/settings/audio.cfg"
+printf 'autopilot = true\nautopilot_birth_only = true\n' > "$D/Documents/t-engine/4.0/settings/autopilot.cfg"
+shot() { xcrun simctl io "$UD" screenshot "$OUT/$1.png" >/dev/null 2>&1; }
+check() { # name pattern
+	if grep -qE "$2" "$LOG"; then echo "PASS $1"; else echo "FAIL $1 (no /$2/ in console)"; fi
+}
+xcrun simctl terminate "$UD" org.te4.tome.dev 2>/dev/null
+xcrun simctl launch --console-pty "$UD" org.te4.tome.dev --flush-stdout > "$LOG" 2>&1 &
+sleep 85; shot 01-ingame
+check "character created (birth-only autopilot)" '"birther_state"|AUTOPILOT\] active'
+# orientation calibration: tap the far top-left of the map and read the engine coords back
+$TAP tap 300 60 >/dev/null; sleep 2
+RAW=$(grep -E 'IOS-INPUT\] UP' "$LOG" | tail -1 | grep -oE 'lua=\([0-9.]+,[0-9.]+\)')
+echo "calibration tap -> $RAW (expected near (300,60); if mirrored, flip orient in ~/.tome-simtap.json)"
+# 1. long-press on the character's tile area = right click menu
+$TAP tap 700 320 --long >/dev/null; sleep 2; shot 02-longpress
+check "long-press opens the Actions menu" 'MapMenu|Actions'
+$TAP tap 1350 40 >/dev/null; sleep 1   # tap outside = close
+# 2. drag pans the camera (trace [PAN] only present in instrumented builds; use setScroll marker instead)
+$TAP swipe 700 320 500 320 >/dev/null; sleep 2; shot 03-pan
+# 3. touch row: Level
+$TAP tap 1142 616 >/dev/null; sleep 3; shot 04-levelup
+check "touch row Level opens the level-up dialog" 'tb_touch_LEVELUP|Levelup'
+# 4. close box
+CB=$(grep 'DLG-CLOSE' "$LOG" | tail -1); X=$(echo "$CB" | awk -F'\t' '{print $3}'); Y=$(echo "$CB" | awk -F'\t' '{print $4}')
+[ -n "$X" ] && { $TAP tap $((X+17)) $((Y+17)) >/dev/null; sleep 2; shot 05-closed; }
+# 5. escape key path (HID) opens the game menu, again closes it
+~/.local/bin/idb ui key 41 --udid "$UD" >/dev/null 2>&1; sleep 2; shot 06-gamemenu
+~/.local/bin/idb ui key 41 --udid "$UD" >/dev/null 2>&1; sleep 1
+# 6. touch row: Rest / Explore
+$TAP tap 1014 616 >/dev/null; sleep 3; shot 07-rest
+check "touch row Rest" 'tb_touch_REST|Rest'
+echo "lua errors: $(grep -c 'Lua Error' "$LOG")"
+echo "frames in $OUT"
