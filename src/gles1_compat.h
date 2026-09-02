@@ -95,6 +95,8 @@ void te4_glTexImage3D(GLenum target, GLint level, GLint internalformat, GLsizei 
 void te4_glDrawBuffers(GLsizei n, const GLenum *bufs);
 void te4_glReadPixels_compat(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, void *pixels);
 void te4_glClearDepth(GLdouble d);
+void te4_glActiveTexture(GLenum unit);
+#define glActiveTexture te4_glActiveTexture
 
 #define glMatrixMode te4_glMatrixMode
 #define glLoadIdentity te4_glLoadIdentity

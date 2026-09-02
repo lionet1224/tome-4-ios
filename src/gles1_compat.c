@@ -527,6 +527,21 @@ void te4_glPopAttrib(void)
 /* ------------------------------------------------------------------ */
 void te4_glClearDepth(GLdouble d) { glClearDepthf((GLclampf)d); }
 
+/* multitexture is reported unavailable, but track unit switches anyway:
+ * the pipeline shader only samples unit 0, so a bind on another unit
+ * would silently leave a stale texture on unit 0 */
+static GLenum cur_tex_unit = GL_TEXTURE0;
+void te4_glActiveTexture(GLenum unit)
+{
+	static int warned = 0;
+	if (unit != GL_TEXTURE0 && warned < 5) {
+		warned++;
+		printf("[GLES2-FF] glActiveTexture(0x%x) with multitexture off\n", (unsigned)unit);
+	}
+	cur_tex_unit = unit;
+	glActiveTexture(unit);
+}
+
 void te4_glTexImage3D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const void *pixels)
 {
 	static int warned = 0;
