@@ -180,7 +180,9 @@ function _M.handleDialog(d)
 			local map = game.level.map
 			for dx = -1, 1 do for dy = -1, 1 do
 				local g = map(p.x + dx, p.y + dy, map.TERRAIN)
-				if g and (g.door_opened or g.is_door or g.door_sealed) then
+				-- vault doors carry door_player_check/door_player_stop; that is the
+				-- pair auto-explore consults together with autoexplore_ignore
+				if g and (g.door_player_check or g.door_player_stop or g.door_opened or g.is_door) then
 					map.attrs(p.x + dx, p.y + dy, "autoexplore_ignore", true)
 				end
 			end end
