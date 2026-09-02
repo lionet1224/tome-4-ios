@@ -200,7 +200,13 @@ function _M.handleDialog(d)
 	-- "Danger..." (descending to a level above our rank) and similar yes/no
 	-- prompts where the bot wants to proceed: press the Yes button
 	local title = d.title and tostring(d.title) or ""
-	if title:find("Danger") or title:find("sealed door") then
+	-- generic unstick: a prompt that comes right back after being closed is a
+	-- bump-prompt (rock to push, door to open, ...) whose cancel just repeats;
+	-- answer it positively instead of cancelling forever
+	local st = _M.state
+	if st.last_dialog_title == title then st.dialog_repeat = (st.dialog_repeat or 0) + 1 else st.dialog_repeat = 0 end
+	st.last_dialog_title = title
+	if title:find("Danger") or title:find("sealed door") or st.dialog_repeat >= 2 then
 		-- prefer a Yes/Open/Ok button; otherwise the first button is the
 		-- positive one in the engine's prompt helpers
 		local first
