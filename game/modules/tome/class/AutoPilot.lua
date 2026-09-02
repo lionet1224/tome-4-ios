@@ -295,6 +295,12 @@ function _M.frame()
 		if game.turn ~= st.last_turn then
 			st.last_turn = game.turn
 			st.last_progress_time = now
+		elseif now - st.last_progress_time > 10 and st.ingame and _M.blockingDialogs() == 0
+		       and game.player and not game.player.dead then
+			-- generic self-unstick: something is silently refusing to act;
+			-- burn a turn so whatever blocks us (projectile, effect) passes
+			_M.event("unstick", {idle=now - st.last_progress_time})
+			pcall(function() game.player:useEnergy() end)
 		elseif now - st.last_progress_time > 90 then
 			_M.event("stalled", {seconds=now - st.last_progress_time})
 			_M.quit(3)
