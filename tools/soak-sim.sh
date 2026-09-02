@@ -47,9 +47,10 @@ LPID=$!
 D0="$(xcrun simctl get_app_container "$DEV" $BUNDLE_ID data 2>/dev/null)"
 SECS=$((MINUTES * 60))
 HUNG=""
+EXIT="timeout"
 sleep 20  # let the app come up before judging liveness
 for i in $(seq 1 "$SECS"); do
-	pgrep -f 'ToME.app/t-engine' >/dev/null 2>&1 || { echo "[soak-sim] app exited"; break; }
+	pgrep -f 'ToME.app/t-engine' >/dev/null 2>&1 || { echo "[soak-sim] app exited"; EXIT="exited"; break; }
 	if [ $((i % 60)) -eq 0 ]; then
 		xcrun simctl io "$DEV" screenshot "$RUN/periodic-$i.png" >/dev/null 2>&1
 	fi
@@ -57,8 +58,8 @@ for i in $(seq 1 "$SECS"); do
 		TELE="$(tele_for_run "$D0/Documents/t-engine/4.0/tome/autopilot")"
 		if [ -n "$TELE" ]; then
 			AGE=$(( $(date +%s) - $(stat -f %m "$TELE") ))
-			if [ "$AGE" -gt 120 ]; then echo "[soak-sim] HUNG: telemetry stale ${AGE}s"; HUNG=1; break; fi
-		elif [ "$i" -ge 180 ]; then echo "[soak-sim] HUNG: no telemetry ${i}s after launch"; HUNG=1; break
+			if [ "$AGE" -gt 120 ]; then echo "[soak-sim] HUNG: telemetry stale ${AGE}s"; HUNG=1; EXIT="HUNG"; break; fi
+		elif [ "$i" -ge 180 ]; then echo "[soak-sim] HUNG: no telemetry ${i}s after launch"; HUNG=1; EXIT="HUNG"; break
 			if grep -q '"session_end"' "$TELE"; then echo "[soak-sim] autopilot ended the run"; break; fi
 		fi
 	fi
@@ -77,7 +78,7 @@ if [ -n "$D" ]; then
 	ls "$D/Documents/t-engine/4.0/tome/error-logs/"*/*.txt 2>/dev/null | tail -3 | while read -r f; do cp "$f" "$RUN/"; done
 fi
 # the run's savefile: archived when the run ended abnormally, always removed from the container
-SAVE=$(grep -oE '"save":"[^"]*"' "$RUN/telemetry.jsonl" 2>/dev/null | tail -1 | cut -d'"' -f4 | tr 'A-Z' 'a-z' | sed 's/[^a-z0-9_.-]/_/g')
+SAVE=$(grep -oE '"save":"[^"]*"' "$RUN/telemetry.jsonl" 2>/dev/null | tail -1 | cut -d'"' -f4 | tr 'A-Z' 'a-z' | sed 's/[^a-z0-9_.]/_/g')
 if [ -n "$SAVE" ] && [ -n "$D" ] && [ -d "$D/Documents/t-engine/4.0/tome/save/$SAVE" ]; then
 	case "$EXIT" in timeout|"exited(0)") ;; *) mkdir -p "$RUN/save"; cp -R "$D/Documents/t-engine/4.0/tome/save/$SAVE" "$RUN/save/" && echo "[soak-sim] save archived: $SAVE";; esac
 	rm -rf "$D/Documents/t-engine/4.0/tome/save/$SAVE" "$D/Documents/t-engine/4.0/tome/save/$SAVE.quickbirth"

@@ -104,7 +104,7 @@ function _M:init(title, actor, order, at_end, quickbirth, w, h)
 
 	-- iOS port: default a name instead of empty; typing needs the on-screen
 	-- keyboard which the port suppresses for now
-	self.c_name = Textbox.new{title=_t"Name: ", text=(not config.settings.cheat and game.player_name == "player") and (config.settings.autopilot and ("Soak-%d"):format(os.time()) or "Adventurer") or game.player_name, chars=30, max_len=50, fct=function()
+	self.c_name = Textbox.new{title=_t"Name: ", text=(not config.settings.cheat and game.player_name == "player") and (config.settings.autopilot and ("Soak_%d"):format(os.time()) or "Adventurer") or game.player_name, chars=30, max_len=50, fct=function()
 		if config.settings.cheat then self:makeDefault() end
 	end, on_change=function() self:setDescriptor() end, on_mouse = function(button) if button == "right" then self:randomName() end end}
 

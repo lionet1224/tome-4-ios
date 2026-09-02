@@ -75,7 +75,7 @@ ls "$HOME_TE"/tome/error-logs/*/*.txt 2>/dev/null | tail -3 | while read -r f; d
 
 # the run's savefile: archived when the run ended abnormally (repro with
 # tools/soak-resume.sh), always removed from the engine dir (disk)
-SAVE=$(grep -oE '"save":"[^"]*"' "$RUN/telemetry.jsonl" 2>/dev/null | tail -1 | cut -d'"' -f4 | tr 'A-Z' 'a-z' | sed 's/[^a-z0-9_.-]/_/g')
+SAVE=$(grep -oE '"save":"[^"]*"' "$RUN/telemetry.jsonl" 2>/dev/null | tail -1 | cut -d'"' -f4 | tr 'A-Z' 'a-z' | sed 's/[^a-z0-9_.]/_/g')
 if [ -n "$SAVE" ] && [ -d "$HOME_TE/tome/save/$SAVE" ]; then
 	case "$EXIT" in timeout|"exited(0)") ;; *) mkdir -p "$RUN/save"; cp -R "$HOME_TE/tome/save/$SAVE" "$RUN/save/" && echo "[soak] save archived: $SAVE";; esac
 	rm -rf "$HOME_TE/tome/save/$SAVE" "$HOME_TE/tome/save/$SAVE.quickbirth"
