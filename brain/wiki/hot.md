@@ -18,9 +18,12 @@ main menu, native arm64, plain Lua 5.1.
 
 ## Active Threads (post-C7: AUTOPILOT SOAK LOOP — WORLD TOUR WORKS)
 - Mac soak: Trollmire 1-4 → zone_done → worldmap → Ruins of Kor'Pul (wiki order),
-  plevel 6, 136 kills, 0 Lua errors. Lua heap 31→124MB over 15 min: leak watch.
-- Sim: 15-min runs clean to Trollmire 3; minimap shows wrong texture (scene
-  sampled?) — [MM-DBG] instrumentation staged for the next sim run.
+  plevel 6, 136 kills, 0 Lua errors. Heap jumps at zone loads, plateaus between.
+- Sim: 15-min runs clean; **minimap fixed** (raw glBindTexture calls bypassed the
+  tgl cache → made cache-aware), grey band fixed (per-frame clear), rest/vault-door
+  loops fixed (stale popup matching; answer Yes to sealed door). MM-DBG
+  instrumentation still in map.c (throttled) — remove when convenient.
+- Two Claude sessions exist (this one is a fork); the fork owns the repo/soaks.
 - Autopilot + telemetry + soak harness landed ([[autopilot-telemetry]]). Mac
   soak reached level 2, 24 kills, talents/equip/chat exercised. Iterating on
   stairs descent; then `tools/soak-sim.sh` on the simulator (bundle rebuilt).
