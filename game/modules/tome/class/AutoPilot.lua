@@ -536,11 +536,33 @@ local function findStore(p)
 	return nil
 end
 
+-- moving into a friendly actor "bumps" it, which for NPCs opens their chat;
+-- the hermit on the worldmap reopened his chat 1400x this way. Sidestep them.
+local function friendlyAt(p, x, y)
+	local a = game.level.map(x, y, game.level.map.ACTOR)
+	return a and a ~= p and p:reactionToward(a) >= 0
+end
+
 local function stepToward(p, tx, ty)
 	local a = Astar.new(game.level.map, p)
 	local path = a:calc(p.x, p.y, tx, ty)
 	if path and path[1] then
-		p:move(path[1].x, path[1].y)
+		local nx, ny = path[1].x, path[1].y
+		if friendlyAt(p, nx, ny) then
+			-- best free neighbour that still gets us closer
+			local best, bd
+			for dx = -1, 1 do for dy = -1, 1 do
+				local x, y = p.x + dx, p.y + dy
+				if (dx ~= 0 or dy ~= 0) and p:canMove(x, y) and not friendlyAt(p, x, y) then
+					local d = core.fov.distance(x, y, tx, ty)
+					if not bd or d < bd then best, bd = {x=x, y=y}, d end
+				end
+			end end
+			if best then p:move(best.x, best.y) return true end
+			p:useEnergy() -- wait for it to move
+			return true
+		end
+		p:move(nx, ny)
 		return true
 	end
 	return false
