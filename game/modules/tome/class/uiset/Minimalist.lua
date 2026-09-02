@@ -1981,10 +1981,13 @@ function _M:displayToolbar(scale, bx, by)
 					if button == "left" and not xrel and not yrel and event == "button" then game.key:triggerVirtual(tb.key) end
 				end
 				game.mouse:registerZone(bx + tx * scale, by + ty * scale, bw, bh, desc_fct, nil, zone, true, scale)
-				-- the row overlaps the hotkeys zone registered earlier: zones are
-				-- tested in order, so move ours to the front
-				local areas = game.mouse.areas
-				if areas and #areas > 1 and areas[#areas].name == zone then table.insert(areas, 1, table.remove(areas, #areas)) end
+			end
+			-- the row overlaps the hotkeys area; zones are tested front to back
+			-- and other UI re-registers its zones, so keep ours in front
+			local areas, mine = game.mouse.areas, game.mouse.areas_name[zone]
+			if areas and mine and areas[1] ~= mine then
+				for k = 1, #areas do if areas[k] == mine then table.remove(areas, k) break end end
+				table.insert(areas, 1, mine)
 			end
 		end
 	end
