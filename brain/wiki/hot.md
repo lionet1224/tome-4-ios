@@ -26,6 +26,8 @@ main menu, native arm64, plain Lua 5.1.
 - Phone: first install done via tools/ios/install-device.sh (needs the profile trusted
   on the phone: Settings > General > VPN & Device Management). Refresh = re-run the
   script (needs ~1.1GB free: out-dev + DerivedData copies of the 527MB bundle).
+- Escape on touch: two-finger tap (EXIT) + close box on every dialog; tap outside
+  a dialog closes it. Regression: tools/ios/simtest.sh (all green 2026-09-02).
 - Touch layer done: long-press = right click, drag = pan, cursor parked after tap,
   finger-sized touch row (Rest/Explore/Pick up/Level/Char). Native-pixel rendering
   with zoom 2 + font 150% is the iOS default (dialogs fit). Dialog hit-test is
