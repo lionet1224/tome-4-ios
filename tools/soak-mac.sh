@@ -11,6 +11,16 @@ RUN="$ROOT/runs/mac-$STAMP"
 HOME_TE="$HOME/Library/Application Support/T-Engine/4.0"
 mkdir -p "$RUN"; touch "$RUN/.start"
 
+# newest telemetry file that BEGAN after this run started (filename epoch), so a
+# still-running older instance can't be mistaken for ours
+tele_for_run() { # dir
+	local start; start=$(stat -f %m "$RUN/.start")
+	ls "$1"/telemetry-*.jsonl 2>/dev/null | while read -r f; do
+		local e; e=$(basename "$f" .jsonl); e=${e#telemetry-}
+		[ "$e" -ge "$start" ] 2>/dev/null && echo "$f"
+	done | sort | tail -1
+}
+
 SHA="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 # module Lua can't see env vars; enable via settings file
 mkdir -p "$HOME_TE/settings"
@@ -29,7 +39,7 @@ HUNG=""
 for i in $(seq 1 "$SECS"); do
 	kill -0 "$PID" 2>/dev/null || break
 	if [ $((i % 30)) -eq 0 ]; then
-		TELE="$(find "$HOME_TE/tome/autopilot" -name 'telemetry-*.jsonl' -newer "$RUN/.start" 2>/dev/null | head -1)"
+		TELE="$(tele_for_run "$HOME_TE/tome/autopilot")"
 		if [ -n "$TELE" ]; then
 			AGE=$(( $(date +%s) - $(stat -f %m "$TELE") ))
 			if [ "$AGE" -gt 120 ]; then echo "[soak] HUNG: telemetry stale ${AGE}s"; HUNG=1; break; fi
@@ -51,7 +61,7 @@ fi
 
 cp /tmp/te4_log.txt "$RUN/console.log" 2>/dev/null
 # newest telemetry file from this run
-TELE="$(find "$HOME_TE/tome/autopilot" -name 'telemetry-*.jsonl' -newer "$RUN/.start" 2>/dev/null | head -1)"
+TELE="$(tele_for_run "$HOME_TE/tome/autopilot")"
 [ -n "${TELE:-}" ] && cp "$TELE" "$RUN/telemetry.jsonl" || echo "[soak] no telemetry from this run"
 ls "$HOME_TE"/tome/error-logs/*/*.txt 2>/dev/null | tail -3 | while read -r f; do cp "$f" "$RUN/"; done
 
