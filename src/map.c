@@ -2064,29 +2064,6 @@ static int minimap_to_screen(lua_State *L)
 		}
 	}
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, map->mm_rw, map->mm_rh, GL_BGRA, GL_UNSIGNED_BYTE, mm);
-#ifdef TE4_IOS
-	{
-		static int dbg = 0;
-		if ((dbg++ % 300) == 0) {
-			GLint bound = 0;
-			glGetIntegerv(GL_TEXTURE_BINDING_2D, &bound);
-			/* data-level check: how many distinct colours did we write? */
-			int n = map->mm_rw * map->mm_rh, k, uniq = 0, nz = 0;
-			unsigned seen_cols[16]; unsigned first = 0;
-			for (k = 0; k < n; k++) {
-				unsigned char *px = mm + k * 4;
-				if (!px[3]) continue;
-				unsigned c = (px[0] << 16) | (px[1] << 8) | px[2];
-				if (!nz) first = c;
-				nz++;
-				int u; for (u = 0; u < uniq; u++) if (seen_cols[u] == c) break;
-				if (u == uniq && uniq < 16) seen_cols[uniq++] = c;
-			}
-			printf("[MM-DBG] mm_texture=%u cache=%u bound=%d rw=%d rh=%d mm_w=%d err=0x%x nonzero=%d uniq=%d first_bgr=%06x\n",
-				(unsigned)map->mm_texture, (unsigned)gl_c_texture, (int)bound, map->mm_rw, map->mm_rh, map->mm_w, (unsigned)glGetError(), nz, uniq, first);
-		}
-	}
-#endif
 
 	// Display it
 	GLfloat texcoords[2*4] = {
