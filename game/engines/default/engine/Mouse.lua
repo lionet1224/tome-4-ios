@@ -55,6 +55,7 @@ end
 -- @param force_name if not nil only the zone with this name may trigger
 -- @param extra
 function _M:receiveMouse(button, x, y, isup, force_name, extra)
+	if _M.suppress_next_up and isup and button == "left" then _M.suppress_next_up = nil return end
 	self.last_pos = { x = x, y = y }
 	self.status[button] = not isup
 	if not self:isEnabled() then return end
@@ -222,7 +223,46 @@ end
 -- @param dy delta coordinate of the click (normalized to 0->1)
 -- @param pressure
 -- @param isup true if the key was released, false if pressed
+-- iOS port: touch gestures on top of SDL's touch-as-mouse emulation.
+-- * long-press (finger still ~0.45s) = right click (context menu, tooltips)
+-- * after finger-up the fake cursor is parked off-screen so nothing "hovers"
+-- * the left click SDL synthesizes at finger-up after a long-press is swallowed
+_M.touch = nil
+_M.LONG_PRESS_MS = 450
+_M.TOUCH_MOVE_TOLERANCE = 12
+
+function _M.touchTick()
+	local t = _M.touch
+	if t and not t.moved and not t.fired and core.game.getTime() - t.t0 >= _M.LONG_PRESS_MS then
+		t.fired = true
+		local m = _M.current
+		if m then
+			m:receiveMouseMotion("none", t.x, t.y, 0, 0)
+			m:receiveMouse("right", t.x, t.y, true)
+		end
+	end
+	if _M.park_cursor then
+		_M.park_cursor = _M.park_cursor - 1
+		if _M.park_cursor <= 0 then
+			_M.park_cursor = nil
+			if _M.current then _M.current:receiveMouseMotion("none", -10, -10, 0, 0) end
+		end
+	end
+end
+
 function _M:receiveTouch(fingerId, x, y, dx, dy, pressure, isup)
+	if not isup then
+		_M.touch = {x=x, y=y, t0=core.game.getTime(), moved=false, fired=false}
+	else
+		local t = _M.touch
+		_M.touch = nil
+		if t and t.fired then _M.suppress_next_up = true end
+		_M.park_cursor = 2 -- frames; after the synthesized mouse-up has been delivered
+	end
+	return self:receiveTouchOrig(fingerId, x, y, dx, dy, pressure, isup)
+end
+
+function _M:receiveTouchOrig(fingerId, x, y, dx, dy, pressure, isup)
 	-- print("=touch", fingerId, x, y, dx, dy, pressure, isup)
 end
 
@@ -234,6 +274,12 @@ end
 -- @param dy delta coordinate of the click (normalized to 0->1)
 -- @param pressure
 function _M:receiveTouchMotion(fingerId, x, y, dx, dy, pressure)
+	local t = _M.touch
+	if t and (math.abs(x - t.x) > _M.TOUCH_MOVE_TOLERANCE or math.abs(y - t.y) > _M.TOUCH_MOVE_TOLERANCE) then t.moved = true end
+	return self:receiveTouchMotionOrig(fingerId, x, y, dx, dy, pressure)
+end
+
+function _M:receiveTouchMotionOrig(fingerId, x, y, dx, dy, pressure)
 	-- print("=touch motion", fingerId, x, y, dx, dy, pressure)
 end
 
