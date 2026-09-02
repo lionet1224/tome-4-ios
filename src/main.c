@@ -415,7 +415,7 @@ bool on_event(SDL_Event *event)
 		printf("[IOS-INPUT] %s btn=%d raw=(%d,%d) zoom=%.2f -> lua=(%.0f,%.0f) handler=%d\n",
 			event->type == SDL_MOUSEBUTTONDOWN ? "DOWN" : "UP", event->button.button,
 			event->button.x, event->button.y, screen_zoom,
-			event->button.x / screen_zoom, event->button.y / screen_zoom,
+			event->button.x * dpi_scale / screen_zoom, event->button.y * dpi_scale / screen_zoom,
 			current_mousehandler != LUA_NOREF);
 #endif
 		if (event->type == SDL_MOUSEBUTTONDOWN) SDL_SetCursor(mouse_cursor_down);
