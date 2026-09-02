@@ -49,7 +49,12 @@ end
 
 -- os.exit does nothing on iOS; ask the engine to shut down instead
 function _M.quit(code)
-	_M.event("session_end", {code=code or 0})
+	-- persist the exact state for repro (tools/soak-resume.sh), then end
+	if game and game.saveGame and game.player and not game.player.dead then
+		local ok, err = pcall(function() game:saveGame(); savefile_pipe:forceWait() end)
+		_M.event("saved", {name=game.save_name, ok=ok and true or false, err=(not ok) and tostring(err) or nil})
+	end
+	_M.event("session_end", {code=code or 0, save=game and game.save_name})
 	_M.state.done = true
 	pcall(os.exit, code or 0)
 	pcall(function() core.game.exit_engine() end)
@@ -314,7 +319,8 @@ function _M.frame()
 			_M.event("heartbeat", {life=math.floor(p.life or 0), max_life=math.floor(p.max_life or 0),
 				plevel=p.level or 0, kills=st.kills, chats=st.chat_answers, acts=st.acts,
 				mem_kb=math.floor(collectgarbage("count")),
-				unused_stats=p.unused_stats or 0, unused_talents=p.unused_talents or 0, unused_generics=p.unused_generics or 0})
+				unused_stats=p.unused_stats or 0, unused_talents=p.unused_talents or 0, unused_generics=p.unused_generics or 0,
+				save=game.save_name})
 		end
 		if game.turn ~= st.last_turn then
 			st.last_turn = game.turn

@@ -30,6 +30,7 @@ DPRE="$(xcrun simctl get_app_container "$DEV" $BUNDLE_ID data 2>/dev/null)"
 if [ -n "$DPRE" ]; then
 	mkdir -p "$DPRE/Documents/t-engine/4.0/settings"
 	printf 'autopilot = true\nautopilot_build = "%s"\n' "$SHA" > "$DPRE/Documents/t-engine/4.0/settings/autopilot.cfg"
+	[ -n "${RESUME:-}" ] && printf 'autopilot_resume = "%s"\n' "$RESUME" >> "$DPRE/Documents/t-engine/4.0/settings/autopilot.cfg" && echo "[soak-sim] resuming save $RESUME"
 	trap 'rm -f "$DPRE/Documents/t-engine/4.0/settings/autopilot.cfg"' EXIT
 fi
 
@@ -70,6 +71,12 @@ if [ -n "$D" ]; then
 	TELE="$(tele_for_run "$D/Documents/t-engine/4.0/tome/autopilot")"
 	[ -n "${TELE:-}" ] && cp "$TELE" "$RUN/telemetry.jsonl" || echo "[soak-sim] no telemetry from this run"
 	ls "$D/Documents/t-engine/4.0/tome/error-logs/"*/*.txt 2>/dev/null | tail -3 | while read -r f; do cp "$f" "$RUN/"; done
+fi
+# the run's savefile: archived when the run ended abnormally, always removed from the container
+SAVE=$(grep -oE '"save":"[^"]*"' "$RUN/telemetry.jsonl" 2>/dev/null | tail -1 | cut -d'"' -f4 | tr 'A-Z' 'a-z' | sed 's/[^a-z0-9_.-]/_/g')
+if [ -n "$SAVE" ] && [ -n "$D" ] && [ -d "$D/Documents/t-engine/4.0/tome/save/$SAVE" ]; then
+	case "$EXIT" in timeout|"exited(0)") ;; *) mkdir -p "$RUN/save"; cp -R "$D/Documents/t-engine/4.0/tome/save/$SAVE" "$RUN/save/" && echo "[soak-sim] save archived: $SAVE";; esac
+	rm -rf "$D/Documents/t-engine/4.0/tome/save/$SAVE" "$D/Documents/t-engine/4.0/tome/save/$SAVE.quickbirth"
 fi
 mkdir -p "$RUN/shots"; [ -n "$D" ] && find "$D/Documents/t-engine/4.0/tome/screenshots" -name '*.png' -newer "$RUN/.start" -exec mv {} "$RUN/shots/" \; 2>/dev/null
 

@@ -79,7 +79,23 @@ function _M:init()
 
 	-- iOS port: autopilot goes straight into New Game
 	print("[AUTOPILOT-CHECK] settings.autopilot =", tostring(config.settings.autopilot), "build =", tostring(config.settings.autopilot_build))
-	if config.settings.autopilot then
+	if config.settings.autopilot and config.settings.autopilot_resume then
+		-- repro mode: load the archived save (tools/soak-resume.sh) instead of a new game
+		local want = tostring(config.settings.autopilot_resume)
+		local found
+		for _, m in ipairs(Module:listSavefiles()) do
+			for _, save in ipairs(m.savefiles or {}) do
+				if m.short_name == "tome" and save.base_name == want then found = {mod=m.versions and m.versions[1] or m, save=save} end
+			end
+		end
+		if found then
+			print("[AUTOPILOT] resuming save", want)
+			game:onTickEnd(function() Module:instanciate(found.mod, found.save.base_name, false) end)
+		else
+			print("[AUTOPILOT] resume save not found:", want, "- starting New Game")
+			game:onTickEnd(function() l[1].fct() end)
+		end
+	elseif config.settings.autopilot then
 		print("[AUTOPILOT] auto-starting New Game")
 		game:onTickEnd(function() l[1].fct() end)
 	end

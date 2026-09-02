@@ -25,6 +25,7 @@ SHA="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 # module Lua can't see env vars; enable via settings file
 mkdir -p "$HOME_TE/settings"
 printf 'autopilot = true\nautopilot_build = "%s"\n' "$SHA" > "$HOME_TE/settings/autopilot.cfg"
+[ -n "${RESUME:-}" ] && printf 'autopilot_resume = "%s"\n' "$RESUME" >> "$HOME_TE/settings/autopilot.cfg" && echo "[soak] resuming save $RESUME"
 trap 'rm -f "$HOME_TE/settings/autopilot.cfg"' EXIT
 export TE4_BUILD_SHA="$SHA"
 # AddressSanitizer build (premake --asan): report to $RUN/asan.<pid>, abort on first error
@@ -68,6 +69,13 @@ TELE="$(tele_for_run "$HOME_TE/tome/autopilot")"
 [ -n "${TELE:-}" ] && cp "$TELE" "$RUN/telemetry.jsonl" || echo "[soak] no telemetry from this run"
 ls "$HOME_TE"/tome/error-logs/*/*.txt 2>/dev/null | tail -3 | while read -r f; do cp "$f" "$RUN/"; done
 
+# the run's savefile: archived when the run ended abnormally (repro with
+# tools/soak-resume.sh), always removed from the engine dir (disk)
+SAVE=$(grep -oE '"save":"[^"]*"' "$RUN/telemetry.jsonl" 2>/dev/null | tail -1 | cut -d'"' -f4 | tr 'A-Z' 'a-z' | sed 's/[^a-z0-9_.-]/_/g')
+if [ -n "$SAVE" ] && [ -d "$HOME_TE/tome/save/$SAVE" ]; then
+	case "$EXIT" in timeout|"exited(0)") ;; *) mkdir -p "$RUN/save"; cp -R "$HOME_TE/tome/save/$SAVE" "$RUN/save/" && echo "[soak] save archived: $SAVE";; esac
+	rm -rf "$HOME_TE/tome/save/$SAVE" "$HOME_TE/tome/save/$SAVE.quickbirth"
+fi
 # in-game screenshots taken by the autopilot every 60s
 mkdir -p "$RUN/shots"; find "$HOME_TE/tome/screenshots" -name '*.png' -newer "$RUN/.start" -exec mv {} "$RUN/shots/" \; 2>/dev/null
 # harvest crash reports from the run window
