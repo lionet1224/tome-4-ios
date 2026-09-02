@@ -43,6 +43,7 @@ for i in $(seq 1 "$SECS"); do
 		if [ -n "$TELE" ]; then
 			AGE=$(( $(date +%s) - $(stat -f %m "$TELE") ))
 			if [ "$AGE" -gt 120 ]; then echo "[soak] HUNG: telemetry stale ${AGE}s"; HUNG=1; break; fi
+			if grep -q '"session_end"' "$TELE"; then echo "[soak] autopilot ended the run"; pkill -9 -f "MacOS/t-engine"; break; fi
 		fi
 	fi
 	sleep 1
@@ -68,6 +69,7 @@ ls "$HOME_TE"/tome/error-logs/*/*.txt 2>/dev/null | tail -3 | while read -r f; d
 # in-game screenshots taken by the autopilot every 60s
 mkdir -p "$RUN/shots"; find "$HOME_TE/tome/screenshots" -name '*.png' -newer "$RUN/.start" -exec cp {} "$RUN/shots/" \; 2>/dev/null
 # harvest crash reports from the run window
+sleep 4  # the .ips lands a few seconds after the crash
 find "$HOME/Library/Logs/DiagnosticReports" -name 't-engine-*.ips' -newer "$RUN/.start" -exec cp {} "$RUN/" \; 2>/dev/null
 [ -n "${HUNG:-}" ] && EXIT="HUNG(telemetry stale)"
 echo "[soak] finished: $EXIT"

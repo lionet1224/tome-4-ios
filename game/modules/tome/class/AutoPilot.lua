@@ -49,6 +49,7 @@ end
 
 -- os.exit does nothing on iOS; ask the engine to shut down instead
 function _M.quit(code)
+	_M.event("session_end", {code=code or 0})
 	_M.state.done = true
 	pcall(os.exit, code or 0)
 	pcall(function() core.game.exit_engine() end)
@@ -197,6 +198,15 @@ function _M.handleDialog(d)
 			end end
 		end
 		-- fall through: the prompt is a yes/no, answered Yes below (opens the vault)
+		local st = _M.state
+		if st.last_dialog_title == title and (st.dialog_repeat or 0) >= 5 and game.zone then
+			-- a lever door (door_player_stop) never opens from the prompt; stop
+			-- bumping it: level finished, zone done, leave
+			_M.event("blocked_level", {title=title, repeats=st.dialog_repeat})
+			st.explored = true
+			st.zone_done[game.zone.short_name] = true
+			st.dialog_repeat = 0
+		end
 	end
 	-- "Danger..." (descending to a level above our rank) and similar yes/no
 	-- prompts where the bot wants to proceed: press the Yes button
@@ -281,6 +291,7 @@ function _M.frame()
 	local st = _M.state
 	if not st.started then _M.setup() end
 	if st.done then return end
+	if coroutine.running() then return end
 	local now = os.time()
 
 	-- periodic in-game screenshot (engine glReadPixels -> PNG in

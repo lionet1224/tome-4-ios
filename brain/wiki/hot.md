@@ -25,7 +25,7 @@ main menu, native arm64, plain Lua 5.1.
   button), projectile-in-view spin, sleep effect (pass turns), generic 3s
   self-unstick. Minimap fixed (raw glBindTexture cache desync).
 - Harness: SIGKILL by path, telemetry by filename epoch, snapshot scripts.
-- Watch next: "Command Staff" dialog recurrence on staff equip; Lua heap growth
+- Watch next: mac exit(133) SIGTRAP = malloc freelist trap on an AGXMetal shader-compile thread (once, 21:38, right after "cannot resume running coroutine" from the save pipe → frame() now skips inside coroutines); recurrence? "Command Staff" dialog recurrence on staff equip; Lua heap growth
   at zone loads (~25 MB/zone; persistent levels stay resident, not a leak). MM-DBG removed (d47454a2, needs rebuild).
 
 ## Earlier (post-C7: AUTOPILOT SOAK LOOP — WORLD TOUR WORKS)

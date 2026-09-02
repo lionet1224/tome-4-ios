@@ -54,6 +54,7 @@ for i in $(seq 1 "$SECS"); do
 		if [ -n "$TELE" ]; then
 			AGE=$(( $(date +%s) - $(stat -f %m "$TELE") ))
 			if [ "$AGE" -gt 120 ]; then echo "[soak-sim] HUNG: telemetry stale ${AGE}s"; HUNG=1; break; fi
+			if grep -q '"session_end"' "$TELE"; then echo "[soak-sim] autopilot ended the run"; break; fi
 		fi
 	fi
 	sleep 1
