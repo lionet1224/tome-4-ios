@@ -323,7 +323,7 @@ function _M.frame()
 	local st = _M.state
 	if not st.started then _M.setup() end
 	if st.done then return end
-	if config.settings.autopilot_birth_only and game.level and game.player and not game.creating_player then return end
+	if config.settings.autopilot_birth_only and game.level and game.player and game.player.x then return end
 	if coroutine.running() then return end
 	if (st.changing_level or 0) > 0 then return end
 	-- per-level game-turn cap, checked per frame: the act-based cap does not
@@ -688,7 +688,7 @@ local function keepSustainsUp(p)
 end
 
 function _M:onPlayerAct(p)
-	if config.settings.autopilot_birth_only and game.level and game.player and not game.creating_player then return end
+	if config.settings.autopilot_birth_only and game.level and game.player and game.player.x then return end
 	if not game.level or not game.zone then return end
 	if p.dead then return end
 	if p.resting or p.running then return end
