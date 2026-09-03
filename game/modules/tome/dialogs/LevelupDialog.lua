@@ -820,6 +820,9 @@ function _M:createDisplay()
 		font = core.display.newFont(FontPackage:getFont("default"), 16),
 		width = math.floor(2 * self.iw / 3), delay = 1,
 	}
+	-- iOS port: tabbed layout (one list at a time, finger-sized rows)
+	if __IOS__ then return self:createDisplayTouch() end
+
 	local vsep1 = Separator.new{dir="horizontal", size=self.ih - self.b_stat.h - 10}
 	local vsep2 = Separator.new{dir="horizontal", size=self.ih - self.b_stat.h - 10}
 	local hsep = Separator.new{dir="vertical", size=180}
@@ -872,6 +875,80 @@ function _M:createDisplay()
 	end
 
 	return ret
+end
+
+-- iOS port: Stats / Class / Generic as tabs (the point buttons), one
+-- drag-scrolling list at a time, description on the right.
+function _M:createDisplayTouch()
+	local TouchTalentList = require "mod.dialogs.elements.TouchTalentList"
+	local font = core.display.newFont(FontPackage:getFont("default"), 16)
+	local bottom_h = (self.b_prodigies and self.b_prodigies.h or 0) + 8
+	local pane_h = self.ih - self.b_stat.h - 12 - bottom_h
+	local pane_w = math.floor(self.iw * 0.56)
+	local desc_fct = function(item) local ret = self:getTalentDesc(item) self.c_desc:erase() self.c_desc:switchItem(ret, ret) return ret end
+	local stat_fct = function(item) local ret = self:getStatDesc(item) self.c_desc:erase() self.c_desc:switchItem(ret, ret) return ret end
+	local mk = function(tree, tip, nocross)
+		return TouchTalentList.new{font=font, tree=tree, width=pane_w, height=pane_h, tooltip=tip, no_cross=nocross,
+			on_use=function(item, inc) self:onUseTalent(item, inc) end,
+			on_expand=function(item) self.actor.__hidden_talent_types[item.type] = not item.shown end,
+			scrollbar=true}
+	end
+	self.recreate_trees_touch = function()
+		self.c_ctree = mk(self.ctree, desc_fct)
+		self.c_gtree = mk(self.gtree, desc_fct)
+	end
+	self.recreate_trees_touch()
+	self.c_stat = mk(self.tree_stats, stat_fct, true)
+	local desc_w = self.iw - pane_w - 24
+	self.c_desc = TextzoneList.new{ focus_check = true, scrollbar = true, pingpong=20, width=desc_w, height=pane_h, dest_area={h=pane_h} }
+	self.c_pane = self.c_stat
+	self.b_stat.fct = function() self:switchPane("stat") end
+	self.b_class.fct = function() self:switchPane("class") end
+	self.b_generic.fct = function() self:switchPane("generic") end
+	self.c_hide_unknown.on_change = function(s)
+		self.actor.levelup_hide_unknown_catgories = s
+		self:generateList()
+		local oldc, oldg = self.c_ctree, self.c_gtree
+		self.recreate_trees_touch()
+		if self.c_pane == oldc then self:replaceUI(oldc, self.c_ctree) self.c_pane = self.c_ctree
+		elseif self.c_pane == oldg then self:replaceUI(oldg, self.c_gtree) self.c_pane = self.c_gtree end
+	end
+	local align = Empty.new{width=0, height=8}
+	local vsep = Separator.new{dir="horizontal", size=pane_h}
+	local ret = {
+		{left=0, top=0, ui=self.b_stat},
+		{left=self.b_stat, top=0, ui=self.b_class},
+		{left=self.b_class, top=0, ui=self.b_generic},
+		{left=self.b_generic, top=0, ui=self.b_types},
+		{left=0, top=self.b_stat, ui=align},
+		{left=0, top=align, ui=self.c_stat},
+		{left=self.c_stat, top=align, ui=vsep},
+		{left=vsep, top=align, ui=self.c_desc},
+		{right=0, bottom=0, ui=self.b_prodigies},
+		{hcenter=self.b_types, top=-self.t_messages.h, ui=self.t_messages},
+	}
+	if self.b_inscriptions then table.insert(ret, {right=self.b_prodigies.w, bottom=0, ui=self.b_inscriptions}) end
+	table.insert(ret, {right=self.b_inscriptions or self.b_prodigies, bottom=0, ui=self.c_hide_unknown})
+	self:setPaneGlow("stat")
+	self.c_stat:selectFirst()
+	return ret
+end
+
+function _M:switchPane(kind)
+	local new = kind == "stat" and self.c_stat or kind == "class" and self.c_ctree or self.c_gtree
+	if new == self.c_pane then return end
+	print("[TOUCH] levelup tab", kind)
+	self:replaceUI(self.c_pane, new)
+	self.c_pane = new
+	self:setPaneGlow(kind)
+	self:setFocus(new)
+	if new.sel_item then new:updateTooltip() else new:selectFirst() end
+end
+
+function _M:setPaneGlow(kind)
+	self.b_stat.glow = kind == "stat" and 0.6 or nil
+	self.b_class.glow = kind == "class" and 0.6 or nil
+	self.b_generic.glow = kind == "generic" and 0.6 or nil
 end
 
 function _M:getStatDesc(item)
