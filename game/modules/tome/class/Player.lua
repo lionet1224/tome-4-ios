@@ -1417,21 +1417,111 @@ function _M:hotkeyInventory(name)
 	end
 end
 
--- iOS port: the Attack buttons. Target = the closest visible enemy, with
--- ones already fighting us first and, at equal distance, the weakest.
-function _M:touchPickTarget()
-	local best, bk = nil, nil
-	if not (self.fov and self.fov.actors_dist) then return nil end
-	for _, a in ipairs(self.fov.actors_dist) do
-		if a ~= self and a.x and not a.dead and self:reactionToward(a) < 0 and self:canSee(a) then
-			local d = core.fov.distance(self.x, self.y, a.x, a.y)
-			local hostile = (a.ai_target and a.ai_target.actor == self) and 0 or 1
-			local frac = (a.life or 1) / math.max(1, a.max_life or 1)
-			local key = hostile * 1000 + d * 10 + frac
-			if not bk or key < bk then bk, best = key, a end
+-- iOS port: the Act button. A routine is an ordered list of steps; a tap does
+-- the next step that can be done right now (one game turn) and the routine
+-- loops. Several routines per character, switched by holding the button.
+_M.ACT_TARGETS = {"nearest", "attacker", "weakest", "strongest", "furthest", "marked", "best_aoe", "manual", "self"}
+_M.ACT_TARGET_NAMES = {nearest=_t"nearest enemy", attacker=_t"enemy attacking me", weakest=_t"weakest enemy", strongest=_t"strongest enemy", furthest=_t"furthest enemy in range", marked=_t"marked enemy", best_aoe=_t"best area spot", manual=_t"aim by hand", self=_t"myself"}
+_M.ACT_KIND_NAMES = {bump=_t"Bump attack", approach=_t"Approach", back=_t"Step back", wait=_t"Wait a turn"}
+
+function _M:actRoutines()
+	if not self.act_routines then
+		local steps
+		local mh = self:getInven("MAINHAND") and self:getInven("MAINHAND")[1]
+		if mh and mh.archery and self.T_SHOOT and self:knowTalent(self.T_SHOOT) then
+			steps = {{kind="talent", tid=self.T_SHOOT, target="nearest", if_unusable="skip"}, {kind="back", target="nearest", if_unusable="skip"}}
+		else
+			steps = {{kind="bump", target="nearest", if_unusable="skip"}, {kind="approach", target="nearest", if_unusable="skip"}}
+		end
+		self.act_routines = {{name=_t"Basic", steps=steps, pos=1}}
+		self.act_active = 1
+	end
+	return self.act_routines
+end
+
+function _M:actRoutine()
+	local rs = self:actRoutines()
+	self.act_active = util.bound(self.act_active or 1, 1, #rs)
+	return rs[self.act_active]
+end
+
+function _M:actStepName(step)
+	if step.kind == "talent" then local t = self:getTalentFromId(step.tid) return t and t.name or tostring(step.tid)
+	elseif step.kind == "item" then return step.item
+	else return _M.ACT_KIND_NAMES[step.kind] or step.kind end
+end
+
+function _M:actStepEntity(step)
+	if step.kind == "talent" then local t = self:getTalentFromId(step.tid) return t and t.display_entity
+	elseif step.kind == "item" then return self:findInAllInventories(step.item, {no_add_name=true, force_id=true, no_count=true}) end
+end
+
+function _M:actEnemies()
+	local list = {}
+	if self.fov and self.fov.actors_dist then
+		for _, a in ipairs(self.fov.actors_dist) do
+			if a ~= self and a.x and not a.dead and self:reactionToward(a) < 0 and self:canSee(a) then
+				list[#list+1] = {a=a, d=core.fov.distance(self.x, self.y, a.x, a.y)}
+			end
 		end
 	end
-	return best, bk and math.floor((bk % 1000) / 10) or nil
+	return list
+end
+
+--- The creature (or "manual"/self) a step goes for
+function _M:actResolveTarget(step, t)
+	local rule = step.target or "nearest"
+	if rule == "self" then return self end
+	if rule == "manual" then return "manual" end
+	local enemies = self:actEnemies()
+	if #enemies == 0 then return nil end
+	local range = t and self:getTalentRange(t) or nil
+	if rule == "marked" then
+		local m = self.act_marked
+		if m and not m.dead and m.x and self:canSee(m) and game.level.map(m.x, m.y, Map.ACTOR) == m then return m end
+		self.act_marked = nil
+		rule = "nearest"
+	end
+	if rule == "best_aoe" and t then
+		local ok, tg = pcall(self.getTalentTarget, self, t)
+		if ok and type(tg) == "table" and (tg.radius or tg.type == "cone" or tg.type == "beam" or tg.type == "wall") then
+			local best, bn, bd = nil, 0, math.huge
+			for _, e in ipairs(enemies) do
+				if (not range or e.d <= range) and self:canProject(tg, e.a.x, e.a.y) then
+					local n = 0
+					local ok2, hit = pcall(self.projectCollect, self, tg, e.a.x, e.a.y, Map.ACTOR, "hostile")
+					if ok2 then for _ in pairs(hit) do n = n + 1 end end
+					if n > bn or (n == bn and e.d < bd) then best, bn, bd = e.a, n, e.d end
+				end
+			end
+			if best then return best end
+		end
+		rule = "nearest"
+	end
+	local best, bk
+	for _, e in ipairs(enemies) do
+		local a, d = e.a, e.d
+		local key
+		if rule == "attacker" then key = ((a.ai_target and a.ai_target.actor == self) and 0 or 1000) + d
+		elseif rule == "weakest" then key = (a.life or 1) / math.max(1, a.max_life or 1) * 1000 + d
+		elseif rule == "strongest" then key = -((a.level or 1) * 10 + (a.rank or 1)) * 100 + d
+		elseif rule == "furthest" then if not range or d <= range then key = -d end
+		else key = d end
+		if key and (not bk or key < bk) then bk, best = key, a end
+	end
+	return best
+end
+
+function _M:actPathStep(tgt)
+	local Astar = require "engine.Astar"
+	local path = Astar.new(game.level.map, self):calc(self.x, self.y, tgt.x, tgt.y)
+	if path then
+		for _, n in ipairs(path) do if n.x ~= self.x or n.y ~= self.y then return n.x, n.y end end
+	end
+	local dx, dy = tgt.x - self.x, tgt.y - self.y
+	local nx, ny = self.x + (dx > 0 and 1 or dx < 0 and -1 or 0), self.y + (dy > 0 and 1 or dy < 0 and -1 or 0)
+	if self:canMove(nx, ny) then return nx, ny end
+	return nil
 end
 
 --- Move one tile away from the enemies in view (archers, casters)
@@ -1442,79 +1532,132 @@ function _M:touchStepBack(enemy)
 			local x, y = self.x + i, self.y + j
 			if game.level.map:isBound(x, y) and self:canMove(x, y) then
 				local score = math.huge
-				for _, a in ipairs(self.fov.actors_dist or {}) do
-					if a ~= self and a.x and self:reactionToward(a) < 0 then score = math.min(score, core.fov.distance(x, y, a.x, a.y)) end
-				end
+				for _, e in ipairs(self:actEnemies()) do score = math.min(score, core.fov.distance(x, y, e.a.x, e.a.y)) end
 				if score == math.huge then score = core.fov.distance(x, y, enemy.x, enemy.y) end
 				if score > bscore then bscore, bx, by = score, x, y end
 			end
 		end
 	end end
 	if bx and bscore > core.fov.distance(self.x, self.y, enemy.x, enemy.y) - 0.01 then
-		print("[TOUCH] step back", bx, by)
+		print("[ACT] step back", bx, by)
 		self:move(bx, by)
-	else
-		game.logPlayer(self, "No way back.")
+		return true
 	end
+	return false, _t"no way back"
 end
 
-function _M:touchAttack(slot)
-	slot = slot or 1
-	local best, bd = self:touchPickTarget()
-	if not best then game.logPlayer(self, "No enemy in sight.") print("[TOUCH] attack: no enemy") return end
-	bd = core.fov.distance(self.x, self.y, best.x, best.y)
-	local tid = slot == 2 and self.touch_attack_talent2 or self.touch_attack_talent
-	if slot == 2 and not tid then game.logPlayer(self, "Hold the button to choose what it does.") return end
-	if tid == "back" then self:touchStepBack(best) return end
-	if tid and tid ~= "bump" and self:knowTalent(tid) then
-		local t = self:getTalentFromId(tid)
-		if t and not self:isTalentCoolingDown(t) and bd <= self:getTalentRange(t) and self:hasLOS(best.x, best.y) and self:preUseTalent(t, true, true) then
-			print("[TOUCH] attack talent", t.name, best.name)
-			self:useTalent(tid, nil, nil, nil, best)
+--- Try one step. Returns true when a turn was spent (or aiming started), else false + reason
+function _M:actDo(step)
+	local kind = step.kind
+	if kind == "talent" then
+		local t = step.tid and self:knowTalent(step.tid) and self:getTalentFromId(step.tid) or nil
+		if not t then return false, _t"unknown talent" end
+		if self:isTalentCoolingDown(t) then return false, _t"cooling down" end
+		if not self:preUseTalent(t, true, true) then return false, _t"not usable" end
+		local ok, tg = pcall(self.getTalentTarget, self, t)
+		if not ok or not tg then print("[ACT] talent (no target)", t.name) self:useTalent(t.id) return true end
+		local tgt = self:actResolveTarget(step, t)
+		if tgt == "manual" then print("[ACT] talent manual", t.name) self:useTalent(t.id) return true end
+		if tgt == self then print("[ACT] talent self", t.name) self:useTalent(t.id, nil, nil, nil, self) return true end
+		if not tgt then return false, _t"no target" end
+		local d = core.fov.distance(self.x, self.y, tgt.x, tgt.y)
+		if d > self:getTalentRange(t) or not self:hasLOS(tgt.x, tgt.y) then return false, _t"out of range" end
+		print("[ACT] talent", t.name, tgt.name)
+		self:useTalent(t.id, nil, nil, nil, tgt)
+		return true
+	elseif kind == "item" then
+		local o = self:findInAllInventories(step.item, {no_add_name=true, force_id=true, no_count=true})
+		if not o then return false, _t"item missing" end
+		print("[ACT] item", step.item)
+		self:hotkeyInventory(step.item)
+		return true
+	elseif kind == "wait" then
+		print("[ACT] wait")
+		self:waitTurn()
+		return true
+	end
+	local tgt = self:actResolveTarget(step)
+	if not tgt or tgt == "manual" or tgt == self then return false, _t"no enemy" end
+	local adj = math.max(math.abs(tgt.x - self.x), math.abs(tgt.y - self.y)) <= 1
+	if kind == "bump" then
+		if not adj then return false, _t"not adjacent" end
+		print("[ACT] bump", tgt.name)
+		self:move(tgt.x, tgt.y)
+		return true
+	elseif kind == "approach" then
+		if adj then return false, _t"already adjacent" end
+		local nx, ny = self:actPathStep(tgt)
+		if not nx then return false, _t"no path" end
+		print("[ACT] approach", nx, ny)
+		self:move(nx, ny)
+		return true
+	elseif kind == "back" then
+		return self:touchStepBack(tgt)
+	end
+	return false, _t"unknown step"
+end
+
+--- One tap of the Act button
+function _M:actStep()
+	if game.key ~= game.normal_key then return end
+	local r = self:actRoutine()
+	if #r.steps == 0 then game.logPlayer(self, "The routine %s has no steps. Hold Act to edit it.", r.name) return end
+	local reasons = {}
+	for _ = 1, #r.steps do
+		r.pos = util.bound(r.pos or 1, 1, #r.steps)
+		local step = r.steps[r.pos]
+		local ok, why = self:actDo(step)
+		if ok then
+			r.pos = r.pos % #r.steps + 1
+			self.changed = true
 			return
 		end
+		if step.if_unusable == "wait" then
+			game.logPlayer(self, "Waiting for %s (%s).", self:actStepName(step), why or "")
+			self:waitTurn()
+			return
+		end
+		reasons[#reasons+1] = ("%s: %s"):format(self:actStepName(step), why or "?")
+		r.pos = r.pos % #r.steps + 1
 	end
-	if math.max(math.abs(best.x - self.x), math.abs(best.y - self.y)) <= 1 then
-		print("[TOUCH] attack bump", best.name)
-		self:move(best.x, best.y)
-		return
-	end
-	local Astar = require "engine.Astar"
-	local path = Astar.new(game.level.map, self):calc(self.x, self.y, best.x, best.y)
-	local nx, ny
-	if path then
-		for _, n in ipairs(path) do if n.x ~= self.x or n.y ~= self.y then nx, ny = n.x, n.y break end end
-	end
-	if not nx then
-		local dx, dy = best.x - self.x, best.y - self.y
-		nx, ny = self.x + (dx > 0 and 1 or dx < 0 and -1 or 0), self.y + (dy > 0 and 1 or dy < 0 and -1 or 0)
-	end
-	print("[TOUCH] attack step", nx, ny, best.name)
-	self:move(nx, ny)
+	game.logPlayer(self, "Nothing in %s can be done now (%s).", r.name, table.concat(reasons, "; "))
+	print("[ACT] nothing possible")
 end
 
---- Choose what an Attack button uses (hold the button)
-function _M:touchAttackPick(slot)
-	slot = slot or 1
-	local list = {{name=_t"Bump attack (move into the enemy)", tid="bump"}, {name=_t"Step back (away from the enemies)", tid="back"}}
-	if slot == 2 then table.insert(list, 1, {name=_t"Nothing (hide this button)", tid="none"}) end
-	for tid, lvl in pairs(self.talents) do
-		local t = self:getTalentFromId(tid)
-		if t and t.mode == "activated" and not t.hide then list[#list+1] = {name=t.name, tid=tid} end
+--- What the next tap will do (for the HUD), cached per turn
+function _M:actPreview()
+	local r = self:actRoutine()
+	local step = r.steps[util.bound(r.pos or 1, 1, math.max(1, #r.steps))]
+	if not step then return nil end
+	local key = table.concat({tostring(game.turn or 0), tostring(self.act_active), tostring(r.pos or 1), tostring(self.x), tostring(self.y), tostring(#r.steps)}, ":")
+	if self.act_preview_key ~= key then
+		local t = step.kind == "talent" and step.tid and self:knowTalent(step.tid) and self:getTalentFromId(step.tid) or nil
+		local tgt = nil
+		if step.kind ~= "wait" and step.kind ~= "item" then
+			local ok, res = pcall(self.actResolveTarget, self, step, t)
+			if ok then tgt = res end
+		end
+		self.act_preview_key = key
+		self.act_preview = {step=step, t=t, target=(type(tgt) == "table" and tgt ~= self) and tgt or nil}
 	end
-	local fixed = {none=0, bump=1, back=2}
-	table.sort(list, function(a, b)
-		local fa, fb = fixed[a.tid] or 9, fixed[b.tid] or 9
-		if fa ~= fb then return fa < fb end
-		return a.name < b.name
-	end)
-	local cur = slot == 2 and (self.touch_attack_talent2 or "none") or (self.touch_attack_talent or "bump")
-	for _, it in ipairs(list) do if it.tid == cur then it.name = "#GOLD#> "..it.name.."#LAST#" end end
-	Dialog:listPopup(slot == 2 and _t"Second attack button" or _t"Attack button", _t"Goes for the marked enemy: this attack when it is ready and in range, otherwise a step toward them (or a bump when adjacent).", list, math.floor(game.w * 0.5), math.floor(game.h * 0.8), function(item)
+	return self.act_preview
+end
+
+--- Hold the Act button: switch routine / edit
+function _M:actMenu()
+	local rs = self:actRoutines()
+	local list = {}
+	for i, r in ipairs(rs) do list[#list+1] = {name=(i == self.act_active and "#GOLD#> " or "")..r.name.." ("..#r.steps.." steps)"..(i == self.act_active and "#LAST#" or ""), idx=i} end
+	local r = self:actRoutine()
+	list[#list+1] = {name=_t"Restart routine (back to step 1)", restart=true}
+	if #r.steps > 1 then list[#list+1] = {name=("Skip the next step (%s)"):tformat(self:actStepName(r.steps[util.bound(r.pos or 1, 1, #r.steps)])), skip=true} end
+	list[#list+1] = {name=_t"Edit routines...", edit=true}
+	Dialog:listPopup(_t"Act", _t"Tap Act to do the next step of the active routine; tap a box in the strip above it to jump to that step. Hold a creature and choose 'Mark for Act' to use it as the marked target.", list, math.floor(game.w * 0.5), math.floor(game.h * 0.7), function(item)
 		if not item then return end
-		local v = item.tid ~= "none" and item.tid or nil
-		if slot == 2 then self.touch_attack_talent2 = v else self.touch_attack_talent = v or "bump" end
-		print("[TOUCH] attack pick", slot, item.tid)
+		if item.edit then game:registerDialog(require("mod.dialogs.ActRoutines").new(self))
+		elseif item.restart then r.pos = 1 self.act_preview_key = nil print("[ACT] restart")
+		elseif item.skip then r.pos = (util.bound(r.pos or 1, 1, #r.steps)) % #r.steps + 1 self.act_preview_key = nil print("[ACT] skip ->", r.pos)
+		elseif item.idx then self.act_active = item.idx self.act_preview_key = nil print("[ACT] routine", item.idx) end
 	end)
 end
 

@@ -233,3 +233,9 @@ best_aoe|furthest_in_range, if_unusable=skip|wait}. Multiple named routines per 
 the player), hold Act = switch/edit. Editor = finger rows (like TouchTalentList). Phases: executor +
 targeting resolvers + simple editor → multi-routine + AoE spot finder → conditions (life<%, etc.).
 Open: one-step-per-tap vs run-through; conditions in v1; per-class starter routines.
+Built 2026-09-03 evening: Act = Player:actStep/actDo/actResolveTarget (rules: nearest, attacker,
+weakest, strongest, furthest, marked, best_aoe via projectCollect dry-run, manual, self), routines on
+player.act_routines (act_active, per-routine pos), hold = actMenu (switch / restart / skip / edit),
+editor mod/dialogs/ActRoutines.lua (List rows: tap selects; buttons Add/Remove/Up/Down/Target/
+Skip-Wait; New/Rename/Copy/Delete), HUD strip above Act (tap a box = jump), "Mark for Act" in the
+creature hold menu. Decisions: one step per tap, no conditions in v1, left wheel stays, no 2nd button.

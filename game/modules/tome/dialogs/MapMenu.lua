@@ -74,6 +74,7 @@ function _M:use(item)
 	elseif act == "order" then game.party:giveOrders(item.actor)
 	elseif act == "change_level" then game.key:triggerVirtual("CHANGE_LEVEL")
 	elseif act == "pickup" then game.key:triggerVirtual("PICKUP_FLOOR")
+	elseif act == "act_mark" then game.player.act_marked = item.actor game.player.act_preview_key = nil game.logPlayer(game.player, "Marked %s for the Act button.", item.actor:getName()) print("[ACT] marked", item.actor.name)
 	elseif act == "character_sheet" then game:registerDialog(require("mod.dialogs.CharacterSheet").new(item.actor))
 	elseif act == "quests" then game.key:triggerVirtual("SHOW_QUESTS")
 	elseif act == "levelup" then game.key:triggerVirtual("LEVELUP")
@@ -151,6 +152,7 @@ function _M:generateList()
 	if self.on_player then list[#list+1] = {name=_t"Auto-explore", action="autoexplore", color=colors.simple(colors.ANTIQUE_WHITE)} end
 	if self.on_player then list[#list+1] = {name=_t"Inventory", action="inventory", color=colors.simple(colors.ANTIQUE_WHITE)} end
 	if self.on_player then list[#list+1] = {name=_t"Quest Log", action="quests", color=colors.simple(colors.ANTIQUE_WHITE)} end
+	if a and not self.on_player and game.player:canSee(a) and require("engine.TouchInput").active() and game.player:reactionToward(a) < 0 then list[#list+1] = {name=_t"Mark for Act", action="act_mark", color=colors.simple(colors.GOLD), actor=a} end
 	if a and game.player:canSee(a) then list[#list+1] = {name=_t"Inspect Creature", action="character_sheet", color=colors.simple(colors.ANTIQUE_WHITE), actor=a} end
 		-- can add extended inspection commands here by including the start tab with the dialog
 	-- space separating inspect from active actions

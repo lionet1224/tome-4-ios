@@ -2107,87 +2107,112 @@ function _M:displayTouchTargeting()
 	end
 	if targeting then
 		if game.mouse.areas_name and game.mouse.areas_name.touch_attack then game.mouse:unregisterZone("touch_attack") end
-		if game.mouse.areas_name and game.mouse.areas_name.touch_attack2 then game.mouse:unregisterZone("touch_attack2") end
+		if game.mouse.areas_name and game.mouse.areas_name.touch_act_strip then game.mouse:unregisterZone("touch_act_strip") end
 		self.touch_attack_rect = nil
 	else
 		self:displayTouchAttack(x2, y, bw)
 	end
 end
 
--- iOS port: the Attack buttons (right thumb): tap = Player:touchAttack, hold = pick.
--- Slot 1 sits where Cast goes while aiming, slot 2 where Cancel goes.
-function _M:displayTouchAttack(x2, y, bw)
+-- iOS port: the Act button (right thumb): tap = Player:actStep (next step of the
+-- active routine), hold = switch/edit routines. Shows the next step and marks
+-- the creature it will go for; a strip above shows the routine.
+function _M:displayTouchAttack(x, y, bw)
 	local p = game.player
-	if not p or not p.touchAttack then return end
-	local x1 = x2 - bw - 10
-	local slot2 = p.touch_attack_talent2 ~= nil
-	self.touch_attack_rect = {x=slot2 and x1 or x2, y=y, w=slot2 and (bw * 2 + 10) or bw, h=bw}
-	local function zone(name, x, slot)
-		if not game.mouse:updateZone(name, x, y, bw, bw, nil, 1) then
-			game.mouse:registerZone(x, y, bw, bw, function(button, mx, my, xrel, yrel, bx, by, event)
-				if event == "button" and button == "left" then print("[TOUCH] attack button", slot) game.player:touchAttack(slot)
-				elseif event == "button" and button == "right" then game.player:touchAttackPick(slot) end
-				return true
-			end, nil, name, false, 1)
-		end
+	if not p or not p.actStep then return end
+	self.touch_attack_rect = {x=x - 120, y=y - 70, w=bw + 120, h=bw + 70}
+	if game.mouse.areas_name and game.mouse.areas_name.touch_attack2 then game.mouse:unregisterZone("touch_attack2") end
+	if not game.mouse:updateZone("touch_attack", x, y, bw, bw, nil, 1) then
+		game.mouse:registerZone(x, y, bw, bw, function(button, mx, my, xrel, yrel, bx, by, event)
+			if event == "button" and button == "left" then print("[TOUCH] act button") game.player:actStep()
+			elseif event == "button" and button == "right" then game.player:actMenu() end
+			return true
+		end, nil, "touch_attack", false, 1)
 	end
-	zone("touch_attack", x2, 1)
-	if slot2 then zone("touch_attack2", x1, 2)
-	elseif game.mouse.areas_name and game.mouse.areas_name.touch_attack2 then game.mouse:unregisterZone("touch_attack2") end
+	local ok, pv = pcall(p.actPreview, p)
+	if not ok then print("[ACT] preview error", pv) pv = nil end
+	local r = p:actRoutine()
 
-	-- the enemy the buttons will go for
-	local target = p:touchPickTarget()
-	if target and game.level and game.level.map then
+	-- target marker
+	local target = pv and pv.target
+	if target and target.x and game.level and game.level.map then
 		local map = game.level.map
 		local tx, ty = map:getTileToScreen(target.x, target.y)
 		local tw, th = map.tile_w * (map.zoom or 1), map.tile_h * (map.zoom or 1)
 		if tx and tx >= 0 and ty >= 0 then
 			local pulse = 3 + 2 * math.sin(core.game.getTime() / 150)
+			local marked = target == p.act_marked
+			local cr, cg, cb = 224, 83, 58
+			if marked then cr, cg, cb = 240, 200, 60 end
 			for _, e in ipairs{{tx - pulse, ty - pulse, tw + 2 * pulse, 3}, {tx - pulse, ty + th + pulse - 3, tw + 2 * pulse, 3}, {tx - pulse, ty - pulse, 3, th + 2 * pulse}, {tx + tw + pulse - 3, ty - pulse, 3, th + 2 * pulse}} do
-				core.display.drawQuad(e[1], e[2], e[3], e[4], 224, 83, 58, 230)
+				core.display.drawQuad(e[1], e[2], e[3], e[4], cr, cg, cb, 230)
 			end
 		end
 	end
 
-	local function drawBtn(x, tid, slot)
-		local t = tid and tid ~= "bump" and tid ~= "back" and p:knowTalent(tid) and p:getTalentFromId(tid) or nil
-		core.display.drawQuad(x, y, bw, bw, 40, 22, 18, 235)
-		core.display.drawQuad(x, y, bw, 3, 190, 90, 60, 255)
-		core.display.drawQuad(x, y + bw - 3, bw, 3, 190, 90, 60, 255)
-		core.display.drawQuad(x, y, 3, bw, 190, 90, 60, 255)
-		core.display.drawQuad(x + bw - 3, y, 3, bw, 190, 90, 60, 255)
-		if t then
-			if t.display_entity then t.display_entity:toScreen(nil, x + (bw - 56) / 2, y + 8, 56, 56) end
-			local cd = p:isTalentCoolingDown(t)
-			if cd and cd > 0 then
-				core.display.drawQuad(x + (bw - 56) / 2, y + 8, 56, 56, 40, 8, 8, 170)
-				self.touch_wheel:drawLabel(tostring(math.ceil(cd)), x + bw / 2, y + 36, 1.2, 1, 0.75, 0.65, 1)
+	-- the button
+	core.display.drawQuad(x, y, bw, bw, 40, 22, 18, 235)
+	for _, e in ipairs{{x, y, bw, 3}, {x, y + bw - 3, bw, 3}, {x, y, 3, bw}, {x + bw - 3, y, 3, bw}} do core.display.drawQuad(e[1], e[2], e[3], e[4], 190, 90, 60, 255) end
+	local step = pv and pv.step
+	if step then
+		local ent = p:actStepEntity(step)
+		if ent then
+			ent:toScreen(nil, x + (bw - 56) / 2, y + 6, 56, 56)
+			if pv.t then
+				local cd = p:isTalentCoolingDown(pv.t)
+				if cd and cd > 0 then
+					core.display.drawQuad(x + (bw - 56) / 2, y + 6, 56, 56, 40, 8, 8, 170)
+					self.touch_wheel:drawLabel(tostring(math.ceil(cd)), x + bw / 2, y + 34, 1.2, 1, 0.75, 0.65, 1)
+				end
 			end
-			local nm = t.name
-			if #nm > 12 then nm = nm:sub(1, 11).."." end
-			self.touch_wheel:drawLabel(nm, x + bw / 2, y + 76, 0.7, 0.9, 0.87, 0.78, 1)
-		elseif tid == "back" then
-			self.touch_wheel:drawLabel("<<", x + bw / 2, y + 40, 2, 1, 0.83, 0.79, 1)
-			self.touch_wheel:drawLabel(_t"step back", x + bw / 2, y + 76, 0.7, 0.9, 0.87, 0.78, 1)
 		else
-			self.touch_wheel:drawLabel("X", x + bw / 2, y + 40, 2.2, 1, 0.83, 0.79, 1)
-			self.touch_wheel:drawLabel(_t"bump", x + bw / 2, y + 76, 0.7, 0.9, 0.87, 0.78, 1)
+			local g = step.kind == "back" and "<<" or step.kind == "approach" and ">>" or step.kind == "wait" and "..." or "X"
+			self.touch_wheel:drawLabel(g, x + bw / 2, y + 34, 2, 1, 0.83, 0.79, 1)
 		end
-		self.touch_wheel:drawLabel(slot == 2 and _t"ATTACK 2" or _t"ATTACK", x + bw / 2, y + 96, 0.8, 1, 0.83, 0.79, 1)
+		local nm = p:actStepName(step)
+		if #nm > 13 then nm = nm:sub(1, 12).."." end
+		self.touch_wheel:drawLabel(nm, x + bw / 2, y + 72, 0.65, 0.9, 0.87, 0.78, 1)
 	end
-	drawBtn(x2, p.touch_attack_talent or "bump", 1)
-	if slot2 then drawBtn(x1, p.touch_attack_talent2, 2)
-	else
-		-- empty second slot: a faint outline, hold to set
-		core.display.drawQuad(x1, y, bw, bw, 20, 16, 14, 90)
-		self.touch_wheel:drawLabel(_t"hold: 2nd", x1 + bw / 2, y + bw / 2, 0.7, 0.6, 0.55, 0.5, 0.8)
-		if not game.mouse:updateZone("touch_attack2", x1, y, bw, bw, nil, 1) then
-			game.mouse:registerZone(x1, y, bw, bw, function(button, mx, my, xrel, yrel, bx, by, event)
-				if event == "button" and button == "right" then game.player:touchAttackPick(2) end
+	self.touch_wheel:drawLabel(_t"ACT", x + bw / 2, y + 96, 0.8, 1, 0.83, 0.79, 1)
+
+	-- the routine strip: one small box per step, the next one lit
+	local n = #r.steps
+	if n > 0 then
+		local sz, gap = 26, 4
+		local total = n * sz + (n - 1) * gap
+		local sx = x + bw - total
+		local sy = y - sz - 8
+		-- tapping a box jumps the routine to that step (reset / skip / jump)
+		local zx, zw = math.min(sx, x) - 8, math.max(total, bw) + 16
+		if not game.mouse:updateZone("touch_act_strip", zx, sy - 30, zw, sz + 34, nil, 1) then
+			game.mouse:registerZone(zx, sy - 30, zw, sz + 34, function(button, mx, my, xrel, yrel, bx, by, event)
+				if event == "button" and button == "left" then
+					local rr = game.player:actRoutine()
+					local nn = #rr.steps
+					if nn > 0 then
+						local tot = nn * sz + (nn - 1) * gap
+						local start = x + bw - tot
+						local i = util.bound(math.floor((mx - start) / (sz + gap)) + 1, 1, nn)
+						rr.pos = i
+						game.player.act_preview_key = nil
+						print("[ACT] jump ->", i)
+					end
+				end
 				return true
-			end, nil, "touch_attack2", false, 1)
+			end, nil, "touch_act_strip", false, 1)
 		end
-		self.touch_attack_rect = {x=x1, y=y, w=bw * 2 + 10, h=bw}
+		local nm = r.name
+		if #nm > 18 then nm = nm:sub(1, 17).."." end
+		self.touch_wheel:drawLabel(nm, x + bw / 2, sy - 12, 0.65, 0.82, 0.67, 0.29, 1)
+		for i, st in ipairs(r.steps) do
+			local bx = sx + (i - 1) * (sz + gap)
+			local cur = i == util.bound(r.pos or 1, 1, n)
+			core.display.drawQuad(bx, sy, sz, sz, cur and 90 or 20, cur and 50 or 18, cur and 30 or 16, 220)
+			local ent = p:actStepEntity(st)
+			if ent then ent:toScreen(nil, bx + 1, sy + 1, sz - 2, sz - 2)
+			else self.touch_wheel:drawLabel(st.kind == "back" and "<" or st.kind == "approach" and ">" or st.kind == "wait" and "." or "X", bx + sz / 2, sy + sz / 2, 0.7, 1, 0.83, 0.79, 1) end
+			if cur then for _, e in ipairs{{bx, sy, sz, 2}, {bx, sy + sz - 2, sz, 2}, {bx, sy, 2, sz}, {bx + sz - 2, sy, 2, sz}} do core.display.drawQuad(e[1], e[2], e[3], e[4], 240, 200, 60, 255) end end
+		end
 	end
 end
 
@@ -2271,7 +2296,7 @@ function _M:display(nb_keyframes)
 		-- button, the wheels. All of it hides behind open dialogs.
 		if game.dialogs and #game.dialogs > 0 then
 			if game.mouse.areas_name and game.mouse.areas_name.touch_attack then game.mouse:unregisterZone("touch_attack") end
-			if game.mouse.areas_name and game.mouse.areas_name.touch_attack2 then game.mouse:unregisterZone("touch_attack2") end
+			if game.mouse.areas_name and game.mouse.areas_name.touch_act_strip then game.mouse:unregisterZone("touch_act_strip") end
 			self.touch_attack_rect = nil
 		else
 			self:displayTouchPips()
