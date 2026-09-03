@@ -9,7 +9,7 @@ local FontPackage = require "engine.FontPackage"
 
 module(..., package.seeall, class.make)
 
-_M.DEFAULTS = {wheel=true, trigger="hold", pos="finger", zone="thirds", wedges=8, hold_ms=160}
+_M.DEFAULTS = {wheel=true, trigger="hold", pos="finger", zone="thirds", wedges=8, hold_ms=160, unlock_all=true}
 
 function _M.setting(k)
 	local t = config.settings.touch
@@ -32,6 +32,18 @@ function _M.enabled()
 	return __IOS__ and _M.setting("wheel") and true or false
 end
 
+--- iOS port: treat every birth option (classes, races, the transmogrification
+-- chest, ...) as unlocked. The chest is what makes carry weight a non-issue:
+-- with it every item on the floor is picked up automatically.
+function _M.applyUnlocks()
+	if not __IOS__ or _M.setting("unlock_all") == false then return end
+	local ab = profile and profile.mod and profile.mod.allow_build
+	if ab and not getmetatable(ab) then
+		setmetatable(ab, {__index=function() return true end})
+		print("[TOUCH] all birth options unlocked")
+	end
+end
+
 function _M:init(uiset)
 	self.uiset = uiset
 	self.open = false
@@ -45,6 +57,8 @@ function _M:zoneOf(x, y)
 	if game.key ~= game.normal_key then return nil end -- dialogs, targeting
 	if game.dialogs and #game.dialogs > 0 then return nil end
 	local w, h = game.w, game.h
+	local r = game.uiset and game.uiset.touch_attack_rect
+	if r and x >= r.x and x < r.x + r.w and y >= r.y and y < r.y + r.h then return nil end
 	local zone = _M.setting("zone")
 	if zone == "bottom" then
 		if y < h * 0.5 then return nil end

@@ -2099,6 +2099,48 @@ function _M:displayTouchTargeting()
 		game.mouse:unregisterZone("touch_cast")
 		game.mouse:unregisterZone("touch_cancel")
 	end
+	if targeting then
+		if game.mouse.areas_name and game.mouse.areas_name.touch_attack then game.mouse:unregisterZone("touch_attack") end
+		self.touch_attack_rect = nil
+	else
+		self:displayTouchAttack(x2, y, bw)
+	end
+end
+
+-- iOS port: the Attack button (right thumb): tap = Player:touchAttack, hold = pick the attack
+function _M:displayTouchAttack(x, y, bw)
+	local p = game.player
+	if not p or not p.touchAttack then return end
+	self.touch_attack_rect = {x=x, y=y, w=bw, h=bw}
+	if not game.mouse:updateZone("touch_attack", x, y, bw, bw, nil, 1) then
+		game.mouse:registerZone(x, y, bw, bw, function(button, mx, my, xrel, yrel, bx, by, event)
+			if event == "button" and button == "left" then print("[TOUCH] attack button") game.player:touchAttack()
+			elseif event == "button" and button == "right" then game.player:touchAttackPick() end
+			return true
+		end, nil, "touch_attack", false, 1)
+	end
+	local tid = p.touch_attack_talent
+	local t = tid and tid ~= "bump" and p:knowTalent(tid) and p:getTalentFromId(tid) or nil
+	core.display.drawQuad(x, y, bw, bw, 40, 22, 18, 235)
+	core.display.drawQuad(x, y, bw, 3, 190, 90, 60, 255)
+	core.display.drawQuad(x, y + bw - 3, bw, 3, 190, 90, 60, 255)
+	core.display.drawQuad(x, y, 3, bw, 190, 90, 60, 255)
+	core.display.drawQuad(x + bw - 3, y, 3, bw, 190, 90, 60, 255)
+	if t then
+		if t.display_entity then t.display_entity:toScreen(nil, x + (bw - 56) / 2, y + 8, 56, 56) end
+		local cd = p:isTalentCoolingDown(t)
+		if cd and cd > 0 then
+			core.display.drawQuad(x + (bw - 56) / 2, y + 8, 56, 56, 40, 8, 8, 170)
+			self.touch_wheel:drawLabel(tostring(math.ceil(cd)), x + bw / 2, y + 36, 1.2, 1, 0.75, 0.65, 1)
+		end
+		local nm = t.name
+		if #nm > 12 then nm = nm:sub(1, 11).."." end
+		self.touch_wheel:drawLabel(nm, x + bw / 2, y + 76, 0.7, 0.9, 0.87, 0.78, 1)
+	else
+		self.touch_wheel:drawLabel("X", x + bw / 2, y + 40, 2.2, 1, 0.83, 0.79, 1)
+		self.touch_wheel:drawLabel(_t"bump", x + bw / 2, y + 76, 0.7, 0.9, 0.87, 0.78, 1)
+	end
+	self.touch_wheel:drawLabel(_t"ATTACK", x + bw / 2, y + 96, 0.8, 1, 0.83, 0.79, 1)
 end
 
 function _M:display(nb_keyframes)

@@ -93,6 +93,7 @@ function _M:init()
 end
 
 function _M:run()
+	if __IOS__ then require("mod.class.TouchWheel").applyUnlocks() end
 	class:triggerHook{"ToME:run"}
 	local ret = self:runReal()
 	class:triggerHook{"ToME:runDone"}

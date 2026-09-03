@@ -70,6 +70,7 @@ for _, t in pairs(_M.birth_descriptor_def.subclass) do _M:setSubclassIcon(t) end
 
 --- Instanciates a birther for the given actor
 function _M:init(title, actor, order, at_end, quickbirth, w, h)
+	if __IOS__ then require("mod.class.TouchWheel").applyUnlocks() end
 	self.quickbirth = quickbirth
 	self.actor = actor:cloneFull()
 	self.actor_base = actor

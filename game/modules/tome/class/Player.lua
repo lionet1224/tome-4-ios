@@ -1417,6 +1417,63 @@ function _M:hotkeyInventory(name)
 	end
 end
 
+-- iOS port: the one-tap Attack button. Closest visible enemy; if the chosen
+-- attack talent is usable and in range, fire it at them, otherwise bump when
+-- adjacent or take one step along a path toward them.
+function _M:touchAttack()
+	local best, bd = nil, math.huge
+	if self.fov and self.fov.actors_dist then
+		for _, a in ipairs(self.fov.actors_dist) do
+			if a ~= self and a.x and self:reactionToward(a) < 0 and self:canSee(a) then
+				local d = core.fov.distance(self.x, self.y, a.x, a.y)
+				if d < bd then bd, best = d, a end
+			end
+		end
+	end
+	if not best then game.logPlayer(self, "No enemy in sight.") print("[TOUCH] attack: no enemy") return end
+	local tid = self.touch_attack_talent
+	if tid and tid ~= "bump" and self:knowTalent(tid) then
+		local t = self:getTalentFromId(tid)
+		if t and not self:isTalentCoolingDown(t) and bd <= self:getTalentRange(t) and self:hasLOS(best.x, best.y) and self:preUseTalent(t, true, true) then
+			print("[TOUCH] attack talent", t.name, best.name)
+			self:useTalent(tid, nil, nil, nil, best)
+			return
+		end
+	end
+	if math.max(math.abs(best.x - self.x), math.abs(best.y - self.y)) <= 1 then
+		print("[TOUCH] attack bump", best.name)
+		self:move(best.x, best.y)
+		return
+	end
+	local Astar = require "engine.Astar"
+	local path = Astar.new(game.level.map, self):calc(self.x, self.y, best.x, best.y)
+	local nx, ny
+	if path then
+		for _, n in ipairs(path) do if n.x ~= self.x or n.y ~= self.y then nx, ny = n.x, n.y break end end
+	end
+	if not nx then
+		local dx, dy = best.x - self.x, best.y - self.y
+		nx, ny = self.x + (dx > 0 and 1 or dx < 0 and -1 or 0), self.y + (dy > 0 and 1 or dy < 0 and -1 or 0)
+	end
+	print("[TOUCH] attack step", nx, ny, best.name)
+	self:move(nx, ny)
+end
+
+--- Choose what the Attack button uses (hold the button)
+function _M:touchAttackPick()
+	local list = {{name=_t"Bump attack (move into the enemy)", tid="bump"}}
+	for tid, lvl in pairs(self.talents) do
+		local t = self:getTalentFromId(tid)
+		if t and t.mode == "activated" and not t.hide then list[#list+1] = {name=t.name, tid=tid} end
+	end
+	table.sort(list, function(a, b) if a.tid == "bump" then return true elseif b.tid == "bump" then return false end return a.name < b.name end)
+	local cur = self.touch_attack_talent or "bump"
+	for _, it in ipairs(list) do if it.tid == cur then it.name = "#GOLD#> "..it.name.."#LAST#" end end
+	Dialog:listPopup(_t"Attack with", _t"The Attack button goes for the closest enemy: this attack when it is ready and in range, otherwise a step toward them (or a bump when adjacent).", list, math.floor(game.w * 0.5), math.floor(game.h * 0.8), function(item)
+		if item then self.touch_attack_talent = item.tid print("[TOUCH] attack pick", item.tid) end
+	end)
+end
+
 function _M:playerPickup()
 	-- If 2 or more objects, display a pickup dialog, otherwise just picks up
 	if game.level.map:getObject(self.x, self.y, 2) then

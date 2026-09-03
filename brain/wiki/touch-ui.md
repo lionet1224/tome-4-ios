@@ -175,3 +175,13 @@ points (can_add). Cooldown pips are now 44px talent icons under the minimap with
 (Minimalist:displayTouchPips). Tooltip while aiming is pushed clear of Cast/Cancel (engine Tooltip.lua).
 Jordan reported "options menu doesn't scroll" — drag-scroll on the Game Options TreeList works in the
 sim (marker + rows moved); unresolved, needs how he dragged.
+
+## 11. Attack button + unlocks (2026-09-03)
+- `Player:touchAttack()`: closest visible hostile (fov.actors_dist); if `touch_attack_talent` (saved on
+  the player, "bump" default) is ready, in range and LOS → useTalent with force_target; else bump when
+  adjacent, else one A* step. `Player:touchAttackPick()` = listPopup of activated talents (hold the button).
+  Drawn/zoned by `Minimalist:displayTouchAttack` bottom-right (Cast/Cancel take the spot while aiming);
+  `TouchWheel:zoneOf` excludes the button rect so a hold there is a right-click, not a wheel.
+- `TouchWheel.applyUnlocks()` (Game:run, Birther:init): metatable on profile.mod.allow_build → every
+  birth option unlocked incl. birth_transmo_chest; the chest makes describeFloor pick up everything
+  and transmo items don't count toward encumbrance. Setting `touch.unlock_all` (Options > Touch).
