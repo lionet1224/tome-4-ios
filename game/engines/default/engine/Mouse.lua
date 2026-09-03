@@ -55,7 +55,9 @@ end
 -- @param force_name if not nil only the zone with this name may trigger
 -- @param extra
 function _M:receiveMouse(button, x, y, isup, force_name, extra)
-	if _M.touch and button == "left" then _M.touch.mouse_seen = true end
+	-- SDL delivers the synthesized mouse events BEFORE the finger events, so
+	-- remember when the last left-down happened rather than flagging the touch
+	if button == "left" and not isup then _M.last_left_down = core.game.getTime() end
 	if _M.suppress_next_up and isup and button == "left" then _M.suppress_next_up = nil return end
 	self.last_pos = { x = x, y = y }
 	self.status[button] = not isup
@@ -302,7 +304,8 @@ function _M:receiveTouch(fingerId, x, y, dx, dy, pressure, isup)
 			local t = _M.touch
 			_M.touch = nil
 			_M.multi = nil
-			if t and not t.mouse_seen and not t.held and not t.moved and _M.current then
+			local seen = _M.last_left_down and _M.last_left_down >= t.t0 - 200
+			if t and not seen and not t.held and not t.moved and _M.current then
 				-- SDL's touch-as-mouse can stop after a multi-touch gesture on iOS:
 				-- deliver the click ourselves from the finger events
 				print("[TOUCH] click synthesized from finger (no mouse event seen)", t.x, t.y)
