@@ -2219,9 +2219,15 @@ function _M:display(nb_keyframes)
 	d.glScale()
 	d.glTranslate(-self.places.mainicons.x, -self.places.mainicons.y, -0)
 	else
-		-- iOS port: cooldown pips, Cast/Cancel while targeting, the wheels
-		self:displayTouchPips()
-		self:displayTouchTargeting()
+		-- iOS port: cooldown pips, Cast/Cancel while targeting, the Attack
+		-- button, the wheels. All of it hides behind open dialogs.
+		if game.dialogs and #game.dialogs > 0 then
+			if game.mouse.areas_name and game.mouse.areas_name.touch_attack then game.mouse:unregisterZone("touch_attack") end
+			self.touch_attack_rect = nil
+		else
+			self:displayTouchPips()
+			self:displayTouchTargeting()
+		end
 		self.touch_wheel:display()
 	end
 
