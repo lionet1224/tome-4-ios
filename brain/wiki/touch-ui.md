@@ -130,7 +130,7 @@ Tiers → touch treatment:
   Touch rule: tap a talent → targeting mode with preview at the default target;
   tap/drag on the map moves the preview; Confirm button (or tap the same spot
   again) casts; two-finger / Cancel aborts.
-- Stairs: tap your own tile while on stairs. Level-up: contextual glowing button
+- Tap yourself = wait a turn; on stairs it takes them (2026-09-03). Hold yourself = self menu. Level-up: contextual glowing button
   when points are unspent. Inventory: behind its icon.
 - Do NOT dismiss dialogs on any tap; Escape (two-finger, close box, tap-outside) is enough.
 - Explore + Rest: right-thumb, hotbar-slot sized (bigger than today's row).

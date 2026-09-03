@@ -190,7 +190,7 @@ td:first-child{white-space:nowrap;font-weight:600}
 <div class="wrap">
   <div class="eyebrow">ToME on iPhone 16 Plus · landscape · 1398 × 645 logical</div>
   <h1>ToME Thumb Layout</h1>
-  <p class="lede">A working mock of the play screen. <b>Operate it:</b> tap a tile to walk or attack, tap a hotbar talent with a red dot to aim it, hold a tile for the action menu, swipe the hotbar sideways for the next page, tap your own tile for the self menu. Every square is real size for a 16 Plus when the phone below is shown at full width. Nothing here is built yet.</p>
+  <p class="lede">A working mock of the play screen. <b>Operate it:</b> tap a tile to walk or attack, tap a hotbar talent with a red dot to aim it, hold a tile for the action menu, swipe the hotbar sideways for the next page, tap yourself to wait a turn, hold yourself for the self menu. Every square is real size for a 16 Plus when the phone below is shown at full width. Nothing here is built yet.</p>
 
   <div class="stage" id="stage">
     <div class="phone" id="phone">
@@ -291,7 +291,7 @@ td:first-child{white-space:nowrap;font-weight:600}
     <li><b>Zoom<span class="tier">T3</span></b><span>Two steps in, two out, replacing pinch.</span></li>
     <li><b>Hotbar<span class="tier">T1</span></b><span>Ten slots at 96 px (keys 1–0), pages 1–3 by swiping sideways, dots above show the page. A red dot marks talents that need a target: circle = area, square = bolt. Cooldown greys the slot with the turns left. Tap without a target dot = fires now, like keyboard with no target needed.</span></li>
     <li><b>Explore / Rest<span class="tier">T1</span></b><span>112 px, bottom-right where the right thumb rests. In targeting mode the same two spots become <b style="display:inline">Cast</b> and <b style="display:inline">Cancel</b>, so the thumb never moves.</span></li>
-    <li><b>The map<span class="tier">T1</span></b><span>Tap = walk, travel, attack, open door (what a click does today). Drag = pan. Hold = action menu for that tile (walk here, look, talk, throw…). Tap your own tile: on stairs it takes them, otherwise a small self menu with wait, pick up, rest, explore. Auto-pickup is on, so the pick-up entry is mostly for the rare "leave it" case.</span></li>
+    <li><b>The map<span class="tier">T1</span></b><span>Tap = walk, travel, attack, open door (what a click does today). Drag = pan. Hold = action menu for that tile (walk here, look, talk, throw…). Tap yourself = wait a turn (the most common key in a fight after the hotkeys). On stairs, tapping yourself takes them instead. Hold yourself for the self menu: pick up, rest, explore, look. Auto-pickup is on, so pick up is for the rare "left it behind" case.</span></li>
   </ol>
 
   <h2>Targeting, spelled out</h2>
@@ -308,11 +308,11 @@ td:first-child{white-space:nowrap;font-weight:600}
   <h2>What changes from the build on your phone</h2>
   <div class="tbl"><table>
     <tr><th>Today</th><th>Proposed</th></tr>
-    <tr><td>Labelled row (Rest, Explore, Pick up, Level, Char, Z+, Z−) at 2× tile size</td><td>Gone. Explore and Rest become the two big thumb buttons. Level-up is the contextual glow. Char is the portrait. Zoom moves to the top-right pair. Pick up lives in the self menu, and auto-pickup is on.</td></tr>
+    <tr><td>Labelled row (Rest, Explore, Pick up, Level, Char, Z+, Z−) at 2× tile size</td><td>Gone. Explore and Rest become the two big thumb buttons. Level-up is the contextual glow. Char is the portrait. Zoom moves to the top-right pair. Pick up lives in the hold-yourself menu, and auto-pickup is on. Wait is a tap on yourself.</td></tr>
     <tr><td>12 hotbar slots at desktop size, one page</td><td>10 slots at 96 px, three pages by swipe.</td></tr>
     <tr><td>Left column with resources, hotkey icons, minimap</td><td>Column removed on phone. Resources move to the top-left bars; minimap on demand from the map icon (not shown, T3).</td></tr>
     <tr><td>Talent needing a target: untested by touch</td><td>Aiming mode above.</td></tr>
-    <tr><td>Stairs: no touch path</td><td>Tap your own tile while standing on them.</td></tr>
+    <tr><td>Stairs and wait: no touch path</td><td>Tap yourself: takes the stairs when you stand on them, otherwise waits a turn.</td></tr>
     <tr><td>Long lists don't scroll</td><td>Drag scrolls any list with momentum, no scrollbar. Hold-drag still scrubs tooltips.</td></tr>
     <tr><td>Level-up: desktop two-pane layout squeezed to fit, buttons chained</td><td>Tabs for Stats, Class, Generic and Categories, each one long drag-scrolling list. Big + and − per row (− undoes a point spent this visit). Tap a talent name to expand its description inline instead of a side pane. Points left sit in the tab pills.</td></tr>
   </table></div>
@@ -322,7 +322,8 @@ td:first-child{white-space:nowrap;font-weight:600}
     <li><em>Hotbar</em><span>10 slots (keys 1–0) or keep 12? Twelve fits at 96 px only if the thumb buttons shrink to 96 too.</span></li>
     <li><em>Cast</em><span>Is "tap the same tile again" enough, or should only the Cast button fire, to avoid accidental double taps?</span></li>
     <li><em>Explore / Rest</em><span>Side by side (shown) or stacked in the corner? Stacked keeps them closer to the corner but the top one sits over the map.</span></li>
-    <li><em>Self menu</em><span>Wait, Pick up, Rest, Explore. Anything else worth a slot there? Vault-door style bump prompts still come as dialogs.</span></li>
+    <li><em>Tap yourself</em><span>Wait, or stairs when on them. Is it a problem that the tile under your finger is the one you can't see? A short flash on the tile confirms the wait.</span></li>
+    <li><em>Hold yourself</em><span>Pick up, Rest, Explore, Look. Anything else worth a slot there?</span></li>
     <li><em>Level-up</em><span>Tabs (shown) or one long list with the stats on top? Is the inline description enough, or do you want the full tooltip on hold?</span></li>
     <li><em>Message line</em><span>Two lines at the top, or a fading strip above the hotbar closer to where you look?</span></li>
   </ul>
@@ -459,7 +460,7 @@ function tileAt(e){const s=+screen.dataset.s||1;const r=cv.getBoundingClientRect
   const cx=OX+player.x*CELL+CELL/2,cy=OY+player.y*CELL+CELL/2;const ux=(lx-(1-zoom)*cx)/zoom,uy=(ly-(1-zoom)*cy)/zoom;
   return {x:Math.floor((ux-OX)/CELL),y:Math.floor((uy-OY)/CELL),lx,ly}}
 cv.addEventListener('pointerdown',e=>{closePops();down=tileAt(e);moved=false;panned=false;clearTimeout(holdT);
-  holdT=setTimeout(()=>{if(!moved&&down){showTilePop(down);down=null}},450)});
+  holdT=setTimeout(()=>{if(!moved&&down){if(down.x===player.x&&down.y===player.y)showSelfPop();else showTilePop(down);down=null}},450)});
 cv.addEventListener('pointermove',e=>{if(!down)return;const t=tileAt(e);if(t.x!==down.x||t.y!==down.y){moved=true;clearTimeout(holdT);
   if(aim){aim.x=Math.max(1,Math.min(COLS-2,t.x));aim.y=Math.max(1,Math.min(ROWS-2,t.y));draw()}else{panned=true}}});
 cv.addEventListener('pointerup',e=>{clearTimeout(holdT);if(!down)return;const t=tileAt(e);const d=down;down=null;
@@ -471,7 +472,7 @@ function tapTile(t){
   if(aim){if(aim.x===t.x&&aim.y===t.y)cast();else{aim.x=t.x;aim.y=t.y;draw()}return}
   if(t.x===player.x&&t.y===player.y){
     if(stairs.x===player.x&&stairs.y===player.y){say('You climb down the stairs. Welcome to Trollmire (level 2).');flash();return}
-    showSelfPop();return}
+    say('You wait a turn.');flash();return}
   const e=enemies.find(e=>e.hp&&e.x===t.x&&e.y===t.y);
   if(e){const adj=Math.max(Math.abs(e.x-player.x),Math.abs(e.y-player.y))<=1;if(adj){e.hp=Math.max(0,e.hp-0.4);say(e.hp?`You hit ${e.n}.`:`You kill ${e.n}!`);draw()}else{say(`You move toward ${e.n}.`);walkToward(e)}return}
   if(grid[t.y][t.x]==='#'){hint('Wall');return}
@@ -491,7 +492,8 @@ function showTilePop(t){const e=enemies.find(e=>e.hp&&e.x===t.x&&e.y===t.y);cons
   [...p.querySelectorAll('button')].forEach(b=>b.addEventListener('click',()=>{closePops();rows[+b.dataset.i][2]()}));
   place(p,t.lx,t.ly)}
 function showSelfPop(){const p=$('selfPop');const onStairs=stairs.x===player.x&&stairs.y===player.y;
-  const rows=[['Wait a turn','',()=>say('You wait.')],['Pick up','',()=>say('Nothing here to pick up.')],['Rest','R',()=>$('rest').click()],['Explore','z',()=>$('explore').click()]];
+  const rows=[['Pick up','',()=>say('Nothing here to pick up.')],['Rest','R',()=>$('rest').click()],['Explore','z',()=>$('explore').click()],['Look here','',()=>say('You stand on a stone floor.')]];
+  if(onStairs)rows.unshift(['Take the stairs','>',()=>tapTile({x:player.x,y:player.y})]);
   p.innerHTML='<div class="hd">'+(onStairs?'On the stairs':'You')+'</div>'+rows.map((r,i)=>`<button data-i="${i}"><span>${r[0]}</span><small>${r[1]}</small></button>`).join('');
   [...p.querySelectorAll('button')].forEach(b=>b.addEventListener('click',()=>{closePops();rows[+b.dataset.i][2]()}));
   const lx=OX+player.x*CELL+CELL,ly=OY+player.y*CELL;place(p,lx,ly)}
@@ -563,7 +565,7 @@ function setState(s){
   player={x:16,y:7};enemies[1].x=15;enemies[1].y=5;
   if(s==='fight'){enemies[1].x=17;enemies[1].y=7;say('The troll attacks you! You are hit for 22.');say('Tap the troll to bump-attack. Tap a red-dot talent to aim.')}
   else if(s==='aim'){useSlot(TAL.p1[0])}
-  else if(s==='stairs'){player={x:stairs.x,y:stairs.y};say('There is a staircase down here. Tap yourself to take it.')}
+  else if(s==='stairs'){player={x:stairs.x,y:stairs.y};say('There is a staircase down here. Tap yourself to take it; anywhere else, tapping yourself waits a turn.')}
   else if(s==='levelup'){$('lvlup').hidden=false;say('You feel more experienced. Tap the gold + to spend points.')}
   else if(s==='lvlscreen'){openLvl();say('Level-up. Drag the list to scroll (no scrollbar). Tap a talent name for its description.')}
   else if(s==='menu'){draw();showTilePop({x:enemies[2].x,y:enemies[2].y,lx:OX+enemies[2].x*CELL+CELL,ly:OY+enemies[2].y*CELL});say('Held a tile for 450 ms: the action menu opens.')}
