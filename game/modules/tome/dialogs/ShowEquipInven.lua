@@ -59,7 +59,7 @@ function _M:init(title, equip_actor, filter, action, on_select, inven_actor, for
 	end
 
 	self.c_doll = EquipDoll.new{
-		scale = __IOS__ and 1.35 or nil, -- iOS port: finger-sized slots
+		-- iOS port: the doll cannot grow, the landscape dialog has no vertical room
 		equipdoll = self.force_equipdoll or nil,
 		subobject=equip_actor:attr("can_tinker") and "getTinker" or nil,
 		subobject_restrict_slots=equip_actor.tinker_restrict_slots,
