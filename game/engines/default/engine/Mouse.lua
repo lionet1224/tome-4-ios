@@ -233,16 +233,13 @@ _M.TOUCH_MOVE_TOLERANCE = 12
 
 function _M.touchTick()
 	local t = _M.touch
-	if t and not t.moved and not t.fired and core.game.getTime() - t.t0 >= _M.LONG_PRESS_MS then
-		t.fired = true
+	if t and not t.moved and not t.held and core.game.getTime() - t.t0 >= _M.LONG_PRESS_MS then
+		-- held still long enough: from here a release = right click, and
+		-- moving = hover-scrub (tooltips follow the finger, no pan/act)
+		t.held = true
 		-- SDL delivers the synthesized left-up BEFORE the finger-up: flag now
 		_M.suppress_next_up = true
-		print("[TOUCH] long-press -> right click at", t.x, t.y)
-		local m = _M.current
-		if m then
-			m:receiveMouseMotion("none", t.x, t.y, 0, 0)
-			m:receiveMouse("right", t.x, t.y, true)
-		end
+		print("[TOUCH] hold")
 	end
 	if _M.park_cursor then
 		_M.park_cursor = _M.park_cursor - 1
@@ -286,17 +283,26 @@ function _M:receiveTouch(fingerId, x, y, dx, dy, pressure, isup)
 	else
 		if _M.fingers[fingerId] then _M.fingers[fingerId] = nil _M.nb_fingers = math.max(0, _M.nb_fingers - 1) end
 		local m = _M.multi
-		if m and not m.fired and core.game.getTime() - m.t0 < 600 then
+		if m and not m.fired and not m.pinched and core.game.getTime() - m.t0 < 600 then
 			m.fired = true
 			_M.suppress_next_up = true -- the synthesized left click of the first finger
 			_M.escape()
 		end
 		if _M.nb_fingers == 0 then
+			local t = _M.touch
 			_M.touch = nil
 			_M.multi = nil
-			-- (the long-press click was already swallowed when it fired: the
-			-- synthesized mouse-up precedes this finger-up)
-			_M.park_cursor = 2 -- frames; after the synthesized mouse-up has been delivered
+			if t and t.held and not t.hover and not t.moved then
+				print("[TOUCH] long-press -> right click at", t.x, t.y)
+				local mm = _M.current
+				if mm then
+					mm:receiveMouseMotion("none", t.x, t.y, 0, 0)
+					mm:receiveMouse("right", t.x, t.y, true)
+				end
+			end
+			-- after a hover-scrub or a drag leave the cursor (and its tooltip)
+			-- where it is; after a tap park it so nothing hovers
+			if not (t and t.moved) then _M.park_cursor = 2 end
 		end
 	end
 	return self:receiveTouchOrig(fingerId, x, y, dx, dy, pressure, isup)
@@ -317,7 +323,10 @@ function _M:receiveTouchMotion(fingerId, x, y, dx, dy, pressure)
 	local t = _M.touch
 	if t then
 		local sx, sy = touchToScreen(x, y)
-		if math.abs(sx - t.x) > _M.TOUCH_MOVE_TOLERANCE or math.abs(sy - t.y) > _M.TOUCH_MOVE_TOLERANCE then t.moved = true end
+		if math.abs(sx - t.x) > _M.TOUCH_MOVE_TOLERANCE or math.abs(sy - t.y) > _M.TOUCH_MOVE_TOLERANCE then
+			if t.held and not t.hover then t.hover = true print("[TOUCH] hover-scrub") end
+			t.moved = true
+		end
 	end
 	return self:receiveTouchMotionOrig(fingerId, x, y, dx, dy, pressure)
 end
@@ -333,7 +342,18 @@ end
 -- @param d_rot delta rotation
 -- @param d_pinch delta pinch
 function _M:receiveTouchGesture(nb_fingers, x, y, d_rot, d_pinch)
-	-- print("=touch gesture", nb_fingers, x, y, d_rot, d_pinch)
+	-- iOS port: pinch = zoom the map (SDL d_pinch is a fraction of the screen)
+	local m = _M.multi
+	if not m or nb_fingers < 2 then return end
+	m.pinch = (m.pinch or 0) + (d_pinch or 0)
+	if math.abs(m.pinch) > 0.015 then m.pinched = true end
+	if m.pinched and game and game.level and game.level.map and game.level.map.setZoom and math.abs(m.pinch) >= 0.04 then
+		local map, p = game.level.map, game.player
+		local delta = m.pinch * 2.5
+		m.pinch = 0
+		print("[TOUCH] pinch zoom", delta)
+		pcall(function() map:setZoom(delta, p and p.x, p and p.y) end)
+	end
 end
 
 --- Called when a gamepad axis event is received

@@ -2630,7 +2630,8 @@ function _M:setupMouse(reset)
 		if not self.uiset:isLocked() or not game.level then return end
 		-- iOS port: drag with one finger = pan the camera; the click SDL
 		-- synthesizes when the finger lifts after a pan is swallowed
-		if button == "left" and event == "motion" and xrel and yrel then
+		local tstate = engine.Mouse.touch
+		if button == "left" and event == "motion" and xrel and yrel and not (tstate and tstate.held) and (engine.Mouse.nb_fingers or 0) < 2 then
 			local pan = self.touch_pan or {dx=0, dy=0, moved=false}
 			self.touch_pan = pan
 			pan.dx, pan.dy = pan.dx + xrel, pan.dy + yrel

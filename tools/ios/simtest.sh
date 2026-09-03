@@ -39,6 +39,14 @@ check "long-press -> right click" '\[TOUCH\] long-press'
 CB=$(grep 'TOUCH\] close box at' "$LOG" | tail -1); X=$(echo "$CB" | awk -F'\t' '{print $2}'); Y=$(echo "$CB" | awk -F'\t' '{print $3}')
 [ -n "$X" ] && { $TAP tap $((X+17)) $((Y+17)) >/dev/null; sleep 1; }   # close the Actions menu via its close box
 check "Actions menu closed by its close box" '\[TOUCH\] close box\s+Actions'
+# 1b. hold-then-drag = hover-scrub (slow swipe: <12px in the first 450ms, then moves)
+~/.local/bin/idb ui swipe $(python3 -c "
+import json,os;c=json.load(open(os.path.expanduser('~/.tome-simtap.json')))
+def pt(lx,ly):
+    xl,yl=lx*c['zoom']/c['dpi'],ly*c['zoom']/c['dpi']
+    return (c['h']-yl,xl) if c['orient']=='A' else (yl,c['w']-xl)
+a=pt(700,320);b=pt(780,320);print(int(a[0]),int(a[1]),int(b[0]),int(b[1]))") --duration 3 --udid "$UD" >/dev/null 2>&1; sleep 2; shot 02b-hover
+check "hold-then-drag -> hover-scrub" '\[TOUCH\] hover-scrub'
 # 2. drag pans the camera (trace [PAN] only present in instrumented builds; use setScroll marker instead)
 $TAP swipe 700 320 500 320 >/dev/null; sleep 2; shot 03-pan
 check "drag -> pan" '\[TOUCH\] drag'
