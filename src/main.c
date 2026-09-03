@@ -1582,9 +1582,7 @@ int main(int argc, char *argv[])
 		if (!strncmp(arg, "--flush-stdout", 14))
 		{
 			setvbuf(stdout, (char *) NULL, _IOLBF, 0);
-#ifdef SELFEXE_WINDOWS
-			os_autoflush = TRUE;
-#endif
+			os_autoflush = TRUE; /* iOS port: also line-buffer the mac /tmp/te4_log.txt */
 		}
 		if (!strncmp(arg, "--no-debug", 10)) no_debug = TRUE;
 		if (!strncmp(arg, "--xpos", 6)) start_xpos = strtol(argv[++i], NULL, 10);

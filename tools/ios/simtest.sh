@@ -19,6 +19,13 @@ shot() { xcrun simctl io "$UD" screenshot "$OUT/$1.png" >/dev/null 2>&1; sips -r
 check() { # name pattern
 	if grep -qE "$2" "$LOG"; then echo "PASS $1"; else echo "FAIL $1 (no /$2/ in console)"; fi
 }
+# slow swipe in logical coords: holds still long enough to open a wheel, then slides
+slowswipe() { ~/.local/bin/idb ui swipe $(python3 -c "
+import json,os;c=json.load(open(os.path.expanduser('~/.tome-simtap.json')))
+def pt(lx,ly):
+    xl,yl=lx*c['zoom']/c['dpi'],ly*c['zoom']/c['dpi']
+    return (c['h']-yl,xl) if c['orient']=='A' else (yl,c['w']-xl)
+a=pt($1,$2);b=pt($3,$4);print(int(a[0]),int(a[1]),int(b[0]),int(b[1]))") --duration "$5" --udid "$UD" >/dev/null 2>&1; }
 xcrun simctl terminate "$UD" org.te4.tome.dev 2>/dev/null
 xcrun simctl launch --console-pty "$UD" org.te4.tome.dev --flush-stdout > "$LOG" 2>&1 &
 sleep 85; shot 01-ingame
@@ -50,9 +57,9 @@ check "hold-then-drag -> hover-scrub" '\[TOUCH\] hover-scrub'
 # 2. drag pans the camera (trace [PAN] only present in instrumented builds; use setScroll marker instead)
 $TAP swipe 700 320 500 320 >/dev/null; sleep 2; shot 03-pan
 check "drag -> pan" '\[TOUCH\] drag'
-# 3. touch row: Level
-$TAP tap 1142 616 >/dev/null; sleep 3; shot 04-levelup
-check "touch row Level" '\[TOUCH\] button\s+LEVELUP'
+# 3. right wheel: hold in the right third, slide up = Character (top wedge)
+slowswipe 1150 450 1150 330 3; sleep 3; shot 04-charsheet
+check "right wheel -> Character/Level up" '\[TOUCH\] wheel pick\s+key\s+(Character|Level up)'
 # 4. close box
 CB=$(grep 'TOUCH\] close box at' "$LOG" | tail -1); X=$(echo "$CB" | awk -F'\t' '{print $2}'); Y=$(echo "$CB" | awk -F'\t' '{print $3}')
 [ -n "$X" ] && { $TAP tap $((X+17)) $((Y+17)) >/dev/null; sleep 2; shot 05-closed; }
@@ -60,23 +67,20 @@ check "dialog close box" '\[TOUCH\] close box'
 # 5. escape key path (HID) opens the game menu, again closes it
 ~/.local/bin/idb ui key 41 --udid "$UD" >/dev/null 2>&1; sleep 2; shot 06-gamemenu
 ~/.local/bin/idb ui key 41 --udid "$UD" >/dev/null 2>&1; sleep 1
-# 6. touch row (tiles right to left: Rest 1334, Explore 1270, Pick up 1206, Level 1142, Char 1078; y 616)
-$TAP tap 1334 616 >/dev/null; sleep 3; shot 07-rest
-check "touch row Rest" '\[TOUCH\] button\s+REST'
+# 6. right wheel: Rest (wedge 8, left of the hub)
+slowswipe 1150 450 1020 400 3; sleep 3; shot 07-rest
+check "right wheel -> Rest" '\[TOUCH\] wheel pick\s+key\s+Rest'
 ~/.local/bin/idb ui key 41 --udid "$UD" >/dev/null 2>&1; sleep 1   # Escape stops resting
 ~/.local/bin/idb ui key 41 --udid "$UD" >/dev/null 2>&1; sleep 1   # and closes the game menu if it opened instead
-$TAP tap 1078 616 >/dev/null; sleep 3; shot 08-char
-check "touch row Char" '\[TOUCH\] button\s+SHOW_CHARACTER_SHEET'
-CB=$(grep 'TOUCH\] close box at' "$LOG" | tail -1); X=$(echo "$CB" | awk -F'\t' '{print $2}'); Y=$(echo "$CB" | awk -F'\t' '{print $3}')
-[ -n "$X" ] && { $TAP tap $((X+17)) $((Y+17)) >/dev/null; sleep 2; shot 09-char-closed; }
-$TAP tap 1206 616 >/dev/null; sleep 3; shot 10-pickup
-check "touch row Pick up" '\[TOUCH\] button\s+PICKUP_FLOOR'
-$TAP tap 1270 616 >/dev/null; sleep 4; shot 11-explore
-check "touch row Explore" '\[TOUCH\] button\s+RUN_AUTO'
-# 7. zoom buttons (tiles continue leftwards: Z+ 1014, Z- 950)
-$TAP tap 1014 616 >/dev/null; sleep 2; $TAP tap 1014 616 >/dev/null; sleep 2; shot 12-zoom-in
-check "touch row Z+ zooms in" '\[MAP\] setting zoom level\s+1\.5'
-$TAP tap 950 616 >/dev/null; sleep 2; shot 13-zoom-out
-check "touch row Z- zooms out" '\[MAP\] setting zoom level\s+1\.25'
+# 7. left wheel: a hotkey (wedge 3, right of the hub)
+slowswipe 250 450 380 390 3; sleep 3; shot 08-hotkey
+check "left wheel -> hotkey" '\[TOUCH\] wheel pick\s+hotkey'
+$TAP tap 1318 565 >/dev/null; sleep 2   # Cancel button if aiming (else the Attack button: harmless)
+# 8. right wheel: Zoom in (wedge 6, lower left of the hub)
+slowswipe 1150 400 1105 515 3; sleep 2; shot 09-zoom
+check "right wheel -> Zoom in" '\[MAP\] setting zoom level\s+1\.25|\[TOUCH\] wheel pick\s+fct\s+Zoom in'
+# 9. attack button
+$TAP tap 1318 565 >/dev/null; sleep 2; shot 10-attack
+check "attack button" '\[TOUCH\] attack'
 echo "lua errors: $(grep -c 'Lua Error' "$LOG")"
 echo "frames in $OUT"

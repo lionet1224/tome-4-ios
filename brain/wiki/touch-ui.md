@@ -220,3 +220,8 @@ sim (marker + rows moved); unresolved, needs how he dragged.
   function(T) with T.tap/hold/swipe/two_finger/key/shot/wait/log, run as a coroutine from tick().
   Harness: `tools/touch/mac-run.sh [script]` (writes settings, launches t-engine.app at
   1398x645, checks markers) with `tools/touch/smoke.lua`.
+Rewrite verified 2026-09-03 15:00: tools/ios/simtest.sh 12/12 on the Plus sim (tap, hold, hover-scrub,
+pan, close box, right wheel ×3, left wheel, zoom, attack); tools/touch/mac-run.sh 7/7 on the Mac
+release build (make -j8 config=release; the Makefile defaults to debug, which is unplayably slow).
+Mac stdout always goes to /tmp/te4_log.txt; --flush-stdout now line-buffers it. The birth level-up
+dialog must be closed by the script (birth_done runs after it), so no "ready" gate before that.

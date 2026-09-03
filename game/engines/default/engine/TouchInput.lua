@@ -44,6 +44,7 @@ end
 -- providers (set by the game module)
 _M.wheel = nil      -- object with zoneOf(x,y) / openAt(side,x,y) / move(x,y) / release() / cancel() / open
 _M.on_pinch = nil   -- function(delta)
+_M.script_ready = nil -- function() -> true once the game module is really playable
 
 -- gesture state
 _M.t = nil          -- the primary finger: {x0,y0,x,y,t0,moved,held,hover,wheel,wheel_zone}
@@ -240,9 +241,14 @@ end
 --   T.two_finger()  T.key("EXIT")  T.shot("name")  T.log("...")
 function _M.scriptTick()
 	local path = config.settings.touch and config.settings.touch.script
-	if not path or _M.script_done then return end
+	if not path then return end
+	-- the boot menu has a fake level/player: wait for a real game module
+	local ingame = game and game.__mod_info and game.__mod_info.short_name ~= "boot" and game.level and game.player and game.player.x
+	if ingame and _M.script_ready and not _M.script_ready() then ingame = false end
+	if _M.script and _M.script.game ~= game then _M.script, _M.script_done = nil, nil end
+	if _M.script_done then return end
 	if not _M.script then
-		if not (game and game.level and game.player and game.player.x) then return end
+		if not ingame then return end
 		local f, err = loadfile(path)
 		if not f then print("[TOUCH] script load failed", err) _M.script_done = true return end
 		local ok, body = pcall(f)
@@ -273,7 +279,7 @@ function _M.scriptTick()
 			if png then local fh = fs.open("/shot-"..name..".png", "w") if fh then fh:write(png) fh:close() print("[SCRIPT] shot", name) end end
 			T.wait(60)
 		end
-		_M.script = {co=coroutine.create(function() body(T) end), wake_fct=function() return wake end}
+		_M.script = {co=coroutine.create(function() body(T) end), wake_fct=function() return wake end, game=game}
 		print("[TOUCH] script started", path)
 	end
 	local s = _M.script

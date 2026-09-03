@@ -3,8 +3,11 @@
 return function(T)
 	local w, h = core.display.size()
 	T.log("screen", w, h)
-	T.key("EXIT")                       -- close the birth-time level-up dialog
-	T.wait(500)
+	T.wait(1500)
+	T.key("EXIT")                       -- close the birth-time level-up dialog; the birth then finishes
+	T.wait(8000)                        -- (randart generation, welcome popup)
+	T.key("EXIT")                       -- close the welcome popup
+	T.wait(800)
 	T.tap(w / 2 + 96, h / 2)             -- walk one tile: a plain tap
 	T.wait(400)
 	T.hold(w / 2 + 96, h / 2, 700)       -- hold = tile action menu (right click)
