@@ -15,7 +15,7 @@ D=$(xcrun simctl get_app_container "$UD" org.te4.tome.dev data)
 mkdir -p "$D/Documents/t-engine/4.0/settings"
 printf 'audio.enable = false\naudio.music_volume = 0\naudio.effects_volume = 0\n' > "$D/Documents/t-engine/4.0/settings/audio.cfg"
 printf 'autopilot = true\nautopilot_birth_only = true\n' > "$D/Documents/t-engine/4.0/settings/autopilot.cfg"
-shot() { xcrun simctl io "$UD" screenshot "$OUT/$1.png" >/dev/null 2>&1; }
+shot() { xcrun simctl io "$UD" screenshot "$OUT/$1.png" >/dev/null 2>&1; sips -r 90 "$OUT/$1.png" --out "$OUT/$1.png" >/dev/null 2>&1; }
 check() { # name pattern
 	if grep -qE "$2" "$LOG"; then echo "PASS $1"; else echo "FAIL $1 (no /$2/ in console)"; fi
 }
@@ -23,6 +23,10 @@ xcrun simctl terminate "$UD" org.te4.tome.dev 2>/dev/null
 xcrun simctl launch --console-pty "$UD" org.te4.tome.dev --flush-stdout > "$LOG" 2>&1 &
 sleep 85; shot 01-ingame
 check "character created (birth-only autopilot)" '"birther_state"|AUTOPILOT\] active'
+# the birth opens the level-up dialog (the autopilot no longer dismisses it): close it via its close box
+CB=$(grep 'TOUCH\] close box at' "$LOG" | tail -1); X=$(echo "$CB" | awk -F'\t' '{print $2}'); Y=$(echo "$CB" | awk -F'\t' '{print $3}')
+[ -n "$X" ] && { $TAP tap $((X+17)) $((Y+17)) >/dev/null; sleep 2; }
+check "birth-time level-up dialog closed" '\[TOUCH\] close box\s+Levelup'
 # orientation calibration: tap the player frame (HUD, harmless; also dismisses a
 # Running popup) and read the engine coords back
 N0=$(grep -cE 'IOS-INPUT\] UP' "$LOG"); $TAP tap 60 100 >/dev/null; sleep 2
