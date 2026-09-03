@@ -169,3 +169,9 @@ category headers expand on tap, drag or wheel scroll) + `LevelupDialog:createDis
 `__IOS__`: the four point buttons are the tabs (Stats / Class / Generic; Category shows its text),
 one pane at a time via Dialog:replaceUI, description pane on the right (no_tooltip path), bottom
 row keeps Hide-unlearnt / Inscriptions / Prodigies. Undo = the − button (calls onUseTalent(item,false)).
+2026-09-03 later: level-up rows grey when unraisable (talent do_shadow; stats: maxed or no points,
+iOS-only do_shadow) unless changed this visit (gold name/value, − enabled); + dims when the tab has no
+points (can_add). Cooldown pips are now 44px talent icons under the minimap with the turns overlaid
+(Minimalist:displayTouchPips). Tooltip while aiming is pushed clear of Cast/Cancel (engine Tooltip.lua).
+Jordan reported "options menu doesn't scroll" — drag-scroll on the Game Options TreeList works in the
+sim (marker + rows moved); unresolved, needs how he dragged.
