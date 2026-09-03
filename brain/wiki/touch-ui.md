@@ -162,3 +162,10 @@ zone thirds/bottom, wedges 8/12, hold delay. Back and forward page wedges (skip 
 350 ms flip cooldown). Two-tap targeting (first tap places, second fires) + Cast/Cancel buttons.
 Cooldown pips under the minimap. Drag-to-scroll in all dialogs. Wedge = icon + number, selected
 name shown over the hub. Not yet: tabbed level-up dialog, self-tile hold menu, wait on tap-self.
+
+## 10. Tabbed level-up (2026-09-03)
+`mod/dialogs/elements/TouchTalentList.lua` (vertical rows, icon + name + status, big − / + per row,
+category headers expand on tap, drag or wheel scroll) + `LevelupDialog:createDisplayTouch()` under
+`__IOS__`: the four point buttons are the tabs (Stats / Class / Generic; Category shows its text),
+one pane at a time via Dialog:replaceUI, description pane on the right (no_tooltip path), bottom
+row keeps Hide-unlearnt / Inscriptions / Prodigies. Undo = the − button (calls onUseTalent(item,false)).
