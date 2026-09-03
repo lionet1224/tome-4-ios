@@ -37,3 +37,4 @@ tags: [meta, log]
 - 2026-09-02 — Level-up screen verified complete at zoom 2 / font 150 after the scissor fix (all trees, close box). In-game screenshot readback also scaled to pixels on iOS.
 - 2026-09-02 — game.creating_player stays true after the autopilot auto-birth; birth-only gate now = game.level and game.player.x. Level-up point buttons chained left-to-right on iOS (fixed column anchors overlapped at 150% font).
 - 2026-09-02 — Dialog loadUI entries with left=<ui>/top=<ui> must reference an entry that appears EARLIER in the list (positions are computed in order); a bad reference throws inside dialog creation — and since the LevelupDialog is created during birth, that silently aborted the HUD setup (map-only screen, no errors logged).
+- 2026-09-02 — Sim screenshots (xcrun simctl io screenshot) are portrait-pixel-oriented; rotate with `sips -r 90` before reading/sending. Level-up point buttons chained (stat→class→generic→types) verified upright.
