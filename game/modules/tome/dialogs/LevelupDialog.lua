@@ -852,6 +852,16 @@ function _M:createDisplay()
 	if self.b_inscriptions then table.insert(ret, {right=self.b_prodigies.w, bottom=0, ui=self.b_inscriptions}) end
 	table.insert(ret, {right=self.b_inscriptions or self.b_prodigies, bottom=0, ui=self.c_hide_unknown})
 
+	-- iOS port: the point buttons are anchored to column positions sized for
+	-- desktop fonts; at 150% font scale they overlap. Chain them left to right.
+	if __IOS__ then
+		for i, e in ipairs(ret) do
+			if e.ui == self.b_class then ret[i] = {left=self.b_stat, top=0, ui=self.b_class}
+			elseif e.ui == self.b_types then ret[i] = {left=self.b_class, top=0, ui=self.b_types}
+			elseif e.ui == self.b_generic then ret[i] = {left=self.b_types, top=0, ui=self.b_generic}
+			end
+		end
+	end
 	if self.no_tooltip then
 		local vsep3 = Separator.new{dir="horizontal", size=self.ih - self.b_stat.h - 10}
 		-- will be recalculated
