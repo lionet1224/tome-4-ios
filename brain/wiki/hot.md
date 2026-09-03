@@ -26,6 +26,8 @@ main menu, native arm64, plain Lua 5.1.
 - Phone: first install done via tools/ios/install-device.sh (needs the profile trusted
   on the phone: Settings > General > VPN & Device Management). Refresh = re-run the
   script (needs ~1.1GB free: out-dev + DerivedData copies of the 527MB bundle).
+- 2026-09-02 20:29: regression 11/11 green (incl. level-up close at birth); level-up
+  screen complete at zoom 2 (scissor fix) with chained point buttons; phone has it.
 - 2026-09-02 18:03: touch regression ALL GREEN (10/10) on the Plus sim, phone
   refreshed with the same build (native 2x rendering, gestures, touch row, close
   boxes, iOS keyboard on text boxes). Untested on device: two-finger Escape, keyboard.
