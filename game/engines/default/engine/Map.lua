@@ -105,7 +105,13 @@ function _M:setViewPort(x, y, w, h, tile_w, tile_h, fontname, fontsize, allow_ba
 	self.viewport = {width=math.floor(w), height=math.floor(h), mwidth=math.floor(w/tile_w), mheight=math.floor(h/tile_h)}
 	self.tile_w, self.tile_h = tile_w, tile_h
 	self.fontname, self.fontsize = fontname, fontsize
-	self.zoom = 1
+	-- iOS port: the zoom lives on the class (setZoom) but hit-testing and drawing
+	-- read the instance field; keep them equal, and let new levels inherit it
+	self.zoom = _M.zoom or 1
+	if self.zoom ~= 1 then
+		self.viewport.mwidth = math.floor(self.viewport.width / (self.tile_w * self.zoom))
+		self.viewport.mheight = math.floor(self.viewport.height / (self.tile_h * self.zoom))
+	end
 
 	if otw ~= self.tile_w or oth ~= self.tile_h then print("[MAP] Reseting tiles caches") self:resetTiles() end
 end
@@ -149,7 +155,8 @@ end
 -- @param tmy make sure this coords are visible after zoom (can be nil)
 function _M:setZoom(zoom, tmx, tmy)
 	self.changed = true
-	_M.zoom = util.bound(_M.zoom + zoom, 0.1, 4)
+	_M.zoom = util.bound((_M.zoom or 1) + zoom, 0.1, 4)
+	self.zoom = _M.zoom
 	self.viewport.mwidth = math.floor(self.viewport.width / (self.tile_w * _M.zoom))
 	self.viewport.mheight = math.floor(self.viewport.height / (self.tile_h * _M.zoom))
 	print("[MAP] setting zoom level", _M.zoom, self.viewport.mwidth, self.viewport.mheight)
