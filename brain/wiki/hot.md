@@ -31,7 +31,7 @@ main menu, native arm64, plain Lua 5.1.
 - 2026-09-02 18:03: touch regression ALL GREEN (10/10) on the Plus sim, phone
   refreshed with the same build (native 2x rendering, gestures, touch row, close
   boxes, iOS keyboard on text boxes). Untested on device: two-finger Escape, keyboard.
-- Gestures v2 (2026-09-02 20:37, regression 13/13 green, on phone): hold+release = context menu, hold+drag = hover-scrub,
+- Design page: [[touch-ui]] (inventory, proposal, gap list). Gestures v2 (2026-09-02 20:37, 15/15 green, on phone): hold+release = context menu, hold+drag = hover-scrub,
   pinch = map zoom. Pinch untestable with idb; verify on device.
 - Escape on touch: two-finger tap (EXIT) + close box on every dialog; tap outside
   a dialog closes it. Regression: tools/ios/simtest.sh (all green 2026-09-02).
