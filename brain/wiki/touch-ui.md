@@ -155,3 +155,10 @@ Decisions 2026-09-03: radial direction accepted; tabbed level-up screen accepted
 buttons while aiming; cooldown pips under the vitals; right wheel contents as drawn.
 To decide on the phone (build them as settings): wheel trigger (hold vs first movement), wheel
 position (under finger vs corner), zone size (thirds vs bottom halves), wedge count (8 vs 12).
+
+## 9. Built (2026-09-03, commit 85601933)
+Radial wheels in-game with settings (Options > Touch): trigger hold/drag, position finger/corner,
+zone thirds/bottom, wedges 8/12, hold delay. Back and forward page wedges (skip empty pages,
+350 ms flip cooldown). Two-tap targeting (first tap places, second fires) + Cast/Cancel buttons.
+Cooldown pips under the minimap. Drag-to-scroll in all dialogs. Wedge = icon + number, selected
+name shown over the hub. Not yet: tabbed level-up dialog, self-tile hold menu, wait on tap-self.

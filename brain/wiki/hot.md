@@ -16,7 +16,22 @@ main menu, native arm64, plain Lua 5.1.
   for the full patch table). Run: `./t-engine.app/Contents/MacOS/t-engine` from repo root.
 - Brain lives in-repo at `brain/`.
 
-## Active Threads (morning 2026-09-02)
+## Active Threads (2026-09-03)
+- **Radial touch UI in-game** (commit 85601933): `mod/class/TouchWheel.lua` (wheels, settings
+  `config.settings.touch`), Mouse.lua hooks (zone hold/drag opens, move selects, lift fires),
+  map zone ignores input while a wheel is open, two-tap targeting + Cast/Cancel buttons
+  (Minimalist:displayTouchTargeting), cooldown pips under the minimap, hotbar/toolbar/touch row
+  hidden and the map full-screen when the wheel is on, Options > Touch tab for trigger/position/
+  zone/wedges/hold delay, drag-to-scroll in every dialog (Dialog:mouseEvent → scrollbar.pos or
+  wheel ticks). New C primitive core.display.drawRingWedge. Tests: tools/ios/simtest-wheel.sh,
+  simtest-scroll.sh (green). Jordan tests in the simulator himself now.
+- Design mocks: tools/ios/design/{touch-mockup,radial-mockup}.html (artifacts). Decided: radial
+  direction, tabbed level-up (NOT built yet), Cast/Cancel, pips. Open (phone test): trigger,
+  position, zone, wedge count.
+- Next: tabbed level-up dialog (Stats / Class / Generic / Categories, drag lists), wheel polish
+  from Jordan's feedback, phone install of the wheel build.
+
+## Earlier (morning 2026-09-02)
 - Save/resume tooling landed: `tools/soak-resume.sh runs/<dir>` replays an archived
   save; saves were level-less until frame() stopped ticking inside changeLevel.
 - Mac crash hunt: ASan blocked (Homebrew SDL2 dynapi alert at load); running the
