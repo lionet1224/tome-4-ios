@@ -1954,6 +1954,12 @@ function _M:displayToolbar(scale, bx, by)
 			{key="PICKUP_FLOOR", label=_t"Pick up", tip=_t"Pick up what is on the floor"},
 			{key="LEVELUP", label=_t"Level", tip=_t"Spend level-up points"},
 			{key="SHOW_CHARACTER_SHEET", label=_t"Char", tip=_t"Character sheet"},
+			{key="ZOOM_IN", label=_t"Z+", tip=_t"Zoom the map in", fct=function()
+				if game.level and game.level.map and game.level.map.setZoom then game.level.map:setZoom(0.25, game.player and game.player.x, game.player and game.player.y) end
+			end},
+			{key="ZOOM_OUT", label=_t"Z-", tip=_t"Zoom the map out", fct=function()
+				if game.level and game.level.map and game.level.map.setZoom then game.level.map:setZoom(-0.25, game.player and game.player.x, game.player and game.player.y) end
+			end},
 		}
 		-- a row extending left from the bottom of the icon column (the column
 		-- itself is sized for exactly the six stock icons)
@@ -1978,7 +1984,10 @@ function _M:displayToolbar(scale, bx, by)
 				local desc_fct = function(button, mx, my, xrel, yrel, bx, by, event)
 					if event == "out" then tb.alpha = 0.6 return else tb.alpha = 1 end
 					game.tooltip_x, game.tooltip_y = 1, 1; game:tooltipDisplayAtMap(game.w, game.h, tb.tip)
-					if button == "left" and not xrel and not yrel and event == "button" then print("[TOUCH] button", tb.key) game.key:triggerVirtual(tb.key) end
+					if button == "left" and not xrel and not yrel and event == "button" then
+						print("[TOUCH] button", tb.key)
+						if tb.fct then tb.fct() else game.key:triggerVirtual(tb.key) end
+					end
 				end
 				game.mouse:registerZone(bx + tx * scale, by + ty * scale, bw, bh, desc_fct, nil, zone, true, scale)
 			end

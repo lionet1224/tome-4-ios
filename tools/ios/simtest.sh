@@ -73,5 +73,10 @@ $TAP tap 1206 616 >/dev/null; sleep 3; shot 10-pickup
 check "touch row Pick up" '\[TOUCH\] button\s+PICKUP_FLOOR'
 $TAP tap 1270 616 >/dev/null; sleep 4; shot 11-explore
 check "touch row Explore" '\[TOUCH\] button\s+RUN_AUTO'
+# 7. zoom buttons (tiles continue leftwards: Z+ 1014, Z- 950)
+$TAP tap 1014 616 >/dev/null; sleep 2; $TAP tap 1014 616 >/dev/null; sleep 2; shot 12-zoom-in
+check "touch row Z+ zooms in" '\[MAP\] setting zoom level\s+1\.5'
+$TAP tap 950 616 >/dev/null; sleep 2; shot 13-zoom-out
+check "touch row Z- zooms out" '\[MAP\] setting zoom level\s+1\.25'
 echo "lua errors: $(grep -c 'Lua Error' "$LOG")"
 echo "frames in $OUT"
