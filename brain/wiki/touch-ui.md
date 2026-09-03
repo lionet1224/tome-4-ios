@@ -135,3 +135,11 @@ Tiers → touch treatment:
 - Do NOT dismiss dialogs on any tap; Escape (two-finger, close box, tap-outside) is enough.
 - Explore + Rest: right-thumb, hotbar-slot sized (bigger than today's row).
 - Design iteration happens in a web mockup first, then in-game.
+
+## 7. Web mockup (2026-09-02)
+Interactive mock for feedback before building: https://claude.ai/code/artifact/732175a5-16d9-4328-895e-9a2fc2cae4f9
+Source: `tools/ios/design/touch-mockup.html` (republish via the Artifact tool with the same URL).
+Shows: 10-slot 96px hotbar with swipe pages, 112px Explore/Rest at the right thumb that turn into
+Cast/Cancel while aiming, AoE/bolt preview aiming, hold-tile action menu, self-tile menu, contextual
+level-up glow, tabbed level-up screen with drag-scroll (no scrollbar) and per-point undo, inventory
+dialog with drag-scroll. Open questions listed at the bottom of the page.
