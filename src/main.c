@@ -1642,6 +1642,11 @@ int main(int argc, char *argv[])
 
 	// initialize engine and set up resolution and depth
 	Uint32 flags=SDL_INIT_TIMER | SDL_INIT_JOYSTICK;
+	#ifdef TE4_IOS
+	/* iOS port: fingers are handled by engine.TouchInput, not turned into mouse events */
+	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+	SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
+#endif
 	if (SDL_Init (flags) < 0) {
 		printf("cannot initialize SDL: %s\n", SDL_GetError ());
 		return 1;

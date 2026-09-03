@@ -126,9 +126,9 @@ function _M:generate()
 		return 0, 0, 0, 0, 0, 0
 	end
 
-	self.c_inven = ListColumns.new{width=self.w, height=self.h - (self.c_tabs and self.c_tabs.h or 0), sortable=true, scrollbar=true, item_height=__IOS__ and 56 or nil, columns=self.columns or {
+	self.c_inven = ListColumns.new{width=self.w, height=self.h - (self.c_tabs and self.c_tabs.h or 0), sortable=true, scrollbar=true, item_height=require("engine.TouchInput").active() and 56 or nil, columns=self.columns or {
 		{name=_t"", width={33,"fixed"}, display_prop="char", sort="id"},
-		{name=_t"", width={__IOS__ and 60 or 24,"fixed"}, display_prop="object", sort="sortname", direct_draw=direct_draw},
+		{name=_t"", width={require("engine.TouchInput").active() and 60 or 24,"fixed"}, display_prop="object", sort="sortname", direct_draw=direct_draw},
 		{name=_t"Inventory", width=72, display_prop="name", sort="sortname"},
 		{name=_t"Category", width=20, display_prop="cat", sort="cat"},
 		{name=_t"Enc.", width=8, display_prop="encumberance", sort="encumberance"},

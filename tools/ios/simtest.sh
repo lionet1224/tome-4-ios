@@ -29,8 +29,8 @@ CB=$(grep 'TOUCH\] close box at' "$LOG" | tail -1); X=$(echo "$CB" | awk -F'\t' 
 check "birth-time level-up dialog closed" '\[TOUCH\] close box\s+Levelup'
 # orientation calibration: tap the player frame (HUD, harmless; also dismisses a
 # Running popup) and read the engine coords back
-N0=$(grep -cE 'IOS-INPUT\] UP' "$LOG"); $TAP tap 60 100 >/dev/null; sleep 2
-RAW=$(grep -E 'IOS-INPUT\] UP' "$LOG" | sed -n "$((N0+1))p" | grep -oE 'lua=\([0-9.]+,[0-9.]+\)')
+N0=$(grep -cE 'TOUCH\] tap' "$LOG"); $TAP tap 60 100 >/dev/null; sleep 2
+RAW=$(grep -E 'TOUCH\] tap' "$LOG" | sed -n "$((N0+1))p" | cut -f2,3 | tr '\t' ',')
 echo "calibration tap -> $RAW (expected near (60,100); if mirrored, flip orient in ~/.tome-simtap.json)"
 $TAP tap 60 100 >/dev/null; sleep 2   # settle: no dialog, character idle
 # 1. long-press on the character's tile area = right click menu

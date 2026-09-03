@@ -197,3 +197,26 @@ sim (marker + rows moved); unresolved, needs how he dragged.
   has Pickup/Rest/Auto-explore/Inventory/Levelup.
 - Inventory: ListColumns item_height 56 + 60px icon column on iOS; EquipDoll scale 1.35 in
   ShowEquipInven. Dialog drag-scroll has momentum (touch_fling in Dialog:toScreen) for pixel scrollers.
+
+## 13. Input-layer rewrite (2026-09-03, evening)
+- `engine/TouchInput.lua` owns every gesture. SDL's touch→mouse emulation is OFF on iOS
+  (main.c hints SDL_HINT_TOUCH_MOUSE_EVENTS / MOUSE_TOUCH_EVENTS = 0); Mouse.lua's
+  receiveTouch/Motion/Gesture just forward to TouchInput.fingerDown/Move/Up/gesture, and
+  Game.lua's frame tick calls TouchInput.tick(). TouchInput *emits* mouse events in a known
+  order (tap = motion+down+up then park; drag = down at start, motion with "left", up at end;
+  hold 450 ms then lift = right click; hold+drag = hover motion; two-finger = escape(); pinch =
+  on_pinch). No more suppress_next_up / last_left_down / park hacks.
+- Providers set by the uiset: `TouchInput.wheel` (TouchWheel: zoneOf/openAt/move/release/cancel),
+  `TouchInput.on_pinch`. Settings single-sourced in TouchInput.DEFAULTS (TouchWheel.setting =
+  TouchInput.setting).
+- Capability flag: `TouchInput.active()` (iOS, or `touch = {emulate=true}` on desktop) replaces the
+  `__IOS__` checks in Dialog (close box, drag-scroll), Tooltip, GameTargeting, Inventory, ToME
+  Game.lua (pan, tap-self), LevelupDialog, GameOptions. `__IOS__` stays only for rendering
+  (screen_zoom/font) and unlocks.
+- Desktop emulation: `TouchInput.mouseAsFinger` / `mouseMotionAsFinger` at the top of
+  Mouse:receiveMouse/receiveMouseMotion turn the mouse into finger 1 (right click = two-finger).
+  `injecting` guards the events TouchInput itself emits.
+- Scripted gestures: `touch.script = "/file.lua"` (physfs path under the home dir) returning
+  function(T) with T.tap/hold/swipe/two_finger/key/shot/wait/log, run as a coroutine from tick().
+  Harness: `tools/touch/mac-run.sh [script]` (writes settings, launches t-engine.app at
+  1398x645, checks markers) with `tools/touch/smoke.lua`.

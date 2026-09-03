@@ -522,7 +522,7 @@ function _M:generate()
 	end
 	-- iOS port: a close box at the top-right of every dialog (there is no
 	-- Escape key on a phone; registered last so it is tested first)
-	if __IOS__ and not self.no_close_box then
+	if require("engine.TouchInput").active() and not self.no_close_box then
 		self.close_box = {w=34, h=34}
 		self.close_box.x, self.close_box.y = self.display_x + self.w - self.close_box.w - 2, self.display_y + 2
 		print("[TOUCH] close box at", self.close_box.x, self.close_box.y, tostring(self.title))
@@ -838,7 +838,8 @@ function _M:mouseEvent(button, x, y, xrel, yrel, bx, by, event)
 	-- iOS port: a plain finger drag scrolls the widget under it (as wheel
 	-- ticks), and the click SDL synthesizes when that finger lifts is dropped.
 	-- A hold-then-drag still scrubs tooltips (engine.Mouse handles that).
-	local touch = __IOS__ and engine.Mouse.touch
+	local TouchInput = require "engine.TouchInput"
+	local touch = TouchInput.active() and TouchInput.t
 	if touch and touch.moved and not touch.held then
 		if button == "left" and event == "button" then
 			-- finger lifted after a drag: keep a pixel scroller moving (momentum)

@@ -596,7 +596,7 @@ function _M:generateList()
 			stat=sid,
 			desc=s.description,
 			-- iOS port: grey the row when it cannot go up (maxed, or no stat points), unless it can be undone
-			do_shadow = __IOS__ and function(item)
+			do_shadow = require("engine.TouchInput").active() and function(item)
 				if self.actor:getStat(sid, nil, nil, true) ~= self.actor_dup:getStat(sid, nil, nil, true) then return false end
 				if self.actor.unused_stats <= 0 then return true end
 				return self.actor:getStat(sid, nil, nil, true) >= self.actor.level * 1.4 + 20 or self.actor:isStatMax(sid) or self.actor:getStat(sid, nil, nil, true) >= 60 + math.max(0, (self.actor.level - 50))
@@ -827,7 +827,7 @@ function _M:createDisplay()
 		width = math.floor(2 * self.iw / 3), delay = 1,
 	}
 	-- iOS port: tabbed layout (one list at a time, finger-sized rows)
-	if __IOS__ then return self:createDisplayTouch() end
+	if require("engine.TouchInput").active() then return self:createDisplayTouch() end
 
 	local vsep1 = Separator.new{dir="horizontal", size=self.ih - self.b_stat.h - 10}
 	local vsep2 = Separator.new{dir="horizontal", size=self.ih - self.b_stat.h - 10}

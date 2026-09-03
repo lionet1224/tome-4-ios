@@ -45,7 +45,7 @@ function _M:init()
 		{title=_t"Online", kind="online"},
 		{title=_t"Misc", kind="misc"}
 	}
-	if __IOS__ then tabs[#tabs+1] = {title=_t"Touch", kind="touch"} end
+	if require("engine.TouchInput").active() then tabs[#tabs+1] = {title=_t"Touch", kind="touch"} end
 	self:triggerHook{"GameOptions:tabs", tab=function(title, fct)
 		local id = #tabs+1
 		tabs[id] = {title=title, kind="hooktab"..id}

@@ -2634,8 +2634,9 @@ function _M:setupMouse(reset)
 		if wheel and wheel.open then return end
 		-- iOS port: drag with one finger = pan the camera; the click SDL
 		-- synthesizes when the finger lifts after a pan is swallowed
-		local tstate = engine.Mouse.touch
-		if button == "left" and event == "motion" and xrel and yrel and not (tstate and tstate.held) and (engine.Mouse.nb_fingers or 0) < 2 then
+		local TouchInput = require "engine.TouchInput"
+		local tstate = TouchInput.active() and TouchInput.t
+		if button == "left" and event == "motion" and xrel and yrel and TouchInput.active() and not (tstate and tstate.held) and (TouchInput.nb or 0) < 2 then
 			local pan = self.touch_pan or {dx=0, dy=0, moved=false}
 			self.touch_pan = pan
 			pan.dx, pan.dy = pan.dx + xrel, pan.dy + yrel
@@ -2731,7 +2732,7 @@ function _M:setupMouse(reset)
 		end
 
 		-- iOS port: tap yourself = wait a turn, or take the stairs when standing on them
-		if __IOS__ and button == "left" and not xrel and not yrel and event == "button" and self.key == self.normal_key and self.player and tmx == self.player.x and tmy == self.player.y and self.zone and not self.zone.wilderness then
+		if require("engine.TouchInput").active() and button == "left" and not xrel and not yrel and event == "button" and self.key == self.normal_key and self.player and tmx == self.player.x and tmy == self.player.y and self.zone and not self.zone.wilderness then
 			local g = self.level.map(tmx, tmy, Map.TERRAIN)
 			if g and g.change_level then print("[TOUCH] self tap -> stairs") self.key:triggerVirtual("CHANGE_LEVEL")
 			else print("[TOUCH] self tap -> wait") self.key:triggerVirtual("MOVE_STAY") end

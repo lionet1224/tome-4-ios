@@ -282,7 +282,7 @@ function _M:targetMouse(button, mx, my, xrel, yrel, event)
 		elseif button == "left" and not xrel and not yrel and event == "button" then
 			-- iOS port: first tap places the target (shows the area), tapping
 			-- the same tile again (or the Cast button) fires
-			if __IOS__ then
+			if require("engine.TouchInput").active() then
 				local tt = self.ios_target_tap
 				if not (tt and tt.x == tmx and tt.y == tmy) then
 					self.ios_target_tap = {x=tmx, y=tmy}

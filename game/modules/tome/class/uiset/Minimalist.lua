@@ -301,6 +301,12 @@ function _M:init()
 	UISet.init(self)
 
 	self.touch_wheel = TouchWheel.new(self)
+	local TouchInput = require "engine.TouchInput"
+	TouchInput.wheel = self.touch_wheel
+	TouchInput.on_pinch = function(delta)
+		local map = game.level and game.level.map
+		if map and map.setZoom then map:setZoom(delta, game.player and game.player.x, game.player and game.player.y) end
+	end
 	self.mhandle = {}
 	self.res = {}
 	self.party = {}

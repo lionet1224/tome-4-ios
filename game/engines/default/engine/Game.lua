@@ -175,7 +175,7 @@ end
 -- Called by the engine core to redraw the screen every frame
 -- @param nb_keyframes The number of elapsed keyframes since last draw (this can be 0). This is set by the engine
 function _M:display(nb_keyframes)
-	if engine.Mouse.touchTick then engine.Mouse.touchTick() end
+	require("engine.TouchInput").tick()
 	nb_keyframes = nb_keyframes or 1
 	if self.flyers then
 		self.flyers:display(nb_keyframes)

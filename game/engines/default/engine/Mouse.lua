@@ -55,10 +55,8 @@ end
 -- @param force_name if not nil only the zone with this name may trigger
 -- @param extra
 function _M:receiveMouse(button, x, y, isup, force_name, extra)
-	-- SDL delivers the synthesized mouse events BEFORE the finger events, so
-	-- remember when the last left-down happened rather than flagging the touch
-	if button == "left" and not isup then _M.last_left_down = core.game.getTime() end
-	if _M.suppress_next_up and isup and button == "left" then _M.suppress_next_up = nil return end
+	-- desktop touch emulation: the mouse is a finger (engine.TouchInput)
+	if require("engine.TouchInput").mouseAsFinger(button, x, y, isup) then return end
 	self.last_pos = { x = x, y = y }
 	self.status[button] = not isup
 	if not self:isEnabled() then return end
@@ -83,6 +81,7 @@ function _M:getPos()
 end
 
 function _M:receiveMouseMotion(button, x, y, xrel, yrel, force_name, extra)
+	if require("engine.TouchInput").mouseMotionAsFinger(button, x, y) then return end
 	self.last_pos = { x = x, y = y }
 	if _M.drag then
 		if _M.drag.on_move then return _M.drag.on_move(_M.drag, button, x, y, xrel, yrel) end
@@ -218,60 +217,9 @@ function _M:usedDrag()
 end
 
 
---- Called when a touch event is received
--- @param fingerId id of the finger info
--- @param x coordinate of the click (normalized to 0->1)
--- @param y coordinate of the click (normalized to 0->1)
--- @param dx delta coordinate of the click (normalized to 0->1)
--- @param dy delta coordinate of the click (normalized to 0->1)
--- @param pressure
--- @param isup true if the key was released, false if pressed
--- iOS port: touch gestures on top of SDL's touch-as-mouse emulation.
--- * long-press (finger still ~0.45s) = right click (context menu, tooltips)
--- * after finger-up the fake cursor is parked off-screen so nothing "hovers"
--- * the left click SDL synthesizes at finger-up after a long-press is swallowed
-_M.touch = nil
-_M.LONG_PRESS_MS = 450
-_M.TOUCH_MOVE_TOLERANCE = 18
-
--- iOS port: the radial wheels (mod.class.TouchWheel) claim holds/drags that
--- start in their zones; the uiset owns the wheel object
-function _M.wheel()
-	local ui = game and game.uiset
-	return ui and ui.touch_wheel or nil
-end
-
-local function wheelSetting(k)
-	local t = config.settings.touch
-	local v = t and t[k]
-	if v == nil then return ({trigger="hold", hold_ms=160})[k] end
-	return v
-end
-
-function _M.touchTick()
-	local t = _M.touch
-	local wheel = _M.wheel()
-	if t and t.wheel_zone and not t.wheel and not t.moved and wheel and wheelSetting("trigger") == "hold" and core.game.getTime() - t.t0 >= (tonumber(wheelSetting("hold_ms")) or 160) then
-		t.wheel = true
-		_M.suppress_next_up = true -- the click SDL synthesizes at finger-up
-		wheel:openAt(t.wheel_zone, t.x, t.y)
-	end
-	if t and not t.moved and not t.held and not t.wheel and not (t.wheel_zone and wheelSetting("trigger") == "hold") and core.game.getTime() - t.t0 >= _M.LONG_PRESS_MS then
-		-- held still long enough: from here a release = right click, and
-		-- moving = hover-scrub (tooltips follow the finger, no pan/act)
-		t.held = true
-		-- SDL delivers the synthesized left-up BEFORE the finger-up: flag now
-		_M.suppress_next_up = true
-		print("[TOUCH] hold")
-	end
-	if _M.park_cursor then
-		_M.park_cursor = _M.park_cursor - 1
-		if _M.park_cursor <= 0 then
-			_M.park_cursor = nil
-			if _M.current then _M.current:receiveMouseMotion("none", -10, -10, 0, 0) end
-		end
-	end
-end
+--- Touch events: everything goes through engine.TouchInput (iOS port)
+local TouchInput = require "engine.TouchInput"
+_M.LONG_PRESS_MS = TouchInput.LONG_PRESS_MS
 
 -- SDL reports finger positions as 0..1 fractions of the window
 local function touchToScreen(x, y)
@@ -280,145 +228,29 @@ local function touchToScreen(x, y)
 	return x, y
 end
 
--- * two-finger tap = Escape (the EXIT keybind of whatever has the keyboard:
---   closes dialogs/menus, cancels targeting, opens the game menu in play)
-_M.fingers = {}
-_M.nb_fingers = 0
-
-function _M.escape()
-	print("[TOUCH] two-finger tap -> EXIT")
-	local k = engine.KeyBind and engine.KeyBind.current or (engine.Key and engine.Key.current)
-	if k and k.triggerVirtual then k:triggerVirtual("EXIT") end
-end
+function _M.touchTick() TouchInput.tick() end
+function _M.escape() TouchInput.escape() end
 
 function _M:receiveTouch(fingerId, x, y, dx, dy, pressure, isup)
-	if not isup then
-		-- a touch that starts with no finger down is a fresh gesture: drop any
-		-- stale state (a pinch can end without every finger-up reaching us)
-		if _M.nb_fingers <= 0 or (not _M.touch and not _M.multi) then
-			if _M.nb_fingers > 0 or _M.suppress_next_up then print("[TOUCH] stale gesture state reset", _M.nb_fingers) end
-			_M.fingers, _M.nb_fingers, _M.multi, _M.touch = {}, 0, nil, nil
-			_M.suppress_next_up = nil
-		end
-		if not _M.fingers[fingerId] then _M.nb_fingers = _M.nb_fingers + 1 end
-		_M.fingers[fingerId] = true
-		if _M.nb_fingers >= 2 then
-			-- second finger: this is a multi-touch gesture, not a tap/long-press
-			if _M.touch then _M.touch.moved = true end
-			if _M.touch and _M.touch.wheel then local w = _M.wheel() if w then w:cancel() end end
-			_M.multi = {t0=core.game.getTime(), fired=false}
-		else
-			local sx, sy = touchToScreen(x, y)
-			_M.touch = {x=sx, y=sy, t0=core.game.getTime(), moved=false, fired=false}
-			local wheel = _M.wheel()
-			if wheel then _M.touch.wheel_zone = wheel:zoneOf(sx, sy) end
-		end
-	else
-		_M.fingers[fingerId] = nil
-		_M.nb_fingers = 0
-		for _ in pairs(_M.fingers) do _M.nb_fingers = _M.nb_fingers + 1 end
-		local m = _M.multi
-		if m and not m.fired and not m.pinched and core.game.getTime() - m.t0 < 600 then
-			m.fired = true
-			_M.suppress_next_up = true -- the synthesized left click of the first finger
-			_M.escape()
-		end
-		if _M.nb_fingers == 0 then
-			local t = _M.touch
-			_M.touch = nil
-			_M.multi = nil
-			if t and t.wheel then
-				local w = _M.wheel()
-				if w then w:release() end
-				_M.park_cursor = 2
-				return self:receiveTouchOrig(fingerId, x, y, dx, dy, pressure, isup)
-			end
-			local seen = _M.last_left_down and _M.last_left_down >= t.t0 - 200
-			if t and not seen and not t.held and not t.moved and _M.current then
-				-- SDL's touch-as-mouse can stop after a multi-touch gesture on iOS:
-				-- deliver the click ourselves from the finger events
-				print("[TOUCH] click synthesized from finger (no mouse event seen)", t.x, t.y)
-				_M.current:receiveMouseMotion("none", t.x, t.y, 0, 0)
-				_M.current:receiveMouse("left", t.x, t.y, false)
-				_M.current:receiveMouse("left", t.x, t.y, true)
-			end
-			if t and t.held and not t.hover and not t.moved then
-				print("[TOUCH] long-press -> right click at", t.x, t.y)
-				local mm = _M.current
-				if mm then
-					mm:receiveMouseMotion("none", t.x, t.y, 0, 0)
-					mm:receiveMouse("right", t.x, t.y, true)
-				end
-			end
-			-- after a hover-scrub or a drag leave the cursor (and its tooltip)
-			-- where it is; after a tap park it so nothing hovers
-			if not (t and t.moved) then _M.park_cursor = 2 end
-		end
-	end
+	local sx, sy = touchToScreen(x, y)
+	if isup then TouchInput.fingerUp(fingerId, sx, sy) else TouchInput.fingerDown(fingerId, sx, sy) end
 	return self:receiveTouchOrig(fingerId, x, y, dx, dy, pressure, isup)
 end
 
 function _M:receiveTouchOrig(fingerId, x, y, dx, dy, pressure, isup)
-	-- print("=touch", fingerId, x, y, dx, dy, pressure, isup)
 end
 
---- Called when a touch motion event is received
--- @param fingerId id of the finger info
--- @param x coordinate of the click (normalized to 0->1)
--- @param y coordinate of the click (normalized to 0->1)
--- @param dx delta coordinate of the click (normalized to 0->1)
--- @param dy delta coordinate of the click (normalized to 0->1)
--- @param pressure
 function _M:receiveTouchMotion(fingerId, x, y, dx, dy, pressure)
-	local t = _M.touch
-	if t then
-		local sx, sy = touchToScreen(x, y)
-		if t.wheel then
-			local w = _M.wheel()
-			if w then w:move(sx, sy) end
-			return self:receiveTouchMotionOrig(fingerId, x, y, dx, dy, pressure)
-		end
-		if t.wheel_zone and wheelSetting("trigger") == "drag" and (math.abs(sx - t.x) > 12 or math.abs(sy - t.y) > 12) then
-			local w = _M.wheel()
-			if w then
-				t.wheel = true
-				_M.suppress_next_up = true
-				w:openAt(t.wheel_zone, t.x, t.y)
-				w:move(sx, sy)
-				return self:receiveTouchMotionOrig(fingerId, x, y, dx, dy, pressure)
-			end
-		end
-		if math.abs(sx - t.x) > _M.TOUCH_MOVE_TOLERANCE or math.abs(sy - t.y) > _M.TOUCH_MOVE_TOLERANCE then
-			if t.held and not t.hover then t.hover = true print("[TOUCH] hover-scrub") end
-			t.moved = true
-		end
-	end
+	local sx, sy = touchToScreen(x, y)
+	TouchInput.fingerMove(fingerId, sx, sy)
 	return self:receiveTouchMotionOrig(fingerId, x, y, dx, dy, pressure)
 end
 
 function _M:receiveTouchMotionOrig(fingerId, x, y, dx, dy, pressure)
-	-- print("=touch motion", fingerId, x, y, dx, dy, pressure)
 end
 
---- Called when a touch gesture event is received
--- @param nb_fingers number of fingers
--- @param x coordinate of the click (normalized to 0->1)
--- @param y coordinate of the click (normalized to 0->1)
--- @param d_rot delta rotation
--- @param d_pinch delta pinch
 function _M:receiveTouchGesture(nb_fingers, x, y, d_rot, d_pinch)
-	-- iOS port: pinch = zoom the map (SDL d_pinch is a fraction of the screen)
-	local m = _M.multi
-	if not m or nb_fingers < 2 then return end
-	m.pinch = (m.pinch or 0) + (d_pinch or 0)
-	if math.abs(m.pinch) > 0.015 then m.pinched = true end
-	if m.pinched and game and game.level and game.level.map and game.level.map.setZoom and math.abs(m.pinch) >= 0.04 then
-		local map, p = game.level.map, game.player
-		local delta = m.pinch * 2.5
-		m.pinch = 0
-		print("[TOUCH] pinch zoom", delta)
-		pcall(function() map:setZoom(delta, p and p.x, p and p.y) end)
-	end
+	TouchInput.gesture(nb_fingers, x, y, d_rot, d_pinch)
 end
 
 --- Called when a gamepad axis event is received

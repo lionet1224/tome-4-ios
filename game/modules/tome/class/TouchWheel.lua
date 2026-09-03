@@ -9,14 +9,9 @@ local FontPackage = require "engine.FontPackage"
 
 module(..., package.seeall, class.make)
 
-_M.DEFAULTS = {wheel=true, trigger="hold", pos="finger", zone="thirds", wedges=8, hold_ms=160, unlock_all=true}
-
-function _M.setting(k)
-	local t = config.settings.touch
-	local v = t and t[k]
-	if v == nil then return _M.DEFAULTS[k] end
-	return v
-end
+local TouchInput = require "engine.TouchInput"
+_M.DEFAULTS = TouchInput.DEFAULTS
+_M.setting = TouchInput.setting
 
 function _M.set(k, v)
 	config.settings.touch = config.settings.touch or {}
@@ -29,7 +24,7 @@ function _M.set(k, v)
 end
 
 function _M.enabled()
-	return __IOS__ and _M.setting("wheel") and true or false
+	return TouchInput.active() and _M.setting("wheel") and true or false
 end
 
 --- iOS port: treat every birth option (classes, races, the transmogrification
