@@ -99,3 +99,27 @@ Missing or unverified, by priority:
 - simtest: Stairs (stand on stairs → button → level change marker), Wait, hotbar
   page switch, list scroll (inventory with 30 items), targeting (talent with
   target → tap tile → `use_talent` marker), keyboard (name box focus → `[IOS-OSK] show`).
+
+## 5. Frequency-driven design (how keyboard play actually goes)
+
+The loop: auto-explore (z) → interrupted by an enemy → fight with hotkeys 1-0 (most
+talents want a target; with "auto accept target" the key fires at the nearest
+enemy) and bump-attacks (direction keys) → rest (R) → walk over loot, pick up (g),
+maybe read it → back to z. Stairs (>) once per level, level-up (p) every few
+levels, inventory (i) when loot is worth equipping. Talents/character/quests/lore/
+options/save are rare.
+
+Tiers → touch treatment:
+- T1 (dozens/min): hotkey talents, move/attack, explore, rest, confirm target,
+  dismiss popups. Must be ONE tap, no mode, thumb-reachable: big hotbar along the
+  bottom; two large icon buttons (Explore, Rest) at the right thumb; auto-accept
+  target ON so a talent tap fires at the nearest enemy; tap a tile = move/attack/
+  travel; a popup closes on any tap.
+- T2 (per room/level): pick up (auto-pickup on step, touch-friendly), stairs (tap
+  your own tile while on stairs = use them), level-up (glowing contextual button
+  when points are unspent), inventory (toolbar icon), use item (hotbar).
+- T3 (rare): talents/char/quests/lore/menu behind icons; toggles in a "More" popup.
+- Hold = menus, hold-drag = hover, two-finger = Escape stay as the "everything else"
+  layer; they are fine being slower.
+- Tap your own tile: on stairs → change level; otherwise a small self-menu
+  (wait, rest, explore) — replaces the labelled row.
