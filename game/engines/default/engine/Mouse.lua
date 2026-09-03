@@ -270,6 +270,13 @@ end
 
 function _M:receiveTouch(fingerId, x, y, dx, dy, pressure, isup)
 	if not isup then
+		-- a touch that starts with no finger down is a fresh gesture: drop any
+		-- stale state (a pinch can end without every finger-up reaching us)
+		if _M.nb_fingers <= 0 or (not _M.touch and not _M.multi) then
+			if _M.nb_fingers > 0 or _M.suppress_next_up then print("[TOUCH] stale gesture state reset", _M.nb_fingers) end
+			_M.fingers, _M.nb_fingers, _M.multi, _M.touch = {}, 0, nil, nil
+			_M.suppress_next_up = nil
+		end
 		if not _M.fingers[fingerId] then _M.nb_fingers = _M.nb_fingers + 1 end
 		_M.fingers[fingerId] = true
 		if _M.nb_fingers >= 2 then
@@ -281,7 +288,9 @@ function _M:receiveTouch(fingerId, x, y, dx, dy, pressure, isup)
 			_M.touch = {x=sx, y=sy, t0=core.game.getTime(), moved=false, fired=false}
 		end
 	else
-		if _M.fingers[fingerId] then _M.fingers[fingerId] = nil _M.nb_fingers = math.max(0, _M.nb_fingers - 1) end
+		_M.fingers[fingerId] = nil
+		_M.nb_fingers = 0
+		for _ in pairs(_M.fingers) do _M.nb_fingers = _M.nb_fingers + 1 end
 		local m = _M.multi
 		if m and not m.fired and not m.pinched and core.game.getTime() - m.t0 < 600 then
 			m.fired = true
