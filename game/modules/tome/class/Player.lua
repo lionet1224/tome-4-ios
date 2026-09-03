@@ -1417,21 +1417,55 @@ function _M:hotkeyInventory(name)
 	end
 end
 
--- iOS port: the one-tap Attack button. Closest visible enemy; if the chosen
--- attack talent is usable and in range, fire it at them, otherwise bump when
--- adjacent or take one step along a path toward them.
-function _M:touchAttack()
-	local best, bd = nil, math.huge
-	if self.fov and self.fov.actors_dist then
-		for _, a in ipairs(self.fov.actors_dist) do
-			if a ~= self and a.x and self:reactionToward(a) < 0 and self:canSee(a) then
-				local d = core.fov.distance(self.x, self.y, a.x, a.y)
-				if d < bd then bd, best = d, a end
-			end
+-- iOS port: the Attack buttons. Target = the closest visible enemy, with
+-- ones already fighting us first and, at equal distance, the weakest.
+function _M:touchPickTarget()
+	local best, bk = nil, nil
+	if not (self.fov and self.fov.actors_dist) then return nil end
+	for _, a in ipairs(self.fov.actors_dist) do
+		if a ~= self and a.x and not a.dead and self:reactionToward(a) < 0 and self:canSee(a) then
+			local d = core.fov.distance(self.x, self.y, a.x, a.y)
+			local hostile = (a.ai_target and a.ai_target.actor == self) and 0 or 1
+			local frac = (a.life or 1) / math.max(1, a.max_life or 1)
+			local key = hostile * 1000 + d * 10 + frac
+			if not bk or key < bk then bk, best = key, a end
 		end
 	end
+	return best, bk and math.floor((bk % 1000) / 10) or nil
+end
+
+--- Move one tile away from the enemies in view (archers, casters)
+function _M:touchStepBack(enemy)
+	local bx, by, bscore = nil, nil, -1
+	for i = -1, 1 do for j = -1, 1 do
+		if (i ~= 0 or j ~= 0) then
+			local x, y = self.x + i, self.y + j
+			if game.level.map:isBound(x, y) and self:canMove(x, y) then
+				local score = math.huge
+				for _, a in ipairs(self.fov.actors_dist or {}) do
+					if a ~= self and a.x and self:reactionToward(a) < 0 then score = math.min(score, core.fov.distance(x, y, a.x, a.y)) end
+				end
+				if score == math.huge then score = core.fov.distance(x, y, enemy.x, enemy.y) end
+				if score > bscore then bscore, bx, by = score, x, y end
+			end
+		end
+	end end
+	if bx and bscore > core.fov.distance(self.x, self.y, enemy.x, enemy.y) - 0.01 then
+		print("[TOUCH] step back", bx, by)
+		self:move(bx, by)
+	else
+		game.logPlayer(self, "No way back.")
+	end
+end
+
+function _M:touchAttack(slot)
+	slot = slot or 1
+	local best, bd = self:touchPickTarget()
 	if not best then game.logPlayer(self, "No enemy in sight.") print("[TOUCH] attack: no enemy") return end
-	local tid = self.touch_attack_talent
+	bd = core.fov.distance(self.x, self.y, best.x, best.y)
+	local tid = slot == 2 and self.touch_attack_talent2 or self.touch_attack_talent
+	if slot == 2 and not tid then game.logPlayer(self, "Hold the button to choose what it does.") return end
+	if tid == "back" then self:touchStepBack(best) return end
 	if tid and tid ~= "bump" and self:knowTalent(tid) then
 		local t = self:getTalentFromId(tid)
 		if t and not self:isTalentCoolingDown(t) and bd <= self:getTalentRange(t) and self:hasLOS(best.x, best.y) and self:preUseTalent(t, true, true) then
@@ -1459,18 +1493,28 @@ function _M:touchAttack()
 	self:move(nx, ny)
 end
 
---- Choose what the Attack button uses (hold the button)
-function _M:touchAttackPick()
-	local list = {{name=_t"Bump attack (move into the enemy)", tid="bump"}}
+--- Choose what an Attack button uses (hold the button)
+function _M:touchAttackPick(slot)
+	slot = slot or 1
+	local list = {{name=_t"Bump attack (move into the enemy)", tid="bump"}, {name=_t"Step back (away from the enemies)", tid="back"}}
+	if slot == 2 then table.insert(list, 1, {name=_t"Nothing (hide this button)", tid="none"}) end
 	for tid, lvl in pairs(self.talents) do
 		local t = self:getTalentFromId(tid)
 		if t and t.mode == "activated" and not t.hide then list[#list+1] = {name=t.name, tid=tid} end
 	end
-	table.sort(list, function(a, b) if a.tid == "bump" then return true elseif b.tid == "bump" then return false end return a.name < b.name end)
-	local cur = self.touch_attack_talent or "bump"
+	local fixed = {none=0, bump=1, back=2}
+	table.sort(list, function(a, b)
+		local fa, fb = fixed[a.tid] or 9, fixed[b.tid] or 9
+		if fa ~= fb then return fa < fb end
+		return a.name < b.name
+	end)
+	local cur = slot == 2 and (self.touch_attack_talent2 or "none") or (self.touch_attack_talent or "bump")
 	for _, it in ipairs(list) do if it.tid == cur then it.name = "#GOLD#> "..it.name.."#LAST#" end end
-	Dialog:listPopup(_t"Attack with", _t"The Attack button goes for the closest enemy: this attack when it is ready and in range, otherwise a step toward them (or a bump when adjacent).", list, math.floor(game.w * 0.5), math.floor(game.h * 0.8), function(item)
-		if item then self.touch_attack_talent = item.tid print("[TOUCH] attack pick", item.tid) end
+	Dialog:listPopup(slot == 2 and _t"Second attack button" or _t"Attack button", _t"Goes for the marked enemy: this attack when it is ready and in range, otherwise a step toward them (or a bump when adjacent).", list, math.floor(game.w * 0.5), math.floor(game.h * 0.8), function(item)
+		if not item then return end
+		local v = item.tid ~= "none" and item.tid or nil
+		if slot == 2 then self.touch_attack_talent2 = v else self.touch_attack_talent = v or "bump" end
+		print("[TOUCH] attack pick", slot, item.tid)
 	end)
 end
 

@@ -185,3 +185,15 @@ sim (marker + rows moved); unresolved, needs how he dragged.
 - `TouchWheel.applyUnlocks()` (Game:run, Birther:init): metatable on profile.mod.allow_build → every
   birth option unlocked incl. birth_transmo_chest; the chest makes describeFloor pick up everything
   and transmo items don't count toward encumbrance. Setting `touch.unlock_all` (Options > Touch).
+
+## 12. Flight-proofing + attack v2 + inventory (2026-09-03, late)
+- main.c: SDL_AddEventWatch → game:onBackground()/onForeground() (ToME Game:onBackground saves
+  synchronously via saveGame + savefile_pipe:forceWait); input-idle → handleIdleTransition(1) at
+  IOS_IDLE_FPS=10 after 4 s without input, any input restores.
+- Attack: touchPickTarget (enemies fighting us first, then distance, then weakest), pulsing red
+  marker on the chosen enemy, second slot (touch_attack_talent2; "Step back" option = adjacent tile
+  maximising distance from enemies; "Nothing" hides it). Hold the faint slot to set it.
+- Tap yourself = wait (MOVE_STAY) or stairs (CHANGE_LEVEL); the hold menu (MapMenu on_player) already
+  has Pickup/Rest/Auto-explore/Inventory/Levelup.
+- Inventory: ListColumns item_height 56 + 60px icon column on iOS; EquipDoll scale 1.35 in
+  ShowEquipInven. Dialog drag-scroll has momentum (touch_fling in Dialog:toScreen) for pixel scrollers.

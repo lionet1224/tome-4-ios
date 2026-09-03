@@ -2730,6 +2730,14 @@ function _M:setupMouse(reset)
 			end
 		end
 
+		-- iOS port: tap yourself = wait a turn, or take the stairs when standing on them
+		if __IOS__ and button == "left" and not xrel and not yrel and event == "button" and self.key == self.normal_key and self.player and tmx == self.player.x and tmy == self.player.y and self.zone and not self.zone.wilderness then
+			local g = self.level.map(tmx, tmy, Map.TERRAIN)
+			if g and g.change_level then print("[TOUCH] self tap -> stairs") self.key:triggerVirtual("CHANGE_LEVEL")
+			else print("[TOUCH] self tap -> wait") self.key:triggerVirtual("MOVE_STAY") end
+			return
+		end
+
 		-- Default left button action
 		if button == "left" and not xrel and not yrel and event == "button" and self.zone and not self.zone.wilderness then if self:mouseLeftClick(mx, my) then return end end
 
@@ -2791,6 +2799,21 @@ function _M:mouseRightClick(mx, my, extra)
 end
 
 --- Ask if we really want to close, if so, save the game first
+--- iOS port: save synchronously when the app goes to the background, so a
+-- suspended-then-killed app loses nothing
+function _M:onBackground()
+	if self.creating_player or not self.player or self.player.dead or not self.level or not self.save_name then return end
+	if self.zone_loading or (savefile_pipe and savefile_pipe.saving) then return end
+	print("[IOS] background save:", self.save_name)
+	self.player:runStop(_t"app suspended")
+	self.player:restStop(_t"app suspended")
+	local ok, err = pcall(function()
+		self:saveGame()
+		savefile_pipe:forceWait()
+	end)
+	if not ok then print("[IOS] background save failed", err) end
+end
+
 function _M:onQuit()
 	self.player:runStop(_t"quitting")
 	self.player:restStop(_t"quitting")

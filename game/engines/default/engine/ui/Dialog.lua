@@ -840,8 +840,20 @@ function _M:mouseEvent(button, x, y, xrel, yrel, bx, by, event)
 	-- A hold-then-drag still scrubs tooltips (engine.Mouse handles that).
 	local touch = __IOS__ and engine.Mouse.touch
 	if touch and touch.moved and not touch.held then
-		if button == "left" and event == "button" then return end
+		if button == "left" and event == "button" then
+			-- finger lifted after a drag: keep a pixel scroller moving (momentum)
+			local f = self.touch_fling
+			if f and f.sb and math.abs(f.v) > 0.05 and core.game.getTime() - f.t < 120 then f.active = true else self.touch_fling = nil end
+			return
+		end
 		if event == "motion" and yrel and yrel ~= 0 and button == "left" then
+			local now = core.game.getTime()
+			local f = self.touch_fling
+			if f and not f.active then
+				local dt = math.max(1, now - f.t)
+				f.v = 0.6 * f.v + 0.4 * (yrel / dt)
+				f.t = now
+			end
 			self.touch_scroll = (self.touch_scroll or 0) + yrel
 			local step = 28
 			local ticks = 0
@@ -858,6 +870,7 @@ function _M:mouseEvent(button, x, y, xrel, yrel, bx, by, event)
 						sb.pos = util.minBound(sb.pos - yrel, 0, sb.max)
 						if w.scroll_inertia then w.scroll_inertia = 0 end
 						self.touch_scroll = 0
+						if not self.touch_fling or self.touch_fling.sb ~= sb then self.touch_fling = {sb=sb, w=w, v=0, t=core.game.getTime()} end
 					elseif ticks ~= 0 then
 						-- row scrollers (lists): one row per step
 						local dir = ticks > 0 and "wheeldown" or "wheelup"
@@ -870,6 +883,7 @@ function _M:mouseEvent(button, x, y, xrel, yrel, bx, by, event)
 		end
 	elseif not touch then
 		self.touch_scroll, self.touch_scrolled = nil, nil
+		if self.touch_fling and not self.touch_fling.active then self.touch_fling = nil end
 	end
 	for i = #self.uis, 1, -1 do
 		local ui = self.uis[i]
@@ -991,6 +1005,16 @@ end
 
 function _M:toScreen(x, y, nb_keyframes)
 	if self.__hidden then return end
+
+	-- iOS port: momentum after a drag-scroll
+	local f = self.touch_fling
+	if f and f.active then
+		local ms = 33 * (nb_keyframes or 1)
+		f.sb.pos = util.minBound(f.sb.pos - f.v * ms, 0, f.sb.max)
+		if f.w.scroll_inertia then f.w.scroll_inertia = 0 end
+		f.v = f.v * math.pow(0.93, nb_keyframes or 1)
+		if math.abs(f.v) < 0.02 or f.sb.pos <= 0 or f.sb.pos >= f.sb.max then self.touch_fling = nil end
+	end
 
 	local shader = self.shadow_shader
 

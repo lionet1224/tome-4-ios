@@ -222,6 +222,10 @@ end
 
 --- Called when the game is focused/unfocused
 -- @param[type=boolean] focus are we focused?
+--- iOS port: the app is about to be suspended / came back (see main.c)
+function _M:onBackground() end
+function _M:onForeground() end
+
 function _M:idling(focus)
 	self.has_os_focus = focus
 --	print("Game got focus/unfocus", focus)

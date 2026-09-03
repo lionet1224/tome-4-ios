@@ -314,6 +314,34 @@ int event_filter(void *userdata, SDL_Event* event)
 
 extern SDL_Cursor *mouse_cursor;
 extern SDL_Cursor *mouse_cursor_down;
+
+#ifdef TE4_IOS
+/* iOS port: the OS lifecycle events must be handled the moment they arrive
+   (the app is about to be suspended), so they go through an event watch. */
+static void call_game_method(const char *name)
+{
+	if (current_game == LUA_NOREF) return;
+	lua_rawgeti(L, LUA_REGISTRYINDEX, current_game);
+	lua_pushstring(L, name);
+	lua_gettable(L, -2);
+	if (!lua_isfunction(L, -1)) { lua_pop(L, 2); return; }
+	lua_remove(L, -2);
+	lua_rawgeti(L, LUA_REGISTRYINDEX, current_game);
+	docall(L, 1, 0);
+}
+static int ios_lifecycle_watch(void *userdata, SDL_Event *event)
+{
+	if (event->type == SDL_APP_WILLENTERBACKGROUND) { printf("[IOS] will enter background\n"); call_game_method("onBackground"); }
+	else if (event->type == SDL_APP_DIDENTERFOREGROUND) { printf("[IOS] did enter foreground\n"); call_game_method("onForeground"); }
+	return 1;
+}
+/* iOS port: drop to a low frame rate after a few seconds without input */
+static Uint32 ios_last_input = 0;
+static int ios_idle = 0;
+#define IOS_IDLE_MS 4000
+#define IOS_IDLE_FPS 10
+#endif
+
 bool on_event(SDL_Event *event)
 {
 	switch (event->type) {
@@ -1618,6 +1646,11 @@ int main(int argc, char *argv[])
 		printf("cannot initialize SDL: %s\n", SDL_GetError ());
 		return 1;
 	}
+#ifdef TE4_IOS
+	SDL_AddEventWatch(ios_lifecycle_watch, NULL);
+	requested_fps_idle = IOS_IDLE_FPS;
+	ios_last_input = SDL_GetTicks();
+#endif
 
 	if (SDL_VideoInit(NULL) != 0) {
 		printf("Error initializing SDL video:  %s\n", SDL_GetError());
@@ -1678,6 +1711,9 @@ int main(int argc, char *argv[])
 	while (!exit_engine)
 	{
 		if (!isActive || tickPaused) SDL_WaitEvent(NULL);
+#ifdef TE4_IOS
+		if (!ios_idle && current_game != LUA_NOREF && SDL_GetTicks() - ios_last_input > IOS_IDLE_MS) { ios_idle = 1; handleIdleTransition(1); }
+#endif
 
 #ifdef SELFEXE_WINDOWS
 		if (os_autoflush) _commit(_fileno(stdout));
@@ -1796,6 +1832,12 @@ int main(int argc, char *argv[])
 				break;
 			default:
 				/* handle key presses */
+				#ifdef TE4_IOS
+				if (event.type == SDL_FINGERDOWN || event.type == SDL_FINGERMOTION || event.type == SDL_KEYDOWN || event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_TEXTINPUT) {
+					ios_last_input = SDL_GetTicks();
+					if (ios_idle) { ios_idle = 0; handleIdleTransition(0); }
+				}
+#endif
 				if (on_event(&event)) {
 					tickPaused = FALSE;
 				}
