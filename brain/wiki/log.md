@@ -35,3 +35,4 @@ tags: [meta, log]
 - 2026-09-02 — ...and do not re-arm that swallow on finger-up, or the next real tap is eaten (close box tap on the Actions menu).
 - 2026-09-02 — **Scissor bug**: core.display.glScissor passed logical coords to glScissor (pixels) → with screen_zoom≠1 the talent trees / scrolling lists (TalentTrees, VariableList) were clipped to a fraction (level-up screen looked empty). Fixed by scaling x,y,w,h by screen_zoom in gl_scissor. Any GL call taking window coords (viewport, scissor, readPixels) needs the zoom factor.
 - 2026-09-02 — Level-up screen verified complete at zoom 2 / font 150 after the scissor fix (all trees, close box). In-game screenshot readback also scaled to pixels on iOS.
+- 2026-09-02 — game.creating_player stays true after the autopilot auto-birth; birth-only gate now = game.level and game.player.x. Level-up point buttons chained left-to-right on iOS (fixed column anchors overlapped at 150% font).
