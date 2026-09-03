@@ -123,3 +123,15 @@ Tiers → touch treatment:
   layer; they are fine being slower.
 - Tap your own tile: on stairs → change level; otherwise a small self-menu
   (wait, rest, explore) — replaces the labelled row.
+
+## 6. Decisions (Jordan, 2026-09-02)
+- Auto-pickup ON by default. Auto-accept target OFF (targeting stays explicit).
+- AoE talents: show the area preview while targeting (as on desktop), then confirm.
+  Touch rule: tap a talent → targeting mode with preview at the default target;
+  tap/drag on the map moves the preview; Confirm button (or tap the same spot
+  again) casts; two-finger / Cancel aborts.
+- Stairs: tap your own tile while on stairs. Level-up: contextual glowing button
+  when points are unspent. Inventory: behind its icon.
+- Do NOT dismiss dialogs on any tap; Escape (two-finger, close box, tap-outside) is enough.
+- Explore + Rest: right-thumb, hotbar-slot sized (bigger than today's row).
+- Design iteration happens in a web mockup first, then in-game.
