@@ -229,7 +229,7 @@ end
 -- * the left click SDL synthesizes at finger-up after a long-press is swallowed
 _M.touch = nil
 _M.LONG_PRESS_MS = 450
-_M.TOUCH_MOVE_TOLERANCE = 12
+_M.TOUCH_MOVE_TOLERANCE = 18
 
 function _M.touchTick()
 	local t = _M.touch
