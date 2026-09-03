@@ -109,6 +109,7 @@ end
 function _M:targetMode(v, msg, co, typ)
 	local old = self.target_mode
 	self.target_mode = v
+	self.ios_target_tap = nil
 
 	if not v then
 		Map:setViewerFaction((self.always_target == true or self.always_target == "old") and self.player.faction or nil)
@@ -279,6 +280,17 @@ function _M:targetMouse(button, mx, my, xrel, yrel, event)
 			self.target:setSpotInMotion(tmx, tmy, "mouse")
 		-- Accept target
 		elseif button == "left" and not xrel and not yrel and event == "button" then
+			-- iOS port: first tap places the target (shows the area), tapping
+			-- the same tile again (or the Cast button) fires
+			if __IOS__ then
+				local tt = self.ios_target_tap
+				if not (tt and tt.x == tmx and tt.y == tmy) then
+					self.ios_target_tap = {x=tmx, y=tmy}
+					print("[TOUCH] target placed", tmx, tmy)
+					return true
+				end
+				self.ios_target_tap = nil
+			end
 			self:targetMode(false, false)
 			self.tooltip_x, self.tooltip_y = nil, nil
 		-- Cancel target

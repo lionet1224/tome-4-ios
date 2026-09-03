@@ -835,6 +835,42 @@ function _M:mouseEvent(button, x, y, xrel, yrel, bx, by, event)
 	-- Look for focus. Reverse order: when elements overlap (a dialog clamped
 	-- to a small screen pushes its bottom buttons up into the text zone) the
 	-- one drawn last, i.e. on top, must get the click - not the text zone.
+	-- iOS port: a plain finger drag scrolls the widget under it (as wheel
+	-- ticks), and the click SDL synthesizes when that finger lifts is dropped.
+	-- A hold-then-drag still scrubs tooltips (engine.Mouse handles that).
+	local touch = __IOS__ and engine.Mouse.touch
+	if touch and touch.moved and not touch.held then
+		if button == "left" and event == "button" then return end
+		if event == "motion" and yrel and yrel ~= 0 and button == "left" then
+			self.touch_scroll = (self.touch_scroll or 0) + yrel
+			local step = 28
+			local ticks = 0
+			while self.touch_scroll >= step do self.touch_scroll = self.touch_scroll - step ticks = ticks - 1 end
+			while self.touch_scroll <= -step do self.touch_scroll = self.touch_scroll + step ticks = ticks + 1 end
+			for i = #self.uis, 1, -1 do
+				local ui = self.uis[i]
+				if (ui.ui.can_focus or ui.ui.can_focus_mouse) and bx >= ui.x and bx <= ui.x + ui.ui.w and by >= ui.y and by <= ui.y + ui.ui.h then
+					local w = ui.ui
+					local sb = w.scrollbar
+					if not self.touch_scrolled then print("[TOUCH] drag -> scroll", tostring(w._NAME or w.__CLASSNAME)) self.touch_scrolled = true end
+					if sb and sb.max and (w.scroll_inertia ~= nil or w.scroll == nil) then
+						-- pixel scrollers (talent trees, text zones): follow the finger 1:1
+						sb.pos = util.minBound(sb.pos - yrel, 0, sb.max)
+						if w.scroll_inertia then w.scroll_inertia = 0 end
+						self.touch_scroll = 0
+					elseif ticks ~= 0 then
+						-- row scrollers (lists): one row per step
+						local dir = ticks > 0 and "wheeldown" or "wheelup"
+						for _ = 1, math.abs(ticks) do w.mouse:delegate(dir, bx, by, nil, nil, bx, by, "button") end
+					end
+					break
+				end
+			end
+			return
+		end
+	elseif not touch then
+		self.touch_scroll, self.touch_scrolled = nil, nil
+	end
 	for i = #self.uis, 1, -1 do
 		local ui = self.uis[i]
 		if (ui.ui.can_focus or ui.ui.can_focus_mouse) and bx >= ui.x and bx <= ui.x + ui.ui.w and by >= ui.y and by <= ui.y + ui.ui.h then

@@ -1786,6 +1786,45 @@ static int gl_draw_quad_part(lua_State *L)
 }
 
 
+/* iOS port: a filled ring wedge (annulus sector) for the touch wheel.
+   drawRingWedge(cx, cy, r_in, r_out, a0, a1, r, g, b, a): angles in degrees,
+   clockwise from 12 o'clock, a1 > a0. Drawn as a triangle strip. */
+static int gl_draw_ring_wedge(lua_State *L)
+{
+	float cx = luaL_checknumber(L, 1);
+	float cy = luaL_checknumber(L, 2);
+	float r_in = luaL_checknumber(L, 3);
+	float r_out = luaL_checknumber(L, 4);
+	float a0 = luaL_checknumber(L, 5);
+	float a1 = luaL_checknumber(L, 6);
+	float r = luaL_checknumber(L, 7) / 255;
+	float g = luaL_checknumber(L, 8) / 255;
+	float b = luaL_checknumber(L, 9) / 255;
+	float a = luaL_checknumber(L, 10) / 255;
+	if (a1 <= a0) return 0;
+	int segs = (int)((a1 - a0) / 3) + 1;
+	if (segs > 120) segs = 120;
+	int nv = (segs + 1) * 2;
+	GLfloat vertices[2 * 242];
+	GLfloat colors[4 * 242];
+	GLfloat texcoords[2 * 242];
+	int i, vi = 0, ci = 0, ti = 0;
+	for (i = 0; i <= segs; i++)
+	{
+		float ang = (a0 + (a1 - a0) * i / segs) * M_PI / 180;
+		float sx = sinf(ang), cy_ = -cosf(ang);
+		vertices[vi++] = cx + r_out * sx; vertices[vi++] = cy + r_out * cy_;
+		vertices[vi++] = cx + r_in * sx;  vertices[vi++] = cy + r_in * cy_;
+		int k; for (k = 0; k < 2; k++) { colors[ci++] = r; colors[ci++] = g; colors[ci++] = b; colors[ci++] = a; texcoords[ti++] = 0; texcoords[ti++] = 0; }
+	}
+	tfglBindTexture(GL_TEXTURE_2D, gl_tex_white);
+	glColorPointer(4, GL_FLOAT, 0, colors);
+	glTexCoordPointer(2, GL_FLOAT, 0, texcoords);
+	glVertexPointer(2, GL_FLOAT, 0, vertices);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, nv);
+	return 0;
+}
+
 static int sdl_load_image(lua_State *L)
 {
 	const char *name = luaL_checkstring(L, 1);
@@ -3534,6 +3573,7 @@ static const struct luaL_Reg displaylib[] =
 	{"newQuadratic", gl_new_quadratic},
 	{"drawQuad", gl_draw_quad},
 	{"drawQuadPart", gl_draw_quad_part},
+	{"drawRingWedge", gl_draw_ring_wedge},
 	{"FBOActive", gl_fbo_is_active},
 	{"safeMode", is_safe_mode},
 	{"forceSafeMode", set_safe_mode},

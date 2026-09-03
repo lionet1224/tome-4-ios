@@ -234,9 +234,29 @@ _M.touch = nil
 _M.LONG_PRESS_MS = 450
 _M.TOUCH_MOVE_TOLERANCE = 18
 
+-- iOS port: the radial wheels (mod.class.TouchWheel) claim holds/drags that
+-- start in their zones; the uiset owns the wheel object
+function _M.wheel()
+	local ui = game and game.uiset
+	return ui and ui.touch_wheel or nil
+end
+
+local function wheelSetting(k)
+	local t = config.settings.touch
+	local v = t and t[k]
+	if v == nil then return ({trigger="hold", hold_ms=160})[k] end
+	return v
+end
+
 function _M.touchTick()
 	local t = _M.touch
-	if t and not t.moved and not t.held and core.game.getTime() - t.t0 >= _M.LONG_PRESS_MS then
+	local wheel = _M.wheel()
+	if t and t.wheel_zone and not t.wheel and not t.moved and wheel and wheelSetting("trigger") == "hold" and core.game.getTime() - t.t0 >= (tonumber(wheelSetting("hold_ms")) or 160) then
+		t.wheel = true
+		_M.suppress_next_up = true -- the click SDL synthesizes at finger-up
+		wheel:openAt(t.wheel_zone, t.x, t.y)
+	end
+	if t and not t.moved and not t.held and not t.wheel and not (t.wheel_zone and wheelSetting("trigger") == "hold") and core.game.getTime() - t.t0 >= _M.LONG_PRESS_MS then
 		-- held still long enough: from here a release = right click, and
 		-- moving = hover-scrub (tooltips follow the finger, no pan/act)
 		t.held = true
@@ -285,10 +305,13 @@ function _M:receiveTouch(fingerId, x, y, dx, dy, pressure, isup)
 		if _M.nb_fingers >= 2 then
 			-- second finger: this is a multi-touch gesture, not a tap/long-press
 			if _M.touch then _M.touch.moved = true end
+			if _M.touch and _M.touch.wheel then local w = _M.wheel() if w then w:cancel() end end
 			_M.multi = {t0=core.game.getTime(), fired=false}
 		else
 			local sx, sy = touchToScreen(x, y)
 			_M.touch = {x=sx, y=sy, t0=core.game.getTime(), moved=false, fired=false}
+			local wheel = _M.wheel()
+			if wheel then _M.touch.wheel_zone = wheel:zoneOf(sx, sy) end
 		end
 	else
 		_M.fingers[fingerId] = nil
@@ -304,6 +327,12 @@ function _M:receiveTouch(fingerId, x, y, dx, dy, pressure, isup)
 			local t = _M.touch
 			_M.touch = nil
 			_M.multi = nil
+			if t and t.wheel then
+				local w = _M.wheel()
+				if w then w:release() end
+				_M.park_cursor = 2
+				return self:receiveTouchOrig(fingerId, x, y, dx, dy, pressure, isup)
+			end
 			local seen = _M.last_left_down and _M.last_left_down >= t.t0 - 200
 			if t and not seen and not t.held and not t.moved and _M.current then
 				-- SDL's touch-as-mouse can stop after a multi-touch gesture on iOS:
@@ -344,6 +373,21 @@ function _M:receiveTouchMotion(fingerId, x, y, dx, dy, pressure)
 	local t = _M.touch
 	if t then
 		local sx, sy = touchToScreen(x, y)
+		if t.wheel then
+			local w = _M.wheel()
+			if w then w:move(sx, sy) end
+			return self:receiveTouchMotionOrig(fingerId, x, y, dx, dy, pressure)
+		end
+		if t.wheel_zone and wheelSetting("trigger") == "drag" and (math.abs(sx - t.x) > 12 or math.abs(sy - t.y) > 12) then
+			local w = _M.wheel()
+			if w then
+				t.wheel = true
+				_M.suppress_next_up = true
+				w:openAt(t.wheel_zone, t.x, t.y)
+				w:move(sx, sy)
+				return self:receiveTouchMotionOrig(fingerId, x, y, dx, dy, pressure)
+			end
+		end
 		if math.abs(sx - t.x) > _M.TOUCH_MOVE_TOLERANCE or math.abs(sy - t.y) > _M.TOUCH_MOVE_TOLERANCE then
 			if t.held and not t.hover then t.hover = true print("[TOUCH] hover-scrub") end
 			t.moved = true

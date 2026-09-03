@@ -34,6 +34,7 @@ local TooltipsData = require "mod.class.interface.TooltipsData"
 local Dialog = require "engine.ui.Dialog"
 local Map = require "engine.Map"
 local FontPackage = require "engine.FontPackage"
+local TouchWheel = require "mod.class.TouchWheel"
 
 module(..., package.seeall, class.inherit(UISet, TooltipsData))
 
@@ -299,6 +300,7 @@ end
 function _M:init()
 	UISet.init(self)
 
+	self.touch_wheel = TouchWheel.new(self)
 	self.mhandle = {}
 	self.res = {}
 	self.party = {}
@@ -513,6 +515,7 @@ function _M:resizeIconsHotkeysToolbar()
 	local h = 52
 	if config.settings.tome.hotkey_icons then h = (8 + config.settings.tome.hotkey_icons_size) * config.settings.tome.hotkey_icons_rows end
 
+	if TouchWheel.enabled() then h = 0 end -- iOS port: no hotbar, the map takes the whole screen
 	local oldstop = self.map_h_stop_up or (game.h - h)
 	self.map_h_stop = game.h
 	self.map_h_stop_up = game.h - h
@@ -2029,6 +2032,70 @@ function _M:displayToolbar(scale, bx, by)
 	self:computePadding("mainicons", bx, by, bx + x * scale, by + y * scale)
 end
 
+-- iOS port: one pip per hotkey of the current page (gold = ready, red = turns
+-- of cooldown, dim = empty), under the minimap
+function _M:displayTouchPips()
+	local p = game.player
+	if not p or not p.hotkey then return end
+	local n = TouchWheel.setting("wedges")
+	local base = 12 * (p.hotkey_page - 1)
+	local size, gap = 28, 4
+	local x0, y0 = game.w - 239, 210
+	for i = 1, n do
+		local hk = p.hotkey[base + i]
+		local txt, cr, cg, cb = tostring(i), 0.43, 0.41, 0.35
+		local br, bg, bb, ba = 20, 20, 24, 200
+		if hk then
+			cr, cg, cb = 0.82, 0.67, 0.29
+			if hk[1] == "talent" then
+				local t = p:getTalentFromId(hk[2])
+				local cd = t and p:isTalentCoolingDown(t)
+				if cd and cd > 0 then txt = tostring(math.ceil(cd)) cr, cg, cb = 1, 0.7, 0.62 br, bg, bb = 42, 21, 18 end
+			end
+		else
+			ba = 70
+		end
+		local x = x0 + (i - 1) * (size + gap)
+		core.display.drawQuad(x, y0, size, size, br, bg, bb, ba)
+		self.touch_wheel:drawLabel(txt, x + size / 2, y0 + size / 2, 0.8, cr, cg, cb, 1)
+	end
+end
+
+-- iOS port: Cast / Cancel buttons at the right thumb while aiming a talent
+function _M:displayTouchTargeting()
+	local targeting = game.key == game.targetmode_key
+	local bw, gap = 112, 10
+	local x1, y = game.w - 24 - bw * 2 - gap, game.h - 24 - bw
+	local x2 = x1 + bw + gap
+	local function zone(name, x, fct)
+		if not game.mouse:updateZone(name, x, y, bw, bw, nil, 1) then
+			game.mouse:registerZone(x, y, bw, bw, function(button, mx, my, xrel, yrel, bx, by, event)
+				if button == "left" and not xrel and not yrel and event == "button" then fct() end
+				return true
+			end, nil, name, false, 1)
+		end
+	end
+	if targeting then
+		zone("touch_cast", x1, function() print("[TOUCH] cast") game.targetmode_key:triggerVirtual("ACCEPT") end)
+		zone("touch_cancel", x2, function() print("[TOUCH] cancel target") game.targetmode_key:triggerVirtual("EXIT") end)
+		core.display.drawQuad(x1, y, bw, bw, 58, 26, 20, 235)
+		core.display.drawQuad(x1, y, bw, 3, 224, 83, 58, 255)
+		core.display.drawQuad(x1, y + bw - 3, bw, 3, 224, 83, 58, 255)
+		core.display.drawQuad(x1, y, 3, bw, 224, 83, 58, 255)
+		core.display.drawQuad(x1 + bw - 3, y, 3, bw, 224, 83, 58, 255)
+		self.touch_wheel:drawLabel(_t"CAST", x1 + bw / 2, y + bw / 2, 1.1, 1, 0.83, 0.79, 1)
+		core.display.drawQuad(x2, y, bw, bw, 25, 26, 31, 235)
+		core.display.drawQuad(x2, y, bw, 2, 59, 52, 39, 255)
+		core.display.drawQuad(x2, y + bw - 2, bw, 2, 59, 52, 39, 255)
+		core.display.drawQuad(x2, y, 2, bw, 59, 52, 39, 255)
+		core.display.drawQuad(x2 + bw - 2, y, 2, bw, 59, 52, 39, 255)
+		self.touch_wheel:drawLabel(_t"CANCEL", x2 + bw / 2, y + bw / 2, 1, 0.56, 0.53, 0.47, 1)
+	elseif game.mouse.areas_name and game.mouse.areas_name.touch_cast then
+		game.mouse:unregisterZone("touch_cast")
+		game.mouse:unregisterZone("touch_cancel")
+	end
+end
+
 function _M:display(nb_keyframes)
 	local d = core.display
 	self.now = core.game.getTime()
@@ -2091,6 +2158,8 @@ function _M:display(nb_keyframes)
 	d.glScale()
 	d.glTranslate(-self.places.party.x, -self.places.party.y, -0)
 
+	local touch_wheel = TouchWheel.enabled()
+	if not touch_wheel then
 	-- Hotkeys
 	d.glTranslate(self.places.hotkeys.x, self.places.hotkeys.y, 0)
 	self:displayHotkeys(1, self.places.hotkeys.x, self.places.hotkeys.y)
@@ -2102,6 +2171,12 @@ function _M:display(nb_keyframes)
 	self:displayToolbar(self.places.mainicons.scale * 0.5, self.places.mainicons.x, self.places.mainicons.y)
 	d.glScale()
 	d.glTranslate(-self.places.mainicons.x, -self.places.mainicons.y, -0)
+	else
+		-- iOS port: cooldown pips, Cast/Cancel while targeting, the wheels
+		self:displayTouchPips()
+		self:displayTouchTargeting()
+		self.touch_wheel:display()
+	end
 
 	-- Display border indicators when possible
 	if self.ui_moving and self.sizes[self.ui_moving] then

@@ -45,6 +45,7 @@ function _M:init()
 		{title=_t"Online", kind="online"},
 		{title=_t"Misc", kind="misc"}
 	}
+	if __IOS__ then tabs[#tabs+1] = {title=_t"Touch", kind="touch"} end
 	self:triggerHook{"GameOptions:tabs", tab=function(title, fct)
 		local id = #tabs+1
 		tabs[id] = {title=title, kind="hooktab"..id}
@@ -88,6 +89,35 @@ function _M:switchTo(kind)
 	if self.uis and self.uis[2] then
 		self:replaceUI(self.uis[2].ui, self.c_list)
 	end
+end
+
+-- iOS port: the touch wheel settings (see mod.class.TouchWheel)
+function _M:generateListTouch()
+	local TouchWheel = require "mod.class.TouchWheel"
+	local list = {}
+	local function toggle(name, desc, key, values, labels, after)
+		local zone = Textzone.new{width=self.c_desc.w, height=self.c_desc.h, text=desc:toTString()}
+		list[#list+1] = { zone=zone, name=(("#GOLD##{bold}#%s#WHITE##{normal}#"):format(name)):toTString(), status=function(item)
+			local v = TouchWheel.setting(key)
+			for i, vv in ipairs(values) do if vv == v then return labels[i] end end
+			return tostring(v)
+		end, fct=function(item)
+			local v = TouchWheel.setting(key)
+			local idx = 1
+			for i, vv in ipairs(values) do if vv == v then idx = i % #values + 1 end end
+			TouchWheel.set(key, values[idx])
+			if after then after() end
+			self.c_list:drawItem(item)
+		end,}
+	end
+	local relayout = function() if self:isTome() and game.uiset and game.uiset.resizeIconsHotkeysToolbar then game.uiset:resizeIconsHotkeysToolbar() end end
+	toggle(_t"Touch wheels", _t"Hold in the left third of the screen for a wheel of your hotkeys, in the right third for actions. Off = the hotbar and the touch row instead.", "wheel", {true, false}, {_t"on", _t"off"}, relayout)
+	toggle(_t"Wheel opens on", _t"Hold: keep the finger still for a moment. First movement: the wheel opens as soon as the finger moves (dragging the map then only works in the middle third).", "trigger", {"hold", "drag"}, {_t"hold", _t"first movement"})
+	toggle(_t"Wheel sits", _t"Under the finger: the wheel opens where you touched (kept on screen). Corner: always the same spot in the bottom corner.", "pos", {"finger", "corner"}, {_t"under the finger", _t"in the corner"})
+	toggle(_t"Wheel zones", _t"Where a hold opens a wheel: the whole left and right thirds, or only their bottom halves (leaves the top for tile menus).", "zone", {"thirds", "bottom"}, {_t"left and right thirds", _t"bottom halves"})
+	toggle(_t"Hotkeys per wheel", _t"How many hotkeys of the page the left wheel shows. 12 matches a desktop page but the wedges get narrow.", "wedges", {8, 12}, {"8", "12"})
+	toggle(_t"Hold delay", _t"How long the finger must stay still before a wheel opens.", "hold_ms", {120, 160, 220, 300}, {"120 ms", "160 ms", "220 ms", "300 ms"})
+	self.list = list
 end
 
 function _M:generateListUi()

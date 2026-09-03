@@ -2628,6 +2628,9 @@ function _M:setupMouse(reset)
 
 	self.mouse:registerZone(Map.display_x, Map.display_y, Map.viewport.width, Map.viewport.height, function(button, mx, my, xrel, yrel, bx, by, event, extra)
 		if not self.uiset:isLocked() or not game.level then return end
+		-- iOS port: while a touch wheel is open the map gets nothing
+		local wheel = self.uiset.touch_wheel
+		if wheel and wheel.open then return end
 		-- iOS port: drag with one finger = pan the camera; the click SDL
 		-- synthesizes when the finger lifts after a pan is swallowed
 		local tstate = engine.Mouse.touch
