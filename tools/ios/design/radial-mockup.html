@@ -1,0 +1,602 @@
+<title>ToME Radial Layout</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#ECEAE3; --ink:#1E1C18; --ink-2:#5A564D; --rule:#D3CFC3;
+  --accent:#9E7A22; --accent-ink:#6E5415; --panel:#F6F5F0;
+  --good:#3C7A45; --warn:#B4531F;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#141518; --ink:#E9E4D6; --ink-2:#A7A297; --rule:#2C2E34;
+    --accent:#D2AA4A; --accent-ink:#E4C36E; --panel:#1C1E23;
+    --good:#7BC086; --warn:#E28A55;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#141518; --ink:#E9E4D6; --ink-2:#A7A297; --rule:#2C2E34;
+  --accent:#D2AA4A; --accent-ink:#E4C36E; --panel:#1C1E23;
+  --good:#7BC086; --warn:#E28A55;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 80px}
+h1{font:700 40px/1.05 Alegreya,Georgia,serif;margin:0 0 8px;text-wrap:balance;letter-spacing:-.01em}
+h2{font:700 24px/1.2 Alegreya,Georgia,serif;margin:44px 0 12px;text-wrap:balance}
+.lede{max-width:64ch;color:var(--ink-2);margin:0 0 22px}
+.lede b{color:var(--ink);font-weight:600}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink);font-weight:600}
+
+/* ---------- phone frame ---------- */
+.stage{position:relative;width:100%}
+.phone{position:relative;margin:0 auto;border-radius:40px;background:#0B0B0D;padding:14px;box-shadow:0 30px 60px -30px rgba(0,0,0,.6);width:max-content}
+.screen{position:relative;overflow:hidden;border-radius:28px;background:#101114;width:1398px;height:645px;transform-origin:top left;
+  --hud:#191A1F; --hud-2:#23252C; --edge:#3B3427; --gold:#D2AA4A; --gold-2:#F0D48A; --text:#EAE3D1; --mute:#8E8878; --danger:#E0533A; --mana:#4C86D9; --hp:#C0392B; --stam:#C9A24A;
+  font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--text);user-select:none;-webkit-user-select:none;touch-action:none}
+.island{position:absolute;left:18px;top:50%;transform:translateY(-50%);width:34px;height:110px;border-radius:20px;background:#000;z-index:9;pointer-events:none}
+canvas#map{position:absolute;inset:0;display:block;cursor:crosshair}
+.screen.scaled{}
+.stage-inner{margin:0 auto}
+
+/* HUD blocks — sizes are in ToME logical px (screen_zoom 2 on a 16 Plus: 1398×645) */
+.hud{position:absolute;pointer-events:none}
+.hud > *{pointer-events:auto}
+.vitals{left:64px;top:14px;display:flex;align-items:center;gap:12px}
+.portrait{width:56px;height:56px;border-radius:8px;background:var(--hud-2);border:2px solid var(--edge);display:grid;place-items:center;font:700 26px Alegreya,serif;color:var(--gold-2)}
+.bars{display:grid;gap:5px;width:220px}
+.bar{height:14px;border-radius:3px;background:#0A0A0C;position:relative;overflow:hidden;border:1px solid #000}
+.bar i{position:absolute;inset:0;width:var(--w);background:var(--c)}
+.bar b{position:absolute;inset:0;font:600 10px/14px "IBM Plex Sans";padding-left:6px;color:#fff;text-shadow:0 1px 0 #000;font-variant-numeric:tabular-nums}
+.lvlup{width:56px;height:56px;border-radius:50%;border:2px solid var(--gold);background:radial-gradient(circle at 50% 35%,#5A4514,#2A200A);color:var(--gold-2);font:700 30px/1 Alegreya,serif;display:grid;place-items:center;cursor:pointer;
+  box-shadow:0 0 0 0 rgba(210,170,74,.8);animation:pulse 1.6s ease-out infinite}
+.lvlup[hidden]{display:none!important}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(210,170,74,.75)}100%{box-shadow:0 0 0 14px rgba(210,170,74,0)}}
+.log{left:400px;right:420px;top:12px;display:grid;gap:2px;font-size:15px;line-height:1.25;text-shadow:0 1px 2px #000}
+.log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--mute)}
+.log div:last-child{color:var(--text)}
+.screens{right:24px;top:12px;display:flex;gap:10px}
+.icon{width:56px;height:56px;border-radius:10px;background:var(--hud);border:1px solid var(--edge);display:grid;place-items:center;cursor:pointer;color:var(--gold)}
+.icon:active{background:var(--hud-2)}
+.icon svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.zoom{right:24px;top:84px;display:flex;flex-direction:column;gap:8px}
+.zoom .icon{width:48px;height:48px;font:600 22px/1 "IBM Plex Sans";color:var(--text)}
+
+/* targeting strip */
+.tstrip{left:50%;top:80px;transform:translateX(-50%);background:rgba(20,18,16,.92);border:1px solid var(--danger);border-radius:10px;padding:8px 16px;font-size:16px;display:flex;gap:14px;align-items:center;pointer-events:none}
+.tstrip b{color:#FFB39F}
+.tstrip[hidden]{display:none!important}
+
+/* popups */
+.pop{position:absolute;background:#1D1B18;border:2px solid var(--edge);border-radius:12px;padding:6px;display:grid;gap:4px;min-width:200px;box-shadow:0 12px 30px rgba(0,0,0,.6);z-index:5}
+.pop[hidden]{display:none!important}
+.pop button{all:unset;display:flex;justify-content:space-between;gap:20px;padding:10px 14px;border-radius:8px;font:500 17px "IBM Plex Sans";color:var(--text);cursor:pointer}
+.pop button:hover,.pop button:focus-visible{background:var(--hud-2)}
+.pop button small{color:var(--mute);font-size:13px}
+.pop button.primary{background:#3A2E12;color:var(--gold-2)}
+.pop .hd{padding:4px 14px 6px;font:600 12px "IBM Plex Sans";letter-spacing:.12em;text-transform:uppercase;color:var(--mute);border-bottom:1px solid var(--edge)}
+
+/* dialog */
+.dlg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:760px;height:520px;background:#1B1916;border:2px solid var(--edge);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.7);z-index:6;display:grid;grid-template-rows:auto 1fr}
+.dlg[hidden]{display:none!important}
+.dlg .ttl{display:flex;justify-content:space-between;align-items:center;padding:8px 8px 8px 20px;border-bottom:1px solid var(--edge);font:700 22px Alegreya,serif;color:var(--gold-2)}
+.dlg .x{width:48px;height:48px;border-radius:8px;background:var(--hud);border:1px solid var(--edge);display:grid;place-items:center;font:600 22px "IBM Plex Sans";cursor:pointer;color:var(--text)}
+.dlg .list{overflow-y:auto;padding:6px 10px;display:grid;gap:2px;align-content:start;overscroll-behavior:contain}
+.dlg .row{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:8px 10px;border-radius:8px;font-size:17px}
+.dlg .row:nth-child(odd){background:rgba(255,255,255,.03)}
+.dlg .row .g{font-size:26px;text-align:center}
+.dlg .row small{color:var(--mute);font-size:13px}
+.dlg .row .w{color:var(--mute);font-variant-numeric:tabular-nums}
+.hint{position:absolute;left:50%;bottom:130px;transform:translateX(-50%);background:rgba(0,0,0,.7);border-radius:8px;padding:6px 12px;font-size:14px;color:var(--mute);pointer-events:none;z-index:7}
+.hint[hidden]{display:none!important}
+
+
+/* level-up dialog */
+.dlg.lvl{width:1180px;height:580px;grid-template-rows:auto auto 1fr}
+.dlg .ttl .r{display:flex;gap:10px;align-items:center}
+.dlg .done{height:48px;padding:0 22px;border-radius:8px;background:#3A2E12;border:1px solid var(--gold);color:var(--gold-2);font:600 17px "IBM Plex Sans";cursor:pointer}
+.tabs{display:flex;gap:6px;padding:8px 10px 0;border-bottom:1px solid var(--edge)}
+.tab{all:unset;cursor:pointer;padding:10px 18px 12px;border-radius:10px 10px 0 0;font:500 17px "IBM Plex Sans";color:var(--mute);display:flex;gap:10px;align-items:center}
+.tab .pts{min-width:26px;height:26px;padding:0 8px;border-radius:13px;background:#2A2620;color:var(--mute);font:600 14px/26px "IBM Plex Sans";text-align:center;font-variant-numeric:tabular-nums}
+.tab.on{background:#26231E;color:var(--text)}
+.tab .pts.has{background:var(--gold);color:#1B1510}
+.dlg .list,.dlg .list *{scrollbar-width:none}
+.dlg .list::-webkit-scrollbar{display:none}
+.dlg .list{touch-action:pan-y;cursor:grab}
+.dlg .list.drag{cursor:grabbing}
+.tree{display:flex;justify-content:space-between;align-items:center;padding:14px 10px 6px;font:700 19px Alegreya,serif;color:var(--gold-2)}
+.tree small{font:500 13px "IBM Plex Sans";color:var(--mute);letter-spacing:.04em}
+.tree .unlock{height:36px;padding:0 14px;border-radius:8px;background:#2A2620;border:1px solid var(--edge);color:var(--text);font:500 14px "IBM Plex Sans";cursor:pointer}
+.trow{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:6px 8px 6px 14px;border-radius:10px}
+.trow:nth-child(odd){background:rgba(255,255,255,.03)}
+.trow.open{background:#24211B}
+.trow .nm{font-size:18px;display:flex;flex-direction:column;gap:3px}
+.trow .nm small{color:var(--mute);font-size:13px}
+.trow .nm .desc{display:none;color:var(--text);font-size:15px;line-height:1.4;max-width:62ch;padding:6px 0 4px;opacity:.9}
+.trow.open .nm .desc{display:block}
+.trow .lv{display:flex;gap:4px}
+.trow .lv i{width:14px;height:22px;border-radius:3px;background:#2E2A22;border:1px solid #3B3629}
+.trow .lv i.f{background:var(--gold);border-color:var(--gold-2)}
+.trow .lv i.n{background:#6F5A25}
+.trow .pm{display:flex;gap:6px}
+.pm button{all:unset;width:64px;height:64px;border-radius:12px;background:#2A2620;border:2px solid var(--edge);color:var(--gold-2);font:600 30px/1 "IBM Plex Sans";text-align:center;cursor:pointer}
+.pm button:active{transform:scale(.95)}
+.pm button:disabled{opacity:.25;cursor:default}
+.pm button.minus{color:var(--mute);font-size:26px}
+.trow.locked .nm,.trow.locked .lv{opacity:.45}
+.srow{display:grid;grid-template-columns:200px 90px 1fr auto;gap:14px;align-items:center;padding:8px 8px 8px 14px;border-radius:10px;font-size:18px}
+.srow:nth-child(odd){background:rgba(255,255,255,.03)}
+.srow .v{font:600 26px "IBM Plex Sans";color:var(--gold-2);font-variant-numeric:tabular-nums}
+.srow .v small{font:400 14px "IBM Plex Sans";color:var(--mute)}
+.srow .eff{color:var(--mute);font-size:14px;line-height:1.35}
+
+/* callouts */
+.co{position:absolute;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font:700 15px/30px "IBM Plex Sans";text-align:center;z-index:8;pointer-events:none;box-shadow:0 0 0 3px rgba(0,0,0,.6)}
+.screen:not(.callouts) .co{display:none}
+
+/* controls under the phone */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0 6px}
+.chip{border:1px solid var(--rule);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 14px;font:500 14px "IBM Plex Sans";cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip:focus-visible,.icon:focus-visible,.big:focus-visible,.slot:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.note{font-size:14px;color:var(--ink-2);margin:6px 0 0}
+
+/* key */
+.key{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px 28px;padding:0;margin:0;list-style:none;counter-reset:k}
+.key li{display:grid;grid-template-columns:30px 1fr;grid-template-rows:auto auto;column-gap:12px;row-gap:4px;padding:10px 0;border-top:1px solid var(--rule);align-items:start}
+.key li::before{grid-row:1 / span 2}
+.key li b{grid-column:2}
+.key li span{grid-column:2}
+.key li::before{counter-increment:k;content:counter(k);width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font:700 13px/26px "IBM Plex Sans";text-align:center}
+.key b{display:block;font-weight:600}
+.key span{color:var(--ink-2);font-size:15px}
+.tier{display:inline-block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:1px 7px;border-radius:4px;border:1px solid var(--rule);color:var(--ink-2);margin-left:6px;vertical-align:middle}
+
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:left;padding:9px 10px;border-top:1px solid var(--rule);vertical-align:top}
+th{font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);border-top:0}
+td:first-child{white-space:nowrap;font-weight:600}
+.tbl{overflow-x:auto}
+.q{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.q li{display:grid;grid-template-columns:auto 1fr;gap:12px;padding:12px 14px;background:var(--panel);border-radius:8px}
+.q li em{font-style:normal;color:var(--accent-ink);font-weight:600}
+@media (prefers-reduced-motion: reduce){.lvlup{animation:none;box-shadow:0 0 0 4px rgba(210,170,74,.5)}}
+@media (max-width:700px){h1{font-size:32px}.wrap{padding:18px 12px 60px}}
+
+/* radial */
+.radial{position:absolute;inset:0;pointer-events:none;z-index:4}
+.radial[hidden]{display:none!important}
+.wedge{fill:rgba(24,23,20,.94);stroke:#3B3427;stroke-width:2}
+.wedge.on{fill:#3A2E12;stroke:#D2AA4A}
+.wedge.dim{fill:rgba(24,23,20,.7)}
+.wedge.page{fill:rgba(40,36,28,.94)}
+.wedge.lvl{stroke:#D2AA4A;stroke-width:3}
+.hub{fill:#0F0F12;stroke:#3B3427;stroke-width:2}
+.wl{font:700 26px "IBM Plex Sans";fill:#EAE3D1;text-anchor:middle;pointer-events:none}
+.wl.dim{fill:#5C574C}
+.wn{font:500 13px "IBM Plex Sans";fill:#B9B2A0;text-anchor:middle;letter-spacing:.03em}
+.wn.dim{fill:#5C574C}
+.wcd{font:600 14px "IBM Plex Sans";fill:#FFB39F;text-anchor:middle}
+.hubt{font:600 15px "IBM Plex Sans";fill:#D2AA4A;text-anchor:middle}
+.hubs{font:500 12px "IBM Plex Sans";fill:#8E8878;text-anchor:middle}
+.zone{position:absolute;bottom:0;width:33%;top:96px;pointer-events:none;background:rgba(210,170,74,.06);border:1px dashed rgba(210,170,74,.35)}
+.zone.l{left:0}.zone.r{right:0}
+.screen:not(.zones) .zone{display:none}
+.corner{position:absolute;bottom:0;width:150px;height:150px;pointer-events:none;opacity:.5}
+.corner.l{left:0;background:radial-gradient(circle at 0 100%,rgba(210,170,74,.35),rgba(210,170,74,0) 70%)}
+.corner.r{right:0;background:radial-gradient(circle at 100% 100%,rgba(210,170,74,.35),rgba(210,170,74,0) 70%)}
+.corner span{position:absolute;bottom:14px;font:600 11px "IBM Plex Sans";letter-spacing:.1em;text-transform:uppercase;color:rgba(234,227,209,.55)}
+.corner.l span{left:64px}.corner.r span{right:20px}
+.aimbtns{position:absolute;right:24px;bottom:24px;display:flex;gap:10px;pointer-events:auto}
+.aimbtns[hidden]{display:none!important}
+.big{width:112px;height:112px;border-radius:16px;background:var(--hud);border:2px solid var(--edge);display:grid;place-items:center;cursor:pointer;color:var(--gold-2)}
+.big svg{width:44px;height:44px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.big span{font:600 13px "IBM Plex Sans";letter-spacing:.06em;text-transform:uppercase;color:var(--text)}
+.big.cast{border-color:var(--danger);background:#3A1A14;color:#FFD3C9}
+.big.cancel{color:var(--mute)}
+.opt{display:inline-flex;border:1px solid var(--rule);border-radius:999px;overflow:hidden}
+.opt button{all:unset;padding:7px 14px;font:500 14px "IBM Plex Sans";cursor:pointer;color:var(--ink)}
+.opt button.on{background:var(--accent);color:#fff}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">ToME on iPhone 16 Plus · landscape · 1398 × 645 logical · radial proposal</div>
+  <h1>ToME Radial Layout</h1>
+  <p class="lede">Second proposal: no hotbar, no thumb buttons. <b>Press and hold anywhere in the left third</b> and a wheel of your hotkeys opens under the thumb; slide to one and let go. <b>The right third</b> opens a wheel with explore, rest, inventory and the rest. A plain tap anywhere is still walk, attack, or open door. Tap yourself to wait, hold yourself for the self menu. Try both "opens on" settings below.</p>
+
+  <div class="stage" id="stage">
+    <div class="phone" id="phone">
+      <div class="screen" id="screen">
+        <canvas id="map" width="1398" height="645"></canvas>
+        <div class="island"></div>
+        <div class="zone l"></div><div class="zone r"></div>
+        <div class="corner l"><span>hold · hotkeys</span></div><div class="corner r"><span>hold · actions</span></div>
+
+        <div class="hud vitals">
+          <div class="portrait" title="Character sheet">A</div>
+          <div class="bars">
+            <div class="bar" style="--c:var(--hp);--w:72%"><i></i><b id="hpTxt">Life 148/205</b></div>
+            <div class="bar" style="--c:var(--mana);--w:55%"><i></i><b>Mana 61/110</b></div>
+            <div class="bar" style="--c:var(--stam);--w:90%"><i></i><b>Stamina 90/100</b></div>
+          </div>
+          <button class="lvlup" id="lvlup" title="Spend points" hidden>+</button>
+        </div>
+        <div class="hud log" id="log" style="right:60px">
+          <div>Auto-exploring…</div>
+          <div>Alanya the orc warrior comes into view.</div>
+        </div>
+        <div class="hud tstrip" id="tstrip" hidden><span>Aiming <b id="tname">Flameshock</b></span><span>tap to move · tap again or Cast to fire</span></div>
+
+        <svg class="radial" id="radial" viewBox="0 0 1398 645" width="1398" height="645" hidden></svg>
+
+        <div class="aimbtns" id="aimbtns" hidden>
+          <button class="big cast" id="castBtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span>Cast</span></button>
+          <button class="big cancel" id="cancelBtn"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg><span>Cancel</span></button>
+        </div>
+
+        <div class="pop" id="tilePop" hidden></div>
+        <div class="pop" id="selfPop" hidden></div>
+        <div class="dlg" id="dlg" hidden>
+          <div class="ttl"><span>Inventory</span><button class="x" id="dlgX" title="Close (Esc)">✕</button></div>
+          <div class="list" id="invList"></div>
+        </div>
+        <div class="dlg lvl" id="lvl" hidden>
+          <div class="ttl"><span>Level up · Alanya · level 8</span><div class="r"><button class="done" id="lvlDone">Done</button><button class="x" id="lvlX" title="Close (Esc)">✕</button></div></div>
+          <div class="tabs" id="lvlTabs">
+            <button class="tab on" data-t="stats">Stats <span class="pts" id="pStat">3</span></button>
+            <button class="tab" data-t="class">Class talents <span class="pts" id="pClass">1</span></button>
+            <button class="tab" data-t="generic">Generic talents <span class="pts" id="pGen">1</span></button>
+            <button class="tab" data-t="cat" style="margin-left:auto">Categories <span class="pts" id="pCat">1</span></button>
+          </div>
+          <div class="list" id="lvlList"></div>
+        </div>
+        <div class="hint" id="hint" hidden></div>
+
+        <div class="co" style="left:96px;top:78px">1</div>
+        <div class="co" style="left:640px;top:20px">2</div>
+        <div class="co" style="left:120px;top:560px">3</div>
+        <div class="co" style="left:1240px;top:560px">4</div>
+        <div class="co" style="left:760px;top:330px">5</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <span class="eyebrow" style="margin-right:6px">Situations</span>
+    <button class="chip on" data-state="explore">Exploring</button>
+    <button class="chip" data-state="left">Hotkey wheel open</button>
+    <button class="chip" data-state="right">Action wheel open</button>
+    <button class="chip" data-state="fight">Enemy adjacent</button>
+    <button class="chip" data-state="aim">Aiming an AoE</button>
+    <button class="chip" data-state="levelup">Level-up ready</button>
+    <button class="chip" data-state="lvlscreen">Level-up screen</button>
+    <button class="chip" data-state="menu">Held a tile</button>
+    <button class="chip" data-state="dialog">Inventory open</button>
+  </div>
+  <div class="toolbar">
+    <span class="eyebrow" style="margin-right:6px">Wheel opens on</span>
+    <span class="opt" id="openOpt"><button class="on" data-o="hold">Hold 160 ms</button><button data-o="drag">First movement</button></span>
+    <span class="eyebrow" style="margin:0 6px 0 14px">Wheel sits</span>
+    <span class="opt" id="posOpt"><button class="on" data-o="finger">Under the finger</button><button data-o="corner">In the corner</button></span>
+    <span style="flex:1"></span>
+    <button class="chip" id="zoneBtn">Show zones</button>
+    <button class="chip" id="coBtn">Show callouts</button>
+  </div>
+  <p class="note">Laptop: press and hold the mouse button in the left or right third, slide, release. Long-press on a tile outside the thirds = 450 ms hold. Keyboard 1–9 fires hotkeys, Escape closes anything.</p>
+
+  <h2>What is on screen</h2>
+  <ol class="key">
+    <li><b>Vitals + level-up<span class="tier">T2</span></b><span>Life, mana, stamina. The gold + appears only with unspent points; the Character wedge on the right wheel glows at the same time, so either route works.</span></li>
+    <li><b>Message line<span class="tier">T1</span></b><span>Last two log lines. The aiming strip drops in below it while a talent is being aimed.</span></li>
+    <li><b>Hotkey wheel<span class="tier">T1</span></b><span>Left third. Eight hotkeys per page as wedges, numbered like the keyboard, cooldown turns shown in the wedge. The ninth wedge flips the page without closing the wheel: slide onto it, the page changes, slide on to the talent. Let go in the hub to cancel.</span></li>
+    <li><b>Action wheel<span class="tier">T1–T3</span></b><span>Right third. Explore and Rest sit on the side nearest the thumb's natural sweep; Inventory, Talents, Character, Journal, Menu and the two zoom steps fill the rest. No pages.</span></li>
+    <li><b>The map<span class="tier">T1</span></b><span>Tap = walk, travel, attack, open door. Tap yourself = wait, or stairs when on them. Hold a tile = its action menu. Drag = pan. Inside the two thirds, the hold (or the first movement, your pick) belongs to the wheel instead, so the tile menu and pan live in the middle third there.</span></li>
+  </ol>
+
+  <h2>How a fight goes</h2>
+  <div class="tbl"><table>
+    <tr><th>Moment</th><th>Keyboard</th><th>This layout</th></tr>
+    <tr><td>Enemy appears</td><td>1 (Flameshock), enter to accept target</td><td>Hold left, slide to 1, release. Preview appears on the nearest enemy. Tap it again or Cast.</td></tr>
+    <tr><td>Melee</td><td>Direction key</td><td>Tap the enemy.</td></tr>
+    <tr><td>Pass a turn</td><td>5 or z-wait</td><td>Tap yourself.</td></tr>
+    <tr><td>Drink a potion (page 2, slot 1)</td><td>Ctrl-1 or page key + 1</td><td>Hold left, slide to the page wedge, slide to 1, release. Three motions, one press.</td></tr>
+    <tr><td>Rest after</td><td>R</td><td>Hold right, slide to Rest, release.</td></tr>
+    <tr><td>Explore on</td><td>z</td><td>Hold right, slide to Explore, release.</td></tr>
+  </table></div>
+
+  <h2>Against the thumb-button layout</h2>
+  <div class="tbl"><table>
+    <tr><th></th><th>Thumb buttons (first mock)</th><th>Wheels (this mock)</th></tr>
+    <tr><td>Explore / Rest</td><td>One tap</td><td>Hold, slide, release. Slower, but never in the way.</td></tr>
+    <tr><td>Hotkeys</td><td>One tap for slots on the visible page; swipe to change page</td><td>One press-slide for 8; page flip inside the gesture</td></tr>
+    <tr><td>Screen space</td><td>Bottom 120 px permanently taken</td><td>All map, all the time</td></tr>
+    <tr><td>Seeing what's ready</td><td>Cooldowns visible at a glance</td><td>Only while the wheel is open</td></tr>
+    <tr><td>Accidents</td><td>Fat-finger a slot while walking</td><td>A hold in the wrong third opens a wheel instead of the tile menu</td></tr>
+  </table></div>
+
+  <h2>Questions for you</h2>
+  <ul class="q">
+    <li><em>Trigger</em><span>Hold 160 ms, or open on the first movement? Hold keeps "drag = pan" everywhere; first-movement opens instantly but pan only works in the middle third.</span></li>
+    <li><em>Where the wheel sits</em><span>Under the finger (clamped so it stays on screen) or always anchored in the corner? Under the finger means the wheel lands in a different spot each time; the corner means a fixed muscle-memory layout but a reach.</span></li>
+    <li><em>Zone size</em><span>Left and right thirds, as drawn? Or only the bottom half of each third, leaving the top for tile holds?</span></li>
+    <li><em>Wedge count</em><span>8 hotkeys per page plus the page wedge. ToME has 12 per page on desktop; 12 wedges are 30° each, tight but possible. Keep 8 and use more pages?</span></li>
+    <li><em>Casting</em><span>Once a talent is aimed, Cast and Cancel appear as two buttons bottom-right (shown). Alternatively: tap the target tile again to cast, two-finger tap to cancel, no buttons at all.</span></li>
+    <li><em>Cooldown glance</em><span>Without a hotbar you can't see cooldowns until the wheel opens. Small cooldown pips near the vitals? Or accept it.</span></li>
+    <li><em>Right wheel contents</em><span>Explore, Rest, Inventory, Talents, Character, Journal, Menu, Zoom in, Zoom out. Drop the zooms in favour of pinch, and add Message log or Map?</span></li>
+  </ul>
+</div>
+
+<script>
+(function(){
+const W=1398,H=645,CELL=48,COLS=29,ROWS=13,OX=Math.floor((W-COLS*CELL)/2),OY=Math.floor((H-ROWS*CELL)/2);
+const rows=[
+"#############################",
+"#.......#####.....#####.....#",
+"#.......#...#.....#...#.....#",
+"#...o...+...+.....#...+..>..#",
+"#.......#...#.....#...#.....#",
+"#.......#####..T..#####.....#",
+"###+#############.###########",
+"#........#......@.......#...#",
+"#..$.....+..............+...#",
+"#........#........o.....#...#",
+"#........#######.########...#",
+"#............s..............#",
+"#############################"];
+const grid=rows.map(r=>r.padEnd(COLS,'#').slice(0,COLS).split(''));
+let player={x:16,y:7};
+const enemies=[{x:4,y:3,g:'o',n:'Alanya the orc warrior',hp:1},{x:15,y:5,g:'T',n:'a troll',hp:1},{x:18,y:9,g:'o',n:'an orc archer',hp:1},{x:13,y:11,g:'s',n:'a snake',hp:1}];
+let loot=[{x:3,y:8}];
+const stairs={x:25,y:3};
+for(const e of enemies) grid[e.y][e.x]='.'; grid[stairs.y][stairs.x]='.'; for(const l of loot) grid[l.y][l.x]='.'; grid[7][16]='.';
+
+const TAL={
+ p1:[{n:'Flameshock',g:'🔥',k:'aoe',r:2},{n:'Manathrust',g:'✦',k:'bolt'},{n:'Shield',g:'◈',k:'self'},{n:'Blink',g:'⇝',k:'bolt'},{n:'Fireflash',g:'☄',k:'aoe',r:1},{n:'Regen',g:'❤',k:'self',cd:3},{n:'Potion',g:'⚗',k:'self'},{n:'Freeze',g:'❄',k:'bolt'},{n:'Arcane Vortex',g:'✺',k:'aoe',r:3},{n:'Disperse',g:'∿',k:'self'}],
+ p2:[{n:'Torch',g:'🕯',k:'self'},{n:'Rod of Recall',g:'⌇',k:'self'},{n:'Scroll',g:'📜',k:'self'},{n:'Lightning',g:'⚡',k:'bolt'},{n:'Quake',g:'▣',k:'aoe',r:2},{n:'',g:'',k:'empty'},{n:'',g:'',k:'empty'},{n:'',g:'',k:'empty'},{n:'',g:'',k:'empty'},{n:'',g:'',k:'empty'}],
+ p3:[{n:'',g:'',k:'empty'},{n:'',g:'',k:'empty'},{n:'',g:'',k:'empty'},{n:'',g:'',k:'empty'},{n:'',g:'',k:'empty'},{n:'',g:'',k:'empty'},{n:'',g:'',k:'empty'},{n:'',g:'',k:'empty'},{n:'',g:'',k:'empty'},{n:'',g:'',k:'empty'}]};
+let page=1;let openMode='hold',posMode='finger';
+let aim=null; // {tal, x,y}
+let zoom=1;
+
+const $=id=>document.getElementById(id);
+const screen=$('screen'),cv=$('map'),ctx=cv.getContext('2d');
+
+// ---------- scaling ----------
+function fit(){
+  const stage=$('stage'); const avail=stage.clientWidth-28;
+  const s=Math.min(1,avail/W);
+  screen.style.transform=`scale(${s})`;
+  screen.style.width=W+'px';screen.style.height=H+'px';
+  $('phone').style.width=(W*s+28)+'px';$('phone').style.height=(H*s+28)+'px';
+  screen.dataset.s=s;
+}
+window.addEventListener('resize',fit);fit();
+
+// ---------- log ----------
+function say(t){const l=$('log');const d=document.createElement('div');d.textContent=t;l.appendChild(d);while(l.children.length>2)l.removeChild(l.firstChild);}
+
+// ---------- drawing ----------
+function vis(x,y){return Math.hypot(x-player.x,y-player.y)<=9.5}
+function line(x0,y0,x1,y1){const pts=[];let dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1,err=dx+dy;for(;;){pts.push([x0,y0]);if(x0===x1&&y0===y1)break;const e2=2*err;if(e2>=dy){err+=dy;x0+=sx}if(e2<=dx){err+=dx;y0+=sy}}return pts}
+function draw(){
+  ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#0E0F12';ctx.fillRect(0,0,W,H);
+  const z=zoom, cx=OX+player.x*CELL+CELL/2, cy=OY+player.y*CELL+CELL/2;
+  ctx.translate(W/2,H/2);ctx.scale(z,z);ctx.translate(-cx*(1-1/z)-W/2/z+cx-cx,0);ctx.translate(-W/2 + (W/2-cx)*(1-1/z)*0, -H/2 + (H/2-cy)*0);
+  // simpler: zoom around player only when zoomed
+  ctx.setTransform(z,0,0,z,(1-z)*cx,(1-z)*cy);
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    const c=grid[y][x],px=OX+x*CELL,py=OY+y*CELL,v=vis(x,y);
+    if(c==='#'){ctx.fillStyle=v?'#2A2926':'#17171A';ctx.fillRect(px,py,CELL,CELL);ctx.fillStyle=v?'#34332F':'#1B1B1E';ctx.fillRect(px+2,py+2,CELL-4,CELL-4)}
+    else{ctx.fillStyle=v?((x+y)%2?'#3E3C38':'#403E3A'):'#222225';ctx.fillRect(px,py,CELL,CELL);
+      if(c==='+'){ctx.fillStyle=v?'#6B4A25':'#3A2C1B';ctx.fillRect(px+8,py+4,CELL-16,CELL-8)}}
+  }
+  // stairs
+  ctx.fillStyle='#8C8A80';for(let i=0;i<4;i++)ctx.fillRect(OX+stairs.x*CELL+8+i*8,OY+stairs.y*CELL+8+i*8,CELL-16-i*8,6);
+  // loot
+  ctx.font='28px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  for(const l of loot){ctx.fillStyle='#E0C15A';ctx.fillText('$',OX+l.x*CELL+CELL/2,OY+l.y*CELL+CELL/2)}
+  // enemies
+  for(const e of enemies){if(!e.hp)continue;const px=OX+e.x*CELL,py=OY+e.y*CELL;ctx.fillStyle=vis(e.x,e.y)?'#4E2A26':'#2A2224';ctx.beginPath();ctx.arc(px+CELL/2,py+CELL/2,18,0,7);ctx.fill();ctx.fillStyle='#F1C9B8';ctx.font='700 24px "IBM Plex Sans"';ctx.fillText(e.g,px+CELL/2,py+CELL/2+1);
+    ctx.fillStyle='#000';ctx.fillRect(px+8,py+CELL-8,CELL-16,4);ctx.fillStyle='#C0392B';ctx.fillRect(px+8,py+CELL-8,(CELL-16)*e.hp,4)}
+  // player
+  {const px=OX+player.x*CELL,py=OY+player.y*CELL;ctx.fillStyle='#2C4C7A';ctx.beginPath();ctx.arc(px+CELL/2,py+CELL/2,19,0,7);ctx.fill();ctx.strokeStyle='#9DC3FF';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#fff';ctx.font='700 24px "IBM Plex Sans"';ctx.fillText('@',px+CELL/2,py+CELL/2+1)}
+  // aiming preview
+  if(aim){
+    const t=aim.tal;
+    if(t.k==='aoe'){for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){if(Math.hypot(x-aim.x,y-aim.y)<=t.r+0.5&&grid[y][x]!=='#'){ctx.fillStyle='rgba(224,83,58,.32)';ctx.fillRect(OX+x*CELL,OY+y*CELL,CELL,CELL)}}}
+    const pts=line(player.x,player.y,aim.x,aim.y);ctx.fillStyle='rgba(224,83,58,.45)';for(const [x,y] of pts.slice(1,-1))ctx.fillRect(OX+x*CELL+18,OY+y*CELL+18,12,12);
+    ctx.strokeStyle='#FF7A5C';ctx.lineWidth=3;ctx.strokeRect(OX+aim.x*CELL+3,OY+aim.y*CELL+3,CELL-6,CELL-6);
+  }
+  ctx.restore();
+}
+
+function nearestEnemy(){let best=null,bd=1e9;for(const e of enemies){if(!e.hp||!vis(e.x,e.y))continue;const d=Math.hypot(e.x-player.x,e.y-player.y);if(d<bd){bd=d;best=e}}return best}
+function useSlot(t){
+  closePops();
+  if(t.k==='empty'){hint('Empty slot. Drag a talent here from the Talents screen.');return}
+  if(t.cd){hint(`${t.n} is on cooldown, ${t.cd} turns`);return}
+  if(t.k==='self'){say(`You use ${t.n}.`);flash();return}
+  const e=nearestEnemy();aim={tal:t,x:e?e.x:player.x+2,y:e?e.y:player.y};
+  $('tname').textContent=t.n;$('tstrip').hidden=false;$('aimbtns').hidden=false;draw();
+}
+function cast(){
+  if(!aim)return;const t=aim.tal;let hit=[];
+  for(const e of enemies){if(!e.hp)continue;const inA=t.k==='aoe'?Math.hypot(e.x-aim.x,e.y-aim.y)<=t.r+0.5:(e.x===aim.x&&e.y===aim.y);if(inA){e.hp=Math.max(0,e.hp-0.6);hit.push(e.n)}}
+  say(hit.length?`You cast ${t.n}. It hits ${hit.join(', ')}.`:`You cast ${t.n} at nothing in particular.`);
+  aim=null;$('tstrip').hidden=true;$('aimbtns').hidden=true;flash();draw();
+}
+function cancelAim(){aim=null;$('tstrip').hidden=true;$('aimbtns').hidden=true;draw()}
+$('castBtn').addEventListener('click',cast);$('cancelBtn').addEventListener('click',cancelAim);
+function doExplore(){say('Auto-exploring…');walkToward(stairs)}
+function doRest(){say('You start resting… You feel rested. (No dialog: this lands in the message line.)');$('hpTxt').textContent='Life 205/205';$('hpTxt').parentElement.style.setProperty('--w','100%')}
+function walkToward(t){const pts=line(player.x,player.y,t.x,t.y);let i=1;const step=()=>{if(i>=pts.length)return;const [x,y]=pts[i++];if(grid[y][x]==='#')return;player={x,y};draw();setTimeout(step,70)};step()}
+
+// ---------- map input ----------
+let down=null,holdT=null,moved=false,panned=false;
+function tileAt(e){const s=+screen.dataset.s||1;const r=cv.getBoundingClientRect();const lx=(e.clientX-r.left)/s,ly=(e.clientY-r.top)/s;
+  const cx=OX+player.x*CELL+CELL/2,cy=OY+player.y*CELL+CELL/2;const ux=(lx-(1-zoom)*cx)/zoom,uy=(ly-(1-zoom)*cy)/zoom;
+  return {x:Math.floor((ux-OX)/CELL),y:Math.floor((uy-OY)/CELL),lx,ly}}
+function zoneOf(t){if(aim||t.ly<96)return null;if(t.lx<W/3)return 'L';if(t.lx>W*2/3)return 'R';return null}
+cv.addEventListener('pointerdown',e=>{closePops();cv.setPointerCapture(e.pointerId);down=tileAt(e);moved=false;panned=false;clearTimeout(holdT);
+  const z=zoneOf(down);
+  if(z&&openMode==='hold'){holdT=setTimeout(()=>{if(!moved&&down){openRadial(z,down.lx,down.ly)}},160)}
+  else holdT=setTimeout(()=>{if(!moved&&down){if(down.x===player.x&&down.y===player.y)showSelfPop();else showTilePop(down);down=null}},450)});
+cv.addEventListener('pointermove',e=>{if(!down)return;const t=tileAt(e);
+  if(radial.open){radialMove(t.lx,t.ly);return}
+  const dist=Math.hypot(t.lx-down.lx,t.ly-down.ly);
+  const z=zoneOf(down);
+  if(z&&openMode==='drag'&&dist>12){clearTimeout(holdT);openRadial(z,down.lx,down.ly);radialMove(t.lx,t.ly);return}
+  if(t.x!==down.x||t.y!==down.y){moved=true;clearTimeout(holdT);
+  if(aim){aim.x=Math.max(1,Math.min(COLS-2,t.x));aim.y=Math.max(1,Math.min(ROWS-2,t.y));draw()}else{panned=true}}});
+cv.addEventListener('pointerup',e=>{clearTimeout(holdT);if(radial.open){radialRelease();down=null;return}if(!down)return;const t=tileAt(e);down=null;
+  if(moved){if(panned)hint('Drag = pan the camera (no move)');return}
+  tapTile(t)});
+cv.addEventListener('pointercancel',()=>{clearTimeout(holdT);down=null;closeRadial()});
+
+// ---------- radial wheel ----------
+const R_OUT=178,R_IN=56;
+const RIGHT=[{n:'Character',g:'@',f:()=>{if(!$('lvlup').hidden){$('lvlup').hidden=true;openLvl()}else say('Character sheet would open.')},lvl:true},{n:'Talents',g:'✧',f:()=>say('Talents screen would open.')},{n:'Journal',g:'▯',f:()=>say('Quests and lore would open.')},{n:'Menu',g:'≡',f:()=>say('Main menu would open.')},{n:'Zoom out',g:'−',f:()=>{zoom=Math.max(0.75,zoom-0.25);draw()}},{n:'Zoom in',g:'+',f:()=>{zoom=Math.min(2,zoom+0.25);draw()}},{n:'Inventory',g:'▤',f:()=>{$('dlg').hidden=false}},{n:'Rest',g:'☾',f:doRest},{n:'Explore',g:'⌕',f:doExplore}];
+const radial={open:false,side:null,cx:0,cy:0,sel:-1,items:[]};
+function radialItems(side){if(side==='R')return RIGHT.map(x=>({...x}));
+  const ts=TAL['p'+page].slice(0,8).map((t,i)=>({n:t.n||'empty',g:t.g,num:(i+1),cd:t.cd,dim:t.k==='empty'||!!t.cd,f:()=>useSlot(t)}));
+  ts.push({n:'page '+(page%3+1),g:'›',page:true});return ts}
+function openRadial(side,x,y){radial.open=true;radial.side=side;radial.items=radialItems(side);radial.sel=-1;
+  if(posMode==='corner'){radial.cx=side==='L'?R_OUT+30:W-R_OUT-30;radial.cy=H-R_OUT-20}
+  else{radial.cx=Math.max(R_OUT+8,Math.min(W-R_OUT-8,x));radial.cy=Math.max(R_OUT+8,Math.min(H-R_OUT-8,y))}
+  drawRadial();$('radial').removeAttribute('hidden')}
+function closeRadial(){radial.open=false;$('radial').setAttribute('hidden','')}
+function radialMove(x,y){const dx=x-radial.cx,dy=y-radial.cy,d=Math.hypot(dx,dy),n=radial.items.length;let sel=-1;
+  if(d>R_IN){let a=Math.atan2(dx,-dy)*180/Math.PI;if(a<0)a+=360;sel=Math.floor(((a+180/n)%360)/(360/n))}
+  if(sel!==radial.sel){radial.sel=sel;const it=radial.items[sel];if(it&&it.page){page=page%3+1;radial.items=radialItems(radial.side)}drawRadial()}}
+function radialRelease(){const it=radial.items[radial.sel];closeRadial();if(it&&!it.page&&!it.dim)it.f();else if(it&&it.dim)hint(it.cd?`${it.n} is on cooldown, ${it.cd} turns`:'Empty slot')}
+function drawRadial(){const svg=$('radial'),n=radial.items.length,cx=radial.cx,cy=radial.cy;let out='';
+  const P=(r,a)=>{const t=(a-90)*Math.PI/180;return (cx+r*Math.cos(t)).toFixed(1)+' '+(cy+r*Math.sin(t)).toFixed(1)};
+  radial.items.forEach((it,i)=>{const a0=i*360/n-180/n+2,a1=(i+1)*360/n-180/n-2,am=i*360/n;
+    const d=`M${P(R_IN,a0)} A${R_IN} ${R_IN} 0 0 1 ${P(R_IN,a1)} L${P(R_OUT,a1)} A${R_OUT} ${R_OUT} 0 0 0 ${P(R_OUT,a0)} Z`;
+    const cls='wedge'+(i===radial.sel?' on':'')+(it.dim?' dim':'')+(it.page?' page':'')+(it.lvl&&!$('lvlup').hidden?' lvl':'');
+    const rm=(R_IN+R_OUT)/2+8,t=(am-90)*Math.PI/180,lx=cx+rm*Math.cos(t),ly=cy+rm*Math.sin(t);
+    out+=`<path class="${cls}" d="${d}"/>`;
+    out+=`<text class="wl${it.dim?' dim':''}" x="${lx}" y="${ly-2}">${it.g||''}</text>`;
+    const nm=it.n.length>10?it.n.slice(0,9)+'…':it.n;
+    if(it.cd)out+=`<text class="wcd" x="${lx}" y="${ly+22}">${it.num} · ${it.cd} turns</text>`;
+    else out+=`<text class="wn${it.dim?' dim':''}" x="${lx}" y="${ly+22}">${it.num?it.num+' · ':''}${nm}</text>`;});
+  out+=`<circle class="hub" cx="${cx}" cy="${cy}" r="${R_IN-6}"/>`;
+  if(radial.side==='L')out+=`<text class="hubt" x="${cx}" y="${cy+1}">page ${page}/3</text><text class="hubs" x="${cx}" y="${cy+19}">release to cancel</text>`;
+  else out+=`<text class="hubs" x="${cx}" y="${cy+5}">release to cancel</text>`;
+  svg.innerHTML=out}
+document.addEventListener('keydown',e=>{const k=parseInt(e.key);if(k>=1&&k<=9&&!$('dlg').hidden===false&&$('lvl').hidden){const t=TAL['p'+page][k-1];if(t)useSlot(t)}});
+function tapTile(t){
+  if(t.x<0||t.y<0||t.x>=COLS||t.y>=ROWS)return;
+  if(aim){if(aim.x===t.x&&aim.y===t.y)cast();else{aim.x=t.x;aim.y=t.y;draw()}return}
+  if(t.x===player.x&&t.y===player.y){
+    if(stairs.x===player.x&&stairs.y===player.y){say('You climb down the stairs. Welcome to Trollmire (level 2).');flash();return}
+    say('You wait a turn.');flash();return}
+  const e=enemies.find(e=>e.hp&&e.x===t.x&&e.y===t.y);
+  if(e){const adj=Math.max(Math.abs(e.x-player.x),Math.abs(e.y-player.y))<=1;if(adj){e.hp=Math.max(0,e.hp-0.4);say(e.hp?`You hit ${e.n}.`:`You kill ${e.n}!`);draw()}else{say(`You move toward ${e.n}.`);walkToward(e)}return}
+  if(grid[t.y][t.x]==='#'){hint('Wall');return}
+  say('Travelling…');walkToward(t);
+  setTimeout(()=>{const li=loot.findIndex(l=>l.x===player.x&&l.y===player.y);if(li>=0){loot.splice(li,1);say('You pick up a steel longsword (auto-pickup).');draw()}},600);
+}
+
+// ---------- popups ----------
+function place(pop,lx,ly){const px=Math.min(W-240,Math.max(8,lx+10)),py=Math.min(H-220,Math.max(8,ly-20));pop.style.left=px+'px';pop.style.top=py+'px';pop.hidden=false}
+function closePops(){$('tilePop').hidden=true;$('selfPop').hidden=true}
+function showTilePop(t){const e=enemies.find(e=>e.hp&&e.x===t.x&&e.y===t.y);const p=$('tilePop');
+  const rows=[['Walk here','',()=>{say('Travelling…');walkToward(t)}]];
+  if(e){rows.unshift(['Attack '+e.n,'',()=>{say(`You move toward ${e.n}.`);walkToward(e)}]);rows.push(['Look','',()=>say(`${e.n}: a foe of some renown.`)]);rows.push(['Talk','',()=>say(`${e.n} has nothing to say.`)])}
+  else rows.push(['Look','',()=>say('A stone floor.')]);
+  rows.push(['Throw / use item here','',()=>say('Item list would open.')]);
+  p.innerHTML='<div class="hd">Actions</div>'+rows.map((r,i)=>`<button data-i="${i}"><span>${r[0]}</span><small>${r[1]}</small></button>`).join('');
+  [...p.querySelectorAll('button')].forEach(b=>b.addEventListener('click',()=>{closePops();rows[+b.dataset.i][2]()}));
+  place(p,t.lx,t.ly)}
+function showSelfPop(){const p=$('selfPop');const onStairs=stairs.x===player.x&&stairs.y===player.y;
+  const rows=[['Pick up','',()=>say('Nothing here to pick up.')],['Rest','R',doRest],['Explore','z',doExplore],['Look here','',()=>say('You stand on a stone floor.')]];
+  if(onStairs)rows.unshift(['Take the stairs','>',()=>tapTile({x:player.x,y:player.y})]);
+  p.innerHTML='<div class="hd">'+(onStairs?'On the stairs':'You')+'</div>'+rows.map((r,i)=>`<button data-i="${i}"><span>${r[0]}</span><small>${r[1]}</small></button>`).join('');
+  [...p.querySelectorAll('button')].forEach(b=>b.addEventListener('click',()=>{closePops();rows[+b.dataset.i][2]()}));
+  const lx=OX+player.x*CELL+CELL,ly=OY+player.y*CELL;place(p,lx,ly)}
+
+// ---------- dialog ----------
+const items=[['🗡','Steel longsword','2.1'],['🛡','Iron shield','5.0'],['🧥','Rough leather armour','9.0'],['⚗','Healing infusion','0.2'],['📜','Scroll of phase door','0.1'],['💍','Copper ring','0.1'],['🪙','412 gold',''],['🏹','Elm shortbow','3.0'],['🔦','Torch','1.0'],['🧪','Wild infusion','0.2'],['🥾','Hardened leather boots','2.0'],['🎒','Miner\'s pick','4.5'],['📕','Tome of lore','1.2'],['🔮','Rod of recall','2.0'],['🪶','Cloak of the wind','1.5'],['⚱','Ancient urn','3.3']];
+$('invList').innerHTML=items.map(i=>`<div class="row"><span class="g">${i[0]}</span><span>${i[1]}<br><small>hold for options · drag list to scroll</small></span><span class="w">${i[2]}</span></div>`).join('');
+$('dlgX').addEventListener('click',()=>$('dlg').hidden=true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('dlg').hidden=true;$('lvl').hidden=true;closePops();if(aim)cancelAim()}});
+
+// ---------- misc ----------
+
+// ---------- native-feel scrolling (desktop emulation; real touch uses the browser's own) ----------
+function nativeScroll(el){let sd=null,vy=0,lastY=0,lastT=0,raf,dragged=false;
+  el.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;cancelAnimationFrame(raf);sd={y:e.clientY,top:el.scrollTop};lastY=e.clientY;lastT=performance.now();vy=0;dragged=false;el.setPointerCapture(e.pointerId)});
+  el.addEventListener('pointermove',e=>{if(!sd)return;const sc=+screen.dataset.s||1;const dy=(e.clientY-sd.y)/sc;if(Math.abs(dy)>6){dragged=true;el.classList.add('drag')}el.scrollTop=sd.top-dy;const t=performance.now();vy=(e.clientY-lastY)/Math.max(1,t-lastT);lastY=e.clientY;lastT=t});
+  const end=()=>{if(!sd)return;sd=null;el.classList.remove('drag');let v=-vy/(+screen.dataset.s||1)*16;const step=()=>{if(Math.abs(v)<0.4)return;el.scrollTop+=v;v*=0.95;raf=requestAnimationFrame(step)};if(dragged)step()};
+  el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+  el.addEventListener('click',e=>{if(dragged){e.stopPropagation();e.preventDefault();dragged=false}},true)}
+nativeScroll($('invList'));
+
+// ---------- level-up ----------
+const LV={stat:3,cls:1,gen:1,cat:1,tab:'stats'};
+const STATS=[['Strength',14,'Physical power, carrying capacity. +1 = +1 physical power'],['Dexterity',12,'Accuracy, defense, and dual-wield damage'],['Constitution',10,'Life. +1 = +4 max life'],['Magic',24,'Spellpower and mana. Alchemists and mages want this'],['Willpower',18,'Mana and stamina pools, mental save'],['Cunning',12,'Critical chance and mind power']];
+const TREES={
+ class:[
+  {n:'Spell / Fire',m:'1.30',t:[['Flame',3,'Conjures a bolt of fire dealing 68 fire damage and burning for 3 turns. Cost 12 mana, cooldown 6.','Next level: 79 damage.'],['Flameshock',2,'Conjures a flameshock of radius 2, dealing 34 fire damage and stunning for 4 turns. Cost 25 mana, cooldown 14.','Next level: radius 2, 41 damage, 4 turn stun.'],['Fireflash',1,'Blasts a ball of fire, radius 1, dealing 41 damage. Cost 30, cooldown 12.','Next level: 52 damage.'],['Inferno',0,'Burns all enemies in radius 3 around you for 5 turns.','Requires level 10 and Fireflash 3.']]},
+  {n:'Spell / Arcane',m:'1.30',t:[['Arcane Power',2,'Increases spellpower by 12 for 20 turns.','Next level: +15.'],['Manathrust',4,'Fires a beam of pure mana dealing 96 arcane damage to everything in its path. Cost 10, cooldown 3.','Next level: 108 damage.'],['Disruption Shield',0,'Absorbs damage into mana.','Requires level 10.'],['Arcane Vortex',1,'A vortex of radius 3 that follows an enemy for 6 turns.','Next level: 7 turns.']]},
+  {n:'Spell / Aegis',m:'1.00',lock:true,t:[['Arcane Reconstruction',0,'Heals 120 life instantly.','Locked tree.'],['Shielding',0,'Increases the power of your shields by 15%.','Locked tree.'],['Arcane Shield',0,'Heals give you a damage shield.','Locked tree.'],['Aegis',0,'Restores your shields.','Locked tree.']]}],
+ generic:[
+  {n:'Cunning / Survival',m:'1.00',t:[['Heightened Senses',1,'See invisible and stealthed creatures within 6 squares.','Next level: 7 squares.'],['Charm Mastery',0,'Reduces the cooldown of wands, totems and torques by 8%.','Next level: 16%.'],['Piercing Sight',0,'Reveals hidden things.','Requires level 8.'],['Evasion',0,'Dodge 30% of attacks for 5 turns.','Requires level 12.']]},
+  {n:'Spell / Divination',m:'1.10',t:[['Arcane Eye',2,'Summons an eye that sees for you for 24 turns.','Next level: 28 turns.'],['Keen Senses',1,'+8 accuracy.','Next level: +11.'],['Vision',0,'Reveals the map around you.','Requires level 8.'],['Premonition',0,'Warns you of incoming damage.','Requires level 12.']]},
+  {n:'Race / Higher',m:'1.00',t:[['Wrath of the Highborn',1,'Gain +15% damage and reduced damage taken for 8 turns.','Next level: +20%.'],['Highborn\'s Bloom',0,'Talents cost nothing for 4 turns.','Requires level 8.'],['Overseer of Nations',0,'+2 vision and see through walls slightly.','Requires level 12.'],['Bloodspring',0,'Heals when you take heavy damage.','Requires level 20.']]}]};
+const spent=new Map(); // key -> count this session
+function pts(){$('pStat').textContent=LV.stat;$('pClass').textContent=LV.cls;$('pGen').textContent=LV.gen;$('pCat').textContent=LV.cat;
+  $('pStat').classList.toggle('has',LV.stat>0);$('pClass').classList.toggle('has',LV.cls>0);$('pGen').classList.toggle('has',LV.gen>0);$('pCat').classList.toggle('has',LV.cat>0)}
+function renderLvl(){
+  const l=$('lvlList');l.innerHTML='';pts();
+  [...$('lvlTabs').children].forEach(t=>t.classList.toggle('on',t.dataset.t===LV.tab));
+  if(LV.tab==='stats'){STATS.forEach((st,i)=>{const k='s'+i,sp=spent.get(k)||0;const r=document.createElement('div');r.className='srow';
+      r.innerHTML=`<span>${st[0]}</span><span class="v">${st[1]+sp} <small>/ 60</small></span><span class="eff">${st[2]}</span><span class="pm"><button class="minus" ${sp?'':'disabled'}>−</button><button ${LV.stat?'':'disabled'}>+</button></span>`;
+      const [mi,pl]=r.querySelectorAll('button');pl.addEventListener('click',()=>{LV.stat--;spent.set(k,sp+1);renderLvl()});mi.addEventListener('click',()=>{LV.stat++;spent.set(k,sp-1);renderLvl()});l.appendChild(r)})}
+  else if(LV.tab==='cat'){const r=document.createElement('div');r.className='srow';r.style.gridTemplateColumns='1fr';r.innerHTML='<span class="eff" style="font-size:16px">Category points unlock a locked talent tree or raise a tree’s mastery. Unlock buttons sit on the tree headers in the Class and Generic tabs.</span>';l.appendChild(r)}
+  else{const trees=TREES[LV.tab],ptKey=LV.tab==='class'?'cls':'gen';
+    trees.forEach((tr,ti)=>{const h=document.createElement('div');h.className='tree';h.innerHTML=`<span>${tr.n} <small>mastery ${tr.m}${tr.lock?' · locked':''}</small></span>${tr.lock?`<button class="unlock" ${LV.cat?'':'disabled'}>Unlock · 1 category point</button>`:''}`;
+      if(tr.lock)h.querySelector('.unlock').addEventListener('click',()=>{LV.cat--;tr.lock=false;renderLvl()});l.appendChild(h);
+      tr.t.forEach((t,i)=>{const k=LV.tab+ti+'_'+i,sp=spent.get(k)||0,lvl=t[1]+sp,req=t[3].startsWith('Requires')||tr.lock;const r=document.createElement('div');r.className='trow'+(req?' locked':'')+(t.open?' open':'');
+        r.innerHTML=`<span class="nm"><span>${t[0]}</span><small>${req?t[3]:'level '+lvl+' / 5'}</small><span class="desc">${t[2]}<br><small>${t[3]}</small></span></span><span class="lv">${[0,1,2,3,4].map(j=>`<i class="${j<lvl?(j>=t[1]?'n':'f'):''}"></i>`).join('')}</span><span class="pm"><button class="minus" ${sp?'':'disabled'}>−</button><button ${LV[ptKey]&&!req&&lvl<5?'':'disabled'}>+</button></span>`;
+        r.querySelector('.nm').addEventListener('click',()=>{t.open=!t.open;renderLvl()});
+        const [mi,pl]=r.querySelectorAll('.pm button');pl.addEventListener('click',()=>{LV[ptKey]--;spent.set(k,sp+1);renderLvl()});mi.addEventListener('click',()=>{LV[ptKey]++;spent.set(k,sp-1);renderLvl()});l.appendChild(r)})})}
+}
+[...$('lvlTabs').children].forEach(t=>t.addEventListener('click',()=>{LV.tab=t.dataset.t;renderLvl();$('lvlList').scrollTop=0}));
+nativeScroll($('lvlList'));
+function openLvl(){closePops();$('dlg').hidden=true;$('lvl').hidden=false;renderLvl()}
+function closeLvl(){$('lvl').hidden=true;if(LV.stat+LV.cls+LV.gen>0)$('lvlup').hidden=false}
+$('lvlX').addEventListener('click',closeLvl);$('lvlDone').addEventListener('click',()=>{closeLvl();say('Points spent. Undo is possible until you leave this screen, as on desktop.')});
+
+$('lvlup').addEventListener('click',()=>{$('lvlup').hidden=true;openLvl()});
+let hintT;function hint(t){const h=$('hint');h.textContent=t;h.hidden=false;clearTimeout(hintT);hintT=setTimeout(()=>h.hidden=true,1600)}
+function flash(){screen.animate([{boxShadow:'inset 0 0 0 0 rgba(210,170,74,0)'},{boxShadow:'inset 0 0 60px rgba(210,170,74,.35)'},{boxShadow:'inset 0 0 0 0 rgba(210,170,74,0)'}],{duration:350})}
+
+// ---------- situations ----------
+function setState(s){
+  closePops();closeRadial();$('dlg').hidden=true;$('lvl').hidden=true;cancelAim();$('lvlup').hidden=true;
+  for(const e of enemies)e.hp=1;loot=[{x:3,y:8}];
+  player={x:16,y:7};enemies[1].x=15;enemies[1].y=5;
+  if(s==='left'){openRadial('L',260,470);radialMove(260+120,470-80);say('Hotkey wheel: slide to a wedge and release. The › wedge flips the page.')}
+  else if(s==='right'){openRadial('R',1140,470);radialMove(1140-110,470-90);say('Action wheel: Explore and Rest sit on the thumb\'s natural sweep.')}
+  else if(s==='fight'){enemies[1].x=17;enemies[1].y=7;say('The troll attacks you! You are hit for 22.');say('Tap the troll to bump-attack. Tap a red-dot talent to aim.')}
+  else if(s==='aim'){useSlot(TAL.p1[0])}
+  else if(s==='stairs'){player={x:stairs.x,y:stairs.y};say('There is a staircase down here. Tap yourself to take it; anywhere else, tapping yourself waits a turn.')}
+  else if(s==='levelup'){$('lvlup').hidden=false;say('You feel more experienced. Tap the gold + to spend points.')}
+  else if(s==='lvlscreen'){openLvl();say('Level-up. Drag the list to scroll (no scrollbar). Tap a talent name for its description.')}
+  else if(s==='menu'){draw();showTilePop({x:enemies[2].x,y:enemies[2].y,lx:OX+enemies[2].x*CELL+CELL,ly:OY+enemies[2].y*CELL});say('Held a tile for 450 ms: the action menu opens.')}
+  else if(s==='dialog'){$('dlg').hidden=false;say('Inventory. Close box, Escape, or two-finger tap closes it; tapping the map does not.')}
+  else{say('Auto-exploring…');say('Alanya the orc warrior comes into view.')}
+  draw();
+  document.querySelectorAll('.chip[data-state]').forEach(c=>c.classList.toggle('on',c.dataset.state===s));
+}
+document.querySelectorAll('.chip[data-state]').forEach(c=>c.addEventListener('click',()=>setState(c.dataset.state)));
+$('zoneBtn').addEventListener('click',()=>{const on=screen.classList.toggle('zones');$('zoneBtn').classList.toggle('on',on);$('zoneBtn').textContent=on?'Hide zones':'Show zones'});
+[...$('openOpt').children].forEach(b=>b.addEventListener('click',()=>{openMode=b.dataset.o;[...$('openOpt').children].forEach(c=>c.classList.toggle('on',c===b))}));
+[...$('posOpt').children].forEach(b=>b.addEventListener('click',()=>{posMode=b.dataset.o;[...$('posOpt').children].forEach(c=>c.classList.toggle('on',c===b))}));
+$('coBtn').addEventListener('click',()=>{const on=screen.classList.toggle('callouts');$('coBtn').classList.toggle('on',on);$('coBtn').textContent=on?'Hide callouts':'Show callouts'});
+
+draw();
+})();
+</script>

@@ -143,3 +143,11 @@ Shows: 10-slot 96px hotbar with swipe pages, 112px Explore/Rest at the right thu
 Cast/Cancel while aiming, AoE/bolt preview aiming, hold-tile action menu, self-tile menu, contextual
 level-up glow, tabbed level-up screen with drag-scroll (no scrollbar) and per-point undo, inventory
 dialog with drag-scroll. Open questions listed at the bottom of the page.
+
+## 8. Radial proposal (Jordan, 2026-09-03)
+Jordan's idea: hold in the left third → wheel of hotkeys (with page flip); hold in the right
+third → wheel of everything else (explore, rest, inventory, talents, character, journal, menu,
+zoom); plain tap = move as today; tap self = wait/stairs. Mock: `tools/ios/design/radial-mockup.html`
+(artifact "ToME Radial Layout"). Open questions on the page: trigger (hold vs first movement),
+wheel anchored under finger vs corner, zone size, 8 vs 12 wedges, cast/cancel buttons vs tap-again,
+cooldown visibility without a hotbar, right-wheel contents.
