@@ -151,3 +151,7 @@ zoom); plain tap = move as today; tap self = wait/stairs. Mock: `tools/ios/desig
 (artifact "ToME Radial Layout"). Open questions on the page: trigger (hold vs first movement),
 wheel anchored under finger vs corner, zone size, 8 vs 12 wedges, cast/cancel buttons vs tap-again,
 cooldown visibility without a hotbar, right-wheel contents.
+Decisions 2026-09-03: radial direction accepted; tabbed level-up screen accepted; Cast+Cancel
+buttons while aiming; cooldown pips under the vitals; right wheel contents as drawn.
+To decide on the phone (build them as settings): wheel trigger (hold vs first movement), wheel
+position (under finger vs corner), zone size (thirds vs bottom halves), wedge count (8 vs 12).

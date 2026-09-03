@@ -187,6 +187,11 @@ td:first-child{white-space:nowrap;font-weight:600}
 .corner.r{right:0;background:radial-gradient(circle at 100% 100%,rgba(210,170,74,.35),rgba(210,170,74,0) 70%)}
 .corner span{position:absolute;bottom:14px;font:600 11px "IBM Plex Sans";letter-spacing:.1em;text-transform:uppercase;color:rgba(234,227,209,.55)}
 .corner.l span{left:64px}.corner.r span{right:20px}
+.cds{left:64px;top:84px;display:flex;gap:5px}
+.cds i{width:30px;height:30px;border-radius:6px;border:1px solid #3B3427;background:rgba(20,20,24,.85);display:grid;place-items:center;font:600 13px "IBM Plex Sans";color:#6E6858;font-style:normal;font-variant-numeric:tabular-nums}
+.cds i.ready{color:var(--gold);border-color:#6A5626}
+.cds i.cd{color:#FFB39F;border-color:#7A3A2C;background:#2A1512}
+.cds i.empty{opacity:.3}
 .aimbtns{position:absolute;right:24px;bottom:24px;display:flex;gap:10px;pointer-events:auto}
 .aimbtns[hidden]{display:none!important}
 .big{width:112px;height:112px;border-radius:16px;background:var(--hud);border:2px solid var(--edge);display:grid;place-items:center;cursor:pointer;color:var(--gold-2)}
@@ -221,6 +226,7 @@ td:first-child{white-space:nowrap;font-weight:600}
           </div>
           <button class="lvlup" id="lvlup" title="Spend points" hidden>+</button>
         </div>
+        <div class="hud cds" id="cds" title="Hotkeys on this page: gold = ready, red = turns of cooldown"></div>
         <div class="hud log" id="log" style="right:60px">
           <div>Auto-exploring…</div>
           <div>Alanya the orc warrior comes into view.</div>
@@ -253,6 +259,7 @@ td:first-child{white-space:nowrap;font-weight:600}
         <div class="hint" id="hint" hidden></div>
 
         <div class="co" style="left:96px;top:78px">1</div>
+        <div class="co" style="left:330px;top:88px">6</div>
         <div class="co" style="left:640px;top:20px">2</div>
         <div class="co" style="left:120px;top:560px">3</div>
         <div class="co" style="left:1240px;top:560px">4</div>
@@ -290,6 +297,7 @@ td:first-child{white-space:nowrap;font-weight:600}
     <li><b>Message line<span class="tier">T1</span></b><span>Last two log lines. The aiming strip drops in below it while a talent is being aimed.</span></li>
     <li><b>Hotkey wheel<span class="tier">T1</span></b><span>Left third. Eight hotkeys per page as wedges, numbered like the keyboard, cooldown turns shown in the wedge. The ninth wedge flips the page without closing the wheel: slide onto it, the page changes, slide on to the talent. Let go in the hub to cancel.</span></li>
     <li><b>Action wheel<span class="tier">T1–T3</span></b><span>Right third. Explore and Rest sit on the side nearest the thumb's natural sweep; Inventory, Talents, Character, Journal, Menu and the two zoom steps fill the rest. No pages.</span></li>
+    <li><b>Cooldown pips<span class="tier">T1</span></b><span>One pip per hotkey on the current page, under the vitals. Gold with the slot number = ready. Red with a count = turns left. Dim = empty slot. This is the at-a-glance view the hotbar used to give.</span></li>
     <li><b>The map<span class="tier">T1</span></b><span>Tap = walk, travel, attack, open door. Tap yourself = wait, or stairs when on them. Hold a tile = its action menu. Drag = pan. Inside the two thirds, the hold (or the first movement, your pick) belongs to the wheel instead, so the tile menu and pan live in the middle third there.</span></li>
   </ol>
 
@@ -314,16 +322,20 @@ td:first-child{white-space:nowrap;font-weight:600}
     <tr><td>Accidents</td><td>Fat-finger a slot while walking</td><td>A hold in the wrong third opens a wheel instead of the tile menu</td></tr>
   </table></div>
 
-  <h2>Questions for you</h2>
+  <h2>Decided</h2>
+  <ul class="q">
+    <li><em>Casting</em><span>Cast and Cancel buttons bottom-right while aiming.</span></li>
+    <li><em>Cooldowns</em><span>Pips under the vitals.</span></li>
+    <li><em>Right wheel</em><span>As drawn.</span></li>
+    <li><em>Level-up</em><span>Tabbed screen from the first mock, drag-scrolling lists.</span></li>
+  </ul>
+  <h2>To decide on the phone</h2>
   <ul class="q">
     <li><em>Trigger</em><span>Hold 160 ms, or open on the first movement? Hold keeps "drag = pan" everywhere; first-movement opens instantly but pan only works in the middle third.</span></li>
     <li><em>Where the wheel sits</em><span>Under the finger (clamped so it stays on screen) or always anchored in the corner? Under the finger means the wheel lands in a different spot each time; the corner means a fixed muscle-memory layout but a reach.</span></li>
     <li><em>Zone size</em><span>Left and right thirds, as drawn? Or only the bottom half of each third, leaving the top for tile holds?</span></li>
     <li><em>Wedge count</em><span>8 hotkeys per page plus the page wedge. ToME has 12 per page on desktop; 12 wedges are 30° each, tight but possible. Keep 8 and use more pages?</span></li>
-    <li><em>Casting</em><span>Once a talent is aimed, Cast and Cancel appear as two buttons bottom-right (shown). Alternatively: tap the target tile again to cast, two-finger tap to cancel, no buttons at all.</span></li>
-    <li><em>Cooldown glance</em><span>Without a hotbar you can't see cooldowns until the wheel opens. Small cooldown pips near the vitals? Or accept it.</span></li>
-    <li><em>Right wheel contents</em><span>Explore, Rest, Inventory, Talents, Character, Journal, Menu, Zoom in, Zoom out. Drop the zooms in favour of pinch, and add Message log or Map?</span></li>
-  </ul>
+              </ul>
 </div>
 
 <script>
@@ -415,14 +427,15 @@ function useSlot(t){
   closePops();
   if(t.k==='empty'){hint('Empty slot. Drag a talent here from the Talents screen.');return}
   if(t.cd){hint(`${t.n} is on cooldown, ${t.cd} turns`);return}
-  if(t.k==='self'){say(`You use ${t.n}.`);flash();return}
+  if(t.k==='self'){say(`You use ${t.n}.`);t.cd=t.n==='Regen'?3:0;tickCd();flash();return}
   const e=nearestEnemy();aim={tal:t,x:e?e.x:player.x+2,y:e?e.y:player.y};
   $('tname').textContent=t.n;$('tstrip').hidden=false;$('aimbtns').hidden=false;draw();
 }
+function tickCd(){for(const t of TAL['p'+page])if(t.cd)t.cd--;renderCds()}
 function cast(){
   if(!aim)return;const t=aim.tal;let hit=[];
   for(const e of enemies){if(!e.hp)continue;const inA=t.k==='aoe'?Math.hypot(e.x-aim.x,e.y-aim.y)<=t.r+0.5:(e.x===aim.x&&e.y===aim.y);if(inA){e.hp=Math.max(0,e.hp-0.6);hit.push(e.n)}}
-  say(hit.length?`You cast ${t.n}. It hits ${hit.join(', ')}.`:`You cast ${t.n} at nothing in particular.`);
+  t.cd=t.k==='aoe'?4:2;tickCd();say(hit.length?`You cast ${t.n}. It hits ${hit.join(', ')}.`:`You cast ${t.n} at nothing in particular.`);
   aim=null;$('tstrip').hidden=true;$('aimbtns').hidden=true;flash();draw();
 }
 function cancelAim(){aim=null;$('tstrip').hidden=true;$('aimbtns').hidden=true;draw()}
@@ -457,6 +470,7 @@ cv.addEventListener('pointercancel',()=>{clearTimeout(holdT);down=null;closeRadi
 const R_OUT=178,R_IN=56;
 const RIGHT=[{n:'Character',g:'@',f:()=>{if(!$('lvlup').hidden){$('lvlup').hidden=true;openLvl()}else say('Character sheet would open.')},lvl:true},{n:'Talents',g:'✧',f:()=>say('Talents screen would open.')},{n:'Journal',g:'▯',f:()=>say('Quests and lore would open.')},{n:'Menu',g:'≡',f:()=>say('Main menu would open.')},{n:'Zoom out',g:'−',f:()=>{zoom=Math.max(0.75,zoom-0.25);draw()}},{n:'Zoom in',g:'+',f:()=>{zoom=Math.min(2,zoom+0.25);draw()}},{n:'Inventory',g:'▤',f:()=>{$('dlg').hidden=false}},{n:'Rest',g:'☾',f:doRest},{n:'Explore',g:'⌕',f:doExplore}];
 const radial={open:false,side:null,cx:0,cy:0,sel:-1,items:[]};
+function renderCds(){const c=$('cds');c.innerHTML=TAL['p'+page].slice(0,8).map((t,i)=>`<i class="${t.k==='empty'?'empty':t.cd?'cd':'ready'}">${t.cd?t.cd:(i+1)}</i>`).join('')}
 function radialItems(side){if(side==='R')return RIGHT.map(x=>({...x}));
   const ts=TAL['p'+page].slice(0,8).map((t,i)=>({n:t.n||'empty',g:t.g,num:(i+1),cd:t.cd,dim:t.k==='empty'||!!t.cd,f:()=>useSlot(t)}));
   ts.push({n:'page '+(page%3+1),g:'›',page:true});return ts}
@@ -467,7 +481,7 @@ function openRadial(side,x,y){radial.open=true;radial.side=side;radial.items=rad
 function closeRadial(){radial.open=false;$('radial').setAttribute('hidden','')}
 function radialMove(x,y){const dx=x-radial.cx,dy=y-radial.cy,d=Math.hypot(dx,dy),n=radial.items.length;let sel=-1;
   if(d>R_IN){let a=Math.atan2(dx,-dy)*180/Math.PI;if(a<0)a+=360;sel=Math.floor(((a+180/n)%360)/(360/n))}
-  if(sel!==radial.sel){radial.sel=sel;const it=radial.items[sel];if(it&&it.page){page=page%3+1;radial.items=radialItems(radial.side)}drawRadial()}}
+  if(sel!==radial.sel){radial.sel=sel;const it=radial.items[sel];if(it&&it.page){page=page%3+1;radial.items=radialItems(radial.side);renderCds()}drawRadial()}}
 function radialRelease(){const it=radial.items[radial.sel];closeRadial();if(it&&!it.page&&!it.dim)it.f();else if(it&&it.dim)hint(it.cd?`${it.n} is on cooldown, ${it.cd} turns`:'Empty slot')}
 function drawRadial(){const svg=$('radial'),n=radial.items.length,cx=radial.cx,cy=radial.cy;let out='';
   const P=(r,a)=>{const t=(a-90)*Math.PI/180;return (cx+r*Math.cos(t)).toFixed(1)+' '+(cy+r*Math.sin(t)).toFixed(1)};
@@ -597,6 +611,6 @@ $('zoneBtn').addEventListener('click',()=>{const on=screen.classList.toggle('zon
 [...$('posOpt').children].forEach(b=>b.addEventListener('click',()=>{posMode=b.dataset.o;[...$('posOpt').children].forEach(c=>c.classList.toggle('on',c===b))}));
 $('coBtn').addEventListener('click',()=>{const on=screen.classList.toggle('callouts');$('coBtn').classList.toggle('on',on);$('coBtn').textContent=on?'Hide callouts':'Show callouts'});
 
-draw();
+renderCds();draw();
 })();
 </script>
