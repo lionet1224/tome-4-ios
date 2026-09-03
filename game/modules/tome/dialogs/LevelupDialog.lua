@@ -595,6 +595,12 @@ function _M:generateList()
 			entity=e,
 			stat=sid,
 			desc=s.description,
+			-- iOS port: grey the row when it cannot go up (maxed, or no stat points), unless it can be undone
+			do_shadow = __IOS__ and function(item)
+				if self.actor:getStat(sid, nil, nil, true) ~= self.actor_dup:getStat(sid, nil, nil, true) then return false end
+				if self.actor.unused_stats <= 0 then return true end
+				return self.actor:getStat(sid, nil, nil, true) >= self.actor.level * 1.4 + 20 or self.actor:isStatMax(sid) or self.actor:getStat(sid, nil, nil, true) >= 60 + math.max(0, (self.actor.level - 50))
+			end or nil,
 			color=function(item)
 				if self.actor:getStat(sid, nil, nil, true) ~= self.actor_dup:getStat(sid, nil, nil, true) then return {255, 215, 0}
 				elseif self.actor:getStat(sid, nil, nil, true) >= self.actor.level * 1.4 + 20 or
@@ -887,8 +893,14 @@ function _M:createDisplayTouch()
 	local pane_w = math.floor(self.iw * 0.56)
 	local desc_fct = function(item) local ret = self:getTalentDesc(item) self.c_desc:erase() self.c_desc:switchItem(ret, ret) return ret end
 	local stat_fct = function(item) local ret = self:getStatDesc(item) self.c_desc:erase() self.c_desc:switchItem(ret, ret) return ret end
+	local can_add = function(item)
+		if item.stat then return self.actor.unused_stats > 0 end
+		if item.type then return self.actor.unused_talents_types > 0 end
+		if item.isgeneric == 0 then return self.actor.unused_generics > 0 end
+		return self.actor.unused_talents > 0
+	end
 	local mk = function(tree, tip, nocross)
-		return TouchTalentList.new{font=font, tree=tree, width=pane_w, height=pane_h, tooltip=tip, no_cross=nocross,
+		return TouchTalentList.new{font=font, tree=tree, width=pane_w, height=pane_h, tooltip=tip, no_cross=nocross, can_add=can_add,
 			on_use=function(item, inc) self:onUseTalent(item, inc) end,
 			on_expand=function(item) self.actor.__hidden_talent_types[item.type] = not item.shown end,
 			scrollbar=true}

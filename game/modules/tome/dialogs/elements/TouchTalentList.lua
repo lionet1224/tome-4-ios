@@ -25,6 +25,7 @@ function _M:init(t)
 	self.tooltip = assert(t.tooltip, "no tooltip")
 	self.on_use = assert(t.on_use, "no on_use")
 	self.on_expand = t.on_expand
+	self.can_add = t.can_add -- function(item) -> are there points to spend on it
 	self.no_cross = t.no_cross
 	self.icon_size = 48
 	self.row_h = 68
@@ -142,8 +143,15 @@ function _M:redrawAllItems()
 			for j = 1, #tree.nodes do
 				local tal = tree.nodes[j]
 				local c = tal:color()
-				tal.text_name = self:text(asString(tal, tal.name), 255, 255, 255)
-				tal.text_status = self:text(asString(tal, tal.status), c[1], c[2], c[3])
+				local changed = c[1] == 255 and c[2] == 215 and c[3] == 0
+				local shadow = util.getval(tal.do_shadow, tal) and not changed
+				tal.touch_changed, tal.touch_shadow = changed, shadow
+				local nr, ng, nb = 255, 255, 255
+				if shadow then nr, ng, nb = 140, 140, 140 elseif changed then nr, ng, nb = 255, 215, 0 end
+				tal.text_name = self:text(asString(tal, tal.name), nr, ng, nb)
+				local st = asString(tal, tal.status)
+				if changed then st = st:gsub("#[^#]*#", "") end -- plain, in gold
+				tal.text_status = self:text(st, c[1], c[2], c[3])
 				rows[#rows+1] = {item=tal, y1=y, y2=y + self.row_h}
 				y = y + self.row_h
 			end
@@ -158,17 +166,18 @@ function _M:redrawAllItems()
 	end
 end
 
-function _M:drawButtons(x, y, dim)
+function _M:drawButtons(x, y, can_minus, can_plus)
 	local bw, bh = self.btn_w, self.btn_h
 	local by = y + 6
 	local right = self.w - (self.scrollbar and self.scrollbar.w + 6 or 0)
 	local mx, px = x + right - 2 * bw - 12, x + right - bw - 6
-	core.display.drawQuad(mx, by, bw, bh, 30, 28, 24, 230)
-	core.display.drawQuad(px, by, bw, bh, 42, 34, 16, 230)
-	core.display.drawQuad(mx, by, bw, 2, 59, 52, 39, 255) core.display.drawQuad(mx, by + bh - 2, bw, 2, 59, 52, 39, 255)
-	core.display.drawQuad(px, by, bw, 2, 140, 112, 48, 255) core.display.drawQuad(px, by + bh - 2, bw, 2, 140, 112, 48, 255)
-	local m = self:text("-", 160, 152, 130, true, true)
-	local p = self:text("+", 240, 212, 138, true, true)
+	local am, ap = can_minus and 230 or 90, can_plus and 230 or 90
+	core.display.drawQuad(mx, by, bw, bh, 30, 28, 24, am)
+	core.display.drawQuad(px, by, bw, bh, 42, 34, 16, ap)
+	core.display.drawQuad(mx, by, bw, 2, 59, 52, 39, am) core.display.drawQuad(mx, by + bh - 2, bw, 2, 59, 52, 39, am)
+	core.display.drawQuad(px, by, bw, 2, 140, 112, 48, ap) core.display.drawQuad(px, by + bh - 2, bw, 2, 140, 112, 48, ap)
+	local m = can_minus and self:text("-", 255, 215, 0, true, true) or self:text("-", 90, 86, 76, true, true)
+	local p = can_plus and self:text("+", 240, 212, 138, true, true) or self:text("+", 90, 86, 76, true, true)
 	self:drawText(m, mx + (bw - m.w) / 2, by + (bh - m.h) / 2)
 	self:drawText(p, px + (bw - p.w) / 2, by + (bh - p.h) / 2)
 end
@@ -184,12 +193,15 @@ function _M:drawRow(r, x, y)
 			tx = tx + cross.w + 8
 		end
 		self:drawText(item.text_name, tx, y + (self.head_h - item.text_name.h) / 2, true)
-		self:drawButtons(x, y - 4)
+		local c = item:color()
+		local changed = c[1] == 255 and c[2] == 215 and c[3] == 0
+		self:drawButtons(x, y - 4, changed, not self.can_add or self.can_add(item))
 		return
 	end
 	if item == self.sel_item then core.display.drawQuad(x, y, self.w, self.row_h - 2, 255, 215, 0, 35) end
 	local ix, iy = x + 8, y + (self.row_h - self.icon_size) / 2
 	item.entity:toScreen(self.tiles, ix, iy, self.icon_size, self.icon_size)
+	if item.touch_shadow then core.display.drawQuad(ix, iy, self.icon_size, self.icon_size, 0, 0, 0, 170) end
 	local c = item:color()
 	core.display.drawQuad(ix - 2, iy - 2, self.icon_size + 4, 2, c[1], c[2], c[3], 255)
 	core.display.drawQuad(ix - 2, iy + self.icon_size, self.icon_size + 4, 2, c[1], c[2], c[3], 255)
@@ -198,7 +210,8 @@ function _M:drawRow(r, x, y)
 	local tx = ix + self.icon_size + 12
 	self:drawText(item.text_name, tx, y + 8, true)
 	self:drawText(item.text_status, tx, y + 10 + item.text_name.h, true)
-	self:drawButtons(x, y + (self.row_h - self.btn_h) / 2 - 6)
+	local can_plus = not item.touch_shadow and (not self.can_add or self.can_add(item))
+	self:drawButtons(x, y + (self.row_h - self.btn_h) / 2 - 6, item.touch_changed, can_plus)
 end
 
 function _M:display(x, y, nb_keyframes, screen_x, screen_y)

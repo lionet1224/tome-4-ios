@@ -2039,25 +2039,30 @@ function _M:displayTouchPips()
 	if not p or not p.hotkey then return end
 	local n = TouchWheel.setting("wedges")
 	local base = 12 * (p.hotkey_page - 1)
-	local size, gap = 28, 4
-	local x0, y0 = game.w - 239, 210
+	local size, gap = 44, 4
+	local x0, y0 = game.w - 24 - n * (size + gap), 210
 	for i = 1, n do
 		local hk = p.hotkey[base + i]
-		local txt, cr, cg, cb = tostring(i), 0.43, 0.41, 0.35
-		local br, bg, bb, ba = 20, 20, 24, 200
-		if hk then
-			cr, cg, cb = 0.82, 0.67, 0.29
-			if hk[1] == "talent" then
-				local t = p:getTalentFromId(hk[2])
-				local cd = t and p:isTalentCoolingDown(t)
-				if cd and cd > 0 then txt = tostring(math.ceil(cd)) cr, cg, cb = 1, 0.7, 0.62 br, bg, bb = 42, 21, 18 end
-			end
-		else
-			ba = 70
-		end
 		local x = x0 + (i - 1) * (size + gap)
-		core.display.drawQuad(x, y0, size, size, br, bg, bb, ba)
-		self.touch_wheel:drawLabel(txt, x + size / 2, y0 + size / 2, 0.8, cr, cg, cb, 1)
+		core.display.drawQuad(x, y0, size, size, 12, 12, 14, hk and 210 or 60)
+		local cd
+		if hk and hk[1] == "talent" then
+			local t = p:getTalentFromId(hk[2])
+			if t then
+				if t.display_entity then t.display_entity:toScreen(nil, x, y0, size, size) end
+				cd = p:isTalentCoolingDown(t)
+				if p:isTalentActive(t.id) then core.display.drawQuad(x, y0 + size - 4, size, 4, 255, 255, 0, 255) end
+			end
+		elseif hk and hk[1] == "inventory" then
+			local o = p:findInAllInventories(hk[2], {no_add_name=true, force_id=true, no_count=true})
+			if o then o:toScreen(nil, x, y0, size, size) end
+		end
+		if cd and cd > 0 then
+			core.display.drawQuad(x, y0, size, size, 40, 8, 8, 170)
+			self.touch_wheel:drawLabel(tostring(math.ceil(cd)), x + size / 2, y0 + size / 2, 1.2, 1, 0.75, 0.65, 1)
+		else
+			self.touch_wheel:drawLabel(tostring(i), x + 8, y0 + 9, 0.65, hk and 0.9 or 0.45, hk and 0.8 or 0.42, hk and 0.45 or 0.36, 1)
+		end
 	end
 end
 
