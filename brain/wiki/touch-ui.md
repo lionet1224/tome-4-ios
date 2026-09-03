@@ -225,3 +225,11 @@ pan, close box, right wheel ×3, left wheel, zoom, attack); tools/touch/mac-run.
 release build (make -j8 config=release; the Makefile defaults to debug, which is unplayably slow).
 Mac stdout always goes to /tmp/te4_log.txt; --flush-stdout now line-buffers it. The birth level-up
 dialog must be closed by the script (birth_done runs after it), so no "ready" gate before that.
+
+## 14. Proposal: "Act" button with routines (2026-09-03, Jordan's ask)
+Act = one button running the active routine one step per tap. Routine = ordered steps
+{kind=talent|bump|approach|step_back|wait|item, target=nearest|attacker|weakest|marked|self|
+best_aoe|furthest_in_range, if_unusable=skip|wait}. Multiple named routines per character (saved on
+the player), hold Act = switch/edit. Editor = finger rows (like TouchTalentList). Phases: executor +
+targeting resolvers + simple editor → multi-routine + AoE spot finder → conditions (life<%, etc.).
+Open: one-step-per-tap vs run-through; conditions in v1; per-class starter routines.
