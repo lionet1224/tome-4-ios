@@ -856,9 +856,10 @@ function _M:createDisplay()
 	-- desktop fonts; at 150% font scale they overlap. Chain them left to right.
 	if __IOS__ then
 		for i, e in ipairs(ret) do
+			-- (each must reference an entry laid out before it: stat, class, generic, types)
 			if e.ui == self.b_class then ret[i] = {left=self.b_stat, top=0, ui=self.b_class}
-			elseif e.ui == self.b_types then ret[i] = {left=self.b_class, top=0, ui=self.b_types}
-			elseif e.ui == self.b_generic then ret[i] = {left=self.b_types, top=0, ui=self.b_generic}
+			elseif e.ui == self.b_generic then ret[i] = {left=self.b_class, top=0, ui=self.b_generic}
+			elseif e.ui == self.b_types then ret[i] = {left=self.b_generic, top=0, ui=self.b_types}
 			end
 		end
 	end
