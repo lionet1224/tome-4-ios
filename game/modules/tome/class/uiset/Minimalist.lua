@@ -2154,7 +2154,11 @@ function _M:displayTouchAttack(x, y, bw)
 	core.display.drawQuad(x, y, bw, bw, 40, 22, 18, 235)
 	for _, e in ipairs{{x, y, bw, 3}, {x, y + bw - 3, bw, 3}, {x, y, 3, bw}, {x + bw - 3, y, 3, bw}} do core.display.drawQuad(e[1], e[2], e[3], e[4], 190, 90, 60, 255) end
 	local step = pv and pv.step
-	if step then
+	if pv and pv.explore then
+		-- no enemy in view: the tap auto-explores
+		self.touch_wheel:drawLabel("z", x + bw / 2, y + 34, 2, 0.94, 0.83, 0.54, 1)
+		self.touch_wheel:drawLabel(_t"Explore", x + bw / 2, y + 72, 0.65, 0.9, 0.87, 0.78, 1)
+	elseif step then
 		local ent = p:actStepEntity(step)
 		if ent then
 			ent:toScreen(nil, x + (bw - 56) / 2, y + 6, 56, 56)

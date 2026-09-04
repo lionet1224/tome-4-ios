@@ -1600,6 +1600,12 @@ end
 --- One tap of the Act button
 function _M:actStep()
 	if game.key ~= game.normal_key then return end
+	-- nothing to fight: explore instead
+	if #self:actEnemies() == 0 then
+		print("[ACT] explore")
+		game.key:triggerVirtual("RUN_AUTO")
+		return
+	end
 	local r = self:actRoutine()
 	if #r.steps == 0 then game.logPlayer(self, "The routine %s has no steps. Hold Act to edit it.", r.name) return end
 	local reasons = {}
@@ -1638,7 +1644,7 @@ function _M:actPreview()
 			if ok then tgt = res end
 		end
 		self.act_preview_key = key
-		self.act_preview = {step=step, t=t, target=(type(tgt) == "table" and tgt ~= self) and tgt or nil}
+		self.act_preview = {step=step, t=t, target=(type(tgt) == "table" and tgt ~= self) and tgt or nil, explore=#self:actEnemies() == 0}
 	end
 	return self.act_preview
 end
