@@ -1679,9 +1679,8 @@ function _M:autoActStop(why)
 	if self.resting then self:restStop(why) end
 	self:autoActRestoreScreen()
 	if why and not quiet_stops[why] then
-		print("[AUTO] buzz + notify")
+		print("[AUTO] buzz")
 		if core.display.haptic then core.display.haptic(2) end
-		if core.display.notify then core.display.notify("ToME needs you", why) end
 	end
 end
 
