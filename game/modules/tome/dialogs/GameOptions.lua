@@ -118,6 +118,9 @@ function _M:generateListTouch()
 	toggle(_t"Wheel zones", _t"Where a hold opens a wheel: the whole left and right thirds, or only their bottom halves (leaves the top for tile menus).", "zone", {"thirds", "bottom"}, {_t"left and right thirds", _t"bottom halves"})
 	toggle(_t"Hotkeys per wheel", _t"How many hotkeys of the page the left wheel shows. 12 matches a desktop page but the wedges get narrow.", "wedges", {8, 12}, {"8", "12"})
 	toggle(_t"Unlock all birth options", _t"Every class, race and birth option counts as unlocked, including the Transmogrification Chest, which is what makes carry weight a non-issue (everything on the floor is picked up into it). Applies to new characters.", "unlock_all", {true, false}, {_t"on", _t"off"}, function() TouchWheel.applyUnlocks() end)
+	toggle(_t"Auto-act stops when life is below", _t"The AUTO button keeps running your Act routine (and exploring) until something needs you. It stops when your life drops under this.", "auto_life", {30, 50, 70}, {"30%", "50%", "70%"})
+	toggle(_t"Auto-act stops when a resource is below", _t"Mana, stamina and the like. 'never' ignores resources.", "auto_res", {0, 25, 50}, {_t"never", "25%", "50%"})
+	toggle(_t"Auto-act stops for elites and rares", _t"Stop as soon as a creature above normal rank is in view.", "auto_rare", {true, false}, {_t"yes", _t"no"})
 	toggle(_t"Hold delay", _t"How long the finger must stay still before a wheel opens.", "hold_ms", {120, 160, 220, 300}, {"120 ms", "160 ms", "220 ms", "300 ms"})
 	self.list = list
 end

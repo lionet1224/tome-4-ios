@@ -18,7 +18,7 @@ module(..., package.seeall, class.make)
 
 _M.LONG_PRESS_MS = 450
 _M.MOVE_TOLERANCE = 18
-_M.DEFAULTS = {wheel=true, trigger="hold", pos="finger", zone="thirds", wedges=8, hold_ms=160, unlock_all=true, emulate=false}
+_M.DEFAULTS = {wheel=true, trigger="hold", pos="finger", zone="thirds", wedges=8, hold_ms=160, unlock_all=true, emulate=false, auto_life=50, auto_res=25, auto_rare=true}
 
 function _M.setting(k)
 	local t = config.settings.touch
@@ -45,6 +45,7 @@ end
 _M.wheel = nil      -- object with zoneOf(x,y) / openAt(side,x,y) / move(x,y) / release() / cancel() / open
 _M.on_pinch = nil   -- function(delta)
 _M.on_hold = nil    -- function(x, y) -> true when a hold there should act at once (buttons), not on release
+_M.on_any_touch = nil -- function(x, y): every finger-down (auto-act stops on it)
 _M.script_ready = nil -- function() -> true once the game module is really playable
 
 -- gesture state
@@ -110,6 +111,7 @@ function _M.fingerDown(id, x, y)
 		return
 	end
 	_M.t = {id=id, x0=x, y0=y, x=x, y=y, t0=now(), moved=false, held=false}
+	if _M.on_any_touch then pcall(_M.on_any_touch, x, y) end
 	if _M.wheel then _M.t.wheel_zone = _M.wheel:zoneOf(x, y) end
 end
 
@@ -330,6 +332,7 @@ function _M.scriptTick()
 		function T.two_finger() _M.fingerDown(1, 500, 300) _M.fingerDown(2, 560, 300) T.wait(60) _M.fingerUp(2, 560, 300) _M.fingerUp(1, 500, 300) T.wait(120) end
 		function T.key(name) local k = engine.KeyBind.current if k then k:triggerVirtual(name) end T.wait(120) end
 		function T.log(...) print("[SCRIPT]", ...) end
+		function T.close() local d = game.dialogs and game.dialogs[#game.dialogs] if d then game:unregisterDialog(d) end T.wait(120) end
 		function T.shot(name)
 			-- taken at the end of the next frame, once dialogs are drawn (frameEnd)
 			_M.pending_shot = name

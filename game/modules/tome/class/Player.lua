@@ -1604,6 +1604,7 @@ function _M:actStep()
 	if #self:actEnemies() == 0 then
 		print("[ACT] explore")
 		game.key:triggerVirtual("RUN_AUTO")
+		self.act_last_ok = self.running and true or false
 		return
 	end
 	local r = self:actRoutine()
@@ -1616,6 +1617,7 @@ function _M:actStep()
 		if ok then
 			r.pos = r.pos % #r.steps + 1
 			self.changed = true
+			self.act_last_ok = true
 			return
 		end
 		if step.if_unusable == "approach" and far_target then
@@ -1625,6 +1627,7 @@ function _M:actStep()
 				print("[ACT] step in", nx, ny, far_target.name)
 				self:move(nx, ny)
 				self.changed = true
+				self.act_last_ok = true
 				return
 			end
 		end
@@ -1638,6 +1641,80 @@ function _M:actStep()
 	end
 	game.logPlayer(self, "Nothing in %s can be done now (%s).", r.name, table.concat(reasons, "; "))
 	print("[ACT] nothing possible")
+	self.act_nothing = true
+end
+
+--- Auto-act: keep running the routine (and exploring) until something needs you
+function _M:autoActStart()
+	self.auto_act = true
+	self.auto_idle = 0
+	self.auto_last = 0
+	game.logPlayer(self, "#GOLD#Auto-act on.#LAST# Tap anywhere to stop.")
+	print("[AUTO] start")
+end
+
+function _M:autoActStop(why)
+	if not self.auto_act then return end
+	self.auto_act = nil
+	if why then game.logPlayer(self, "#GOLD#Auto-act stopped:#LAST# %s", why) end
+	print("[AUTO] stop", why or "")
+	if self.running then self:runStop(why) end
+	if self.resting then self:restStop(why) end
+end
+
+--- Why auto-act must stop now, or nil
+function _M:autoActBlocker()
+	local TI = require "engine.TouchInput"
+	local life_pct = tonumber(TI.setting("auto_life")) or 50
+	local res_pct = tonumber(TI.setting("auto_res")) or 25
+	if self.max_life and self.life / self.max_life * 100 < life_pct then return ("life below %d%%"):format(life_pct) end
+	if res_pct > 0 then
+		for _, res in ipairs(self.resources_def) do
+			if not res.invert_values and not res.switch_direction and (not res.talent or self:knowTalent(res.talent)) then
+				local max = self["max_"..res.short_name]
+				local v = self[res.short_name]
+				if max and max > 0 and v and v / max * 100 < res_pct then return ("%s below %d%%"):format(res.name, res_pct) end
+			end
+		end
+	end
+	if TI.setting("auto_rare") ~= false then
+		for _, e in ipairs(self:actEnemies()) do
+			if (e.a.rank or 2) > 2 then return ("%s spotted"):format(e.a.name) end
+		end
+	end
+	return nil
+end
+
+--- Called every frame by the HUD while auto-act is on
+function _M:autoActTick()
+	if not self.auto_act then return end
+	-- without input events the engine stops requesting game ticks (its idle
+	-- optimisation), so drive the world forward ourselves until it is our turn
+	if not game.paused and game.tick then
+		local t0 = os.clock()
+		local n = 0
+		repeat
+			local ok = pcall(game.tick, game)
+			n = n + 1
+		until not ok or game.paused or n >= 12 or (os.clock() - t0) > 0.02
+	end
+	if self.running or self.resting then return end -- (their progress popup is not "a dialog" for us)
+	if game.key ~= game.normal_key or (game.dialogs and #game.dialogs > 0) then self:autoActStop("something needs you") return end
+	if not game.paused or not self:enoughEnergy() then return end
+	local now = core.game.getTime()
+	if now - (self.auto_last or 0) < 200 then return end
+	self.auto_last = now
+	local why = self:autoActBlocker()
+	if why then self:autoActStop(why) return end
+	self.act_nothing, self.act_last_ok = nil, nil
+	self:actStep()
+	if self.act_nothing then self:autoActStop("nothing in the routine can be done") return end
+	if self.act_last_ok or self.running or self.resting then
+		self.auto_idle = 0
+	else
+		self.auto_idle = (self.auto_idle or 0) + 1
+		if self.auto_idle >= 3 then self:autoActStop("nothing left to do here") return end
+	end
 end
 
 --- What the next tap will do (for the HUD), cached per turn

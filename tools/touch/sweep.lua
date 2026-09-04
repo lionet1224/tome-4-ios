@@ -18,7 +18,11 @@ return function(T)
 			T.wait(900)
 			T.shot(id)
 			if e.name == "Character sheet" then T.swipe(500, 520, 500, 250, 400) T.wait(400) T.shot(id.."-scrolled") end
-			T.key("EXIT") T.wait(300) T.key("EXIT") T.wait(300)
+			-- Escape normally; a dialog that ignores it (conversations) is force-closed
+			local before = #game.dialogs
+			T.key("EXIT") T.wait(300)
+			if #game.dialogs >= before and before > 0 then T.close() end
+			T.key("EXIT") T.wait(300)
 		end
 	end
 	T.log("finished")

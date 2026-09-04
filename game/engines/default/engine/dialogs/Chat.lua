@@ -37,6 +37,7 @@ function _M:init(chat, id, width)
 	self.npc = chat.npc
 	self.player = chat.player
 	self.no_offscreen = "bottom"
+	self.no_close_box = true -- iOS port: a conversation must be answered; the box would do nothing
 	Dialog.init(self, self.force_title or (self.npc.getName and self.npc:getName() or self.npc.name), width or 500, 400)
 
 	self:generateList()
@@ -60,6 +61,24 @@ function _M:makeUI()
 
 	self.c_desc = Textzone.new{font=self.chat.dialog_text_font, width=self.iw - 10 - xoff, height=1, auto_height=true, text=self.text.."\n", can_focus=false}
 	self.c_list = VariableList.new{font=self.chat.dialog_answer_font, width=self.iw - 10 - xoff, max_height=game.h * 0.70 - self.c_desc.h, list=self.list, fct=function(item) self:use(item) end, select=function(item) self:select(item) end}
+
+	-- iOS port: the fixed 400-high box cannot hold a long speech plus finger-sized
+	-- answers; size the box to its content and let the speech scroll if it must
+	local TI = require "engine.TouchInput"
+	if TI.active() then
+		local sa = TI.safeArea()
+		local maxh = math.floor((game.h - sa.t - sa.b) * 0.92) - (self.h - self.ih)
+		local need = self.c_desc.h + self.c_list.h + 30
+		if need > maxh then
+			local TextzoneList = require "engine.ui.TextzoneList"
+			local dh = math.max(80, maxh - self.c_list.h - 30)
+			local tz = TextzoneList.new{font=chat.dialog_text_font, width=self.iw - 10 - xoff, height=dh, scrollbar=true, dest_area={h=dh}}
+			tz:switchItem(self.text, self.text)
+			self.c_desc = tz
+			need = maxh
+		end
+		self:resize(self.w, need + (self.h - self.ih), true)
+	end
 
 	local uis = {
 		{left=0, top=0, ui=self.c_desc},

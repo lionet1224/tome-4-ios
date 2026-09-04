@@ -307,6 +307,13 @@ function _M:init()
 		local r = self.touch_attack_rect
 		return r and x >= r.x and x < r.x + r.w and y >= r.y and y < r.y + r.h and true or false
 	end
+	TouchInput.on_any_touch = function(x, y)
+		local p = game.player
+		if not (p and p.auto_act) then return end
+		local r = self.touch_auto_rect
+		if r and x >= r.x and x < r.x + r.w and y >= r.y and y < r.y + r.h then return end -- the button toggles it itself
+		p:autoActStop("you touched the screen")
+	end
 	TouchInput.on_pinch = function(delta)
 		local map = game.level and game.level.map
 		if map and map.setZoom then map:setZoom(delta, game.player and game.player.x, game.player and game.player.y) end
@@ -2135,7 +2142,9 @@ function _M:displayTouchTargeting()
 	if targeting then
 		if game.mouse.areas_name and game.mouse.areas_name.touch_attack then game.mouse:unregisterZone("touch_attack") end
 		if game.mouse.areas_name and game.mouse.areas_name.touch_act_strip then game.mouse:unregisterZone("touch_act_strip") end
+		if game.mouse.areas_name and game.mouse.areas_name.touch_auto then game.mouse:unregisterZone("touch_auto") end
 		self.touch_attack_rect = nil
+		self.touch_auto_rect = nil
 	else
 		self:displayTouchAttack(x2, y, bw)
 	end
@@ -2147,7 +2156,26 @@ end
 function _M:displayTouchAttack(x, y, bw)
 	local p = game.player
 	if not p or not p.actStep then return end
-	self.touch_attack_rect = {x=x - 120, y=y - 70, w=bw + 120, h=bw + 70}
+	self.touch_attack_rect = {x=x - 130, y=y - 70, w=bw + 130, h=bw + 70}
+	-- the AUTO button, left of Act
+	local ax = x - bw - 10
+	self.touch_auto_rect = {x=ax, y=y, w=bw, h=bw}
+	if not game.mouse:updateZone("touch_auto", ax, y, bw, bw, nil, 1) then
+		game.mouse:registerZone(ax, y, bw, bw, function(button, mx, my, xrel, yrel, bx, by, event)
+			if event == "button" and button == "left" then
+				if game.player.auto_act then game.player:autoActStop("stopped") else game.player:autoActStart() end
+			end
+			return true
+		end, nil, "touch_auto", false, 1)
+	end
+	p:autoActTick()
+	local on = p.auto_act
+	local pulse = on and (0.6 + 0.4 * math.sin(core.game.getTime() / 200)) or 1
+	core.display.drawQuad(ax, y, bw, bw, on and 60 or 24, on and 40 or 26, on and 16 or 30, 235)
+	local br, bg, bb = on and 240 or 120, on and 200 or 110, on and 60 or 80
+	for _, e in ipairs{{ax, y, bw, 3}, {ax, y + bw - 3, bw, 3}, {ax, y, 3, bw}, {ax + bw - 3, y, 3, bw}} do core.display.drawQuad(e[1], e[2], e[3], e[4], br, bg, bb, math.floor(255 * pulse)) end
+	self.touch_wheel:drawLabel(on and "II" or ">>", ax + bw / 2, y + 40, 2, 1, 0.83, 0.79, 1)
+	self.touch_wheel:drawLabel(on and _t"STOP" or _t"AUTO", ax + bw / 2, y + 96, 0.8, 1, 0.83, 0.79, 1)
 	if game.mouse.areas_name and game.mouse.areas_name.touch_attack2 then game.mouse:unregisterZone("touch_attack2") end
 	if not game.mouse:updateZone("touch_attack", x, y, bw, bw, nil, 1) then
 		game.mouse:registerZone(x, y, bw, bw, function(button, mx, my, xrel, yrel, bx, by, event)
@@ -2328,7 +2356,10 @@ function _M:display(nb_keyframes)
 		if game.dialogs and #game.dialogs > 0 then
 			if game.mouse.areas_name and game.mouse.areas_name.touch_attack then game.mouse:unregisterZone("touch_attack") end
 			if game.mouse.areas_name and game.mouse.areas_name.touch_act_strip then game.mouse:unregisterZone("touch_act_strip") end
+			if game.mouse.areas_name and game.mouse.areas_name.touch_auto then game.mouse:unregisterZone("touch_auto") end
 			self.touch_attack_rect = nil
+			self.touch_auto_rect = nil
+			if game.player and game.player.auto_act then game.player:autoActStop("something needs you") end
 		else
 			self:displayTouchPips()
 			self:displayTouchTargeting()
