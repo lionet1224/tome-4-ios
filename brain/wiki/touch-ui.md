@@ -278,3 +278,13 @@ size; LorePopup/ShowChatLog not exercised by the sweep (need real ids / online c
 - Audit fixes: List auto-height capped to 74% of the safe height with a scrollbar (game menu); character
   sheet mono font 13 on touch; wider list panes / columns in UseTalents (62%), GameOptions/VideoOptions
   (58%), KeyBinder (58/21/21). Leftovers: prodigies grid overflows (rare), map dialog minimap tiny.
+
+## 18. AUTO (auto-act) + chat fit (2026-09-04)
+- AUTO button left of Act: Player:autoActStart/Stop/Tick (called from Minimalist each frame). The
+  engine stops ticking without input events, so the tick calls game:tick() (≤12/frame, 20 ms) until
+  game.paused, like the autopilot. Stops on: life < auto_life%, any non-inverted resource < auto_res%,
+  any visible enemy with rank > 2 (auto_rare), any dialog other than the Running/Resting popups, key
+  handler not normal (aiming), routine "nothing possible", 3 idle steps, any touch outside the button.
+  Verified: 2 min unattended, 6 kills, 19 actions.
+- Chat dialog (engine/dialogs/Chat.lua): on touch sized to content; long speeches become a scrolling
+  TextzoneList so the answers stay visible. Chats have no close box (they ignore Escape).
