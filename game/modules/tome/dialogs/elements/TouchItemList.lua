@@ -120,14 +120,27 @@ end
 function _M:setItems(items)
 	self.items = items or {}
 	self.texts = self.texts or {}
+	local right = self.w - (self.scrollbar and self.scrollbar.w + 6 or 0)
 	for _, e in ipairs(self.items) do
 		local o = e.object
 		local ok, name = pcall(o.getName, o, {do_color=true})
-		e.text_name = self:text(ok and tostring(name) or tostring(o.name), 255, 255, 255)
-		e.text_sub = self:text(e.sub or subtitle(o), 170, 165, 150)
-		if e.price then e.text_price = self:text(tostring(e.price), 240, 212, 138, true) end
+		name = ok and tostring(name) or tostring(o.name)
+		-- room for the name: the row minus icon, price and hint; cut with an ellipsis if needed
+		local avail = right - (8 + self.icon_size + 12) - 8
+		if e.price then avail = avail - self.font:size(tostring(e.price)) - 12 end
 		local v = e.verdict
 		if v == nil and self.actor then v = _M.verdict(self.actor, o) end
+		e.verdict = v
+		if v then avail = avail - self.font:size(v == "better" and _t"likely better" or v == "worse" and _t"worse" or _t"empty slot") - 12 end
+		local plain = name:gsub("#[^#]*#", "")
+		if self.font:size(plain) > avail then
+			local cut = plain
+			while #cut > 4 and self.font:size(cut.."...") > avail do cut = cut:sub(1, -4) end
+			name = cut.."..."
+		end
+		e.text_name = self:text(name, 255, 255, 255)
+		e.text_sub = self:text(e.sub or subtitle(o), 170, 165, 150)
+		if e.price then e.text_price = self:text(tostring(e.price), 240, 212, 138, true) end
 		if v == "better" then e.text_badge = self:text(_t"likely better", 120, 230, 120, true)
 		elseif v == "worse" then e.text_badge = self:text(_t"worse", 150, 150, 150)
 		elseif v == "empty" then e.text_badge = self:text(_t"empty slot", 240, 212, 138)
