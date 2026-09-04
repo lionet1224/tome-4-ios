@@ -859,6 +859,7 @@ function _M:mouseEvent(button, x, y, xrel, yrel, bx, by, event)
 			if f and f.sb and math.abs(f.v) > 0.05 and core.game.getTime() - f.t < 120 then f.active = true else self.touch_fling = nil end
 			return
 		end
+		if event == "motion" and not (yrel and yrel ~= 0 and button == "left") then return end -- no hover during a drag
 		if event == "motion" and yrel and yrel ~= 0 and button == "left" then
 			local now = core.game.getTime()
 			local f = self.touch_fling
