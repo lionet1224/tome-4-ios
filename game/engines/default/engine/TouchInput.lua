@@ -158,15 +158,20 @@ function _M.fingerUp(id, x, y)
 	end
 	if _M.nb > 0 then return end
 	local t = _M.t
-	_M.t, _M.multi = nil, nil
+	_M.multi = nil
 	if not t then return end
+	-- _M.t stays set while the release is delivered: handlers (the dialog
+	-- drag-scroll) look at it to tell a drag's release from a click
+	local function done() _M.t = nil end
 	if t.wheel then
+		done()
 		if _M.wheel then _M.wheel:release() end
 		park()
 		return
 	end
-	if t.multi then return end
+	if t.multi then done() return end
 	if t.held then
+		done()
 		if t.hold_fired then park() return end
 		if not t.hover and not t.moved then
 			print("[TOUCH] long-press -> right click at", t.x0, t.y0)
@@ -176,8 +181,10 @@ function _M.fingerUp(id, x, y)
 	end
 	if t.moved then
 		emit(function(mm) mm:receiveMouse("left", x, y, true) end)
+		done()
 		return
 	end
+	done()
 	print("[TOUCH] tap", t.x0, t.y0)
 	click("left", t.x0, t.y0)
 	park()
