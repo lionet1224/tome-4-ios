@@ -239,3 +239,17 @@ player.act_routines (act_active, per-routine pos), hold = actMenu (switch / rest
 editor mod/dialogs/ActRoutines.lua (List rows: tap selects; buttons Add/Remove/Up/Down/Target/
 Skip-Wait; New/Rename/Copy/Delete), HUD strip above Act (tap a box = jump), "Mark for Act" in the
 creature hold menu. Decisions: one step per tap, no conditions in v1, left wheel stays, no 2nd button.
+
+## 15. Touch inventory / shops / action sheet (2026-09-03 night)
+- `mod/dialogs/elements/TouchItemList.lua`: 66px rows (icon, coloured name, stats line, price,
+  "likely better / worse / empty slot" hint via score(): weapon damage else price). NOTE font:draw
+  returns a texture as wide as requested → measure with font:size(markup-stripped) first.
+- `mod/dialogs/TouchInventory.lua` (routed from ActorInventory:showEquipInven when TouchInput.active):
+  Tabs (All/Weapons/Armour/Jewelry/Inscriptions/Tools/Other/Chest), EquipStrip of worn slots (tap =
+  select worn item → Take off), list + TextzoneList description, fixed-width primary button (Wield /
+  Use / Take off / Keep / Drop, or Choose in filter flows) + More (action sheet). Title from the
+  caller is "X - Encumbrance a/b" (rendered "~").
+- `mod/dialogs/TouchStore.lua` (routed from engine Store:interact): Buy/Sell tabs, prices on rows,
+  Buy/Sell button → the store's action callback; implements updateStore/generateList. UNTESTED (no
+  shop reachable in the sim run).
+- UseItemDialog: touch layout = description + big buttons (first one glows) = the action sheet.

@@ -370,6 +370,15 @@ end
 -- @param action a function called when an object is selected
 -- @param on_select the function to be called on selecting the item
 function _M:showEquipInven(title, filter, action, on_select)
+	-- iOS port: the touch inventory screen when the touch UI is on
+	if require("engine.TouchInput").active() then
+		local ok, T = pcall(require, "mod.dialogs.TouchInventory")
+		if ok and T then
+			local d = T.new(title, self, filter, action, on_select)
+			game:registerDialog(d)
+			return d
+		end
+	end
 	local d = ShowEquipInven.new(title, self, filter, action, on_select)
 	game:registerDialog(d)
 	return d

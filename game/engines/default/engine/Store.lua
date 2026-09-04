@@ -121,7 +121,12 @@ end
 -- @param[opt] name display name of the store
 function _M:interact(who, name)
 	local store, inven = self:getInven("INVEN"), who:getInven("INVEN")
-	local d; d = ShowStore.new(("Store: %s"):tformat(name or self.name), store, inven, self.store.store_filter, self.store.actor_filter, function(what, o, item)
+	local DialogClass = ShowStore
+	if require("engine.TouchInput").active() then
+		local ok, T = pcall(require, "mod.dialogs.TouchStore")
+		if ok and T then DialogClass = T end
+	end
+	local d; d = DialogClass.new(("Store: %s"):tformat(name or self.name), store, inven, self.store.store_filter, self.store.actor_filter, function(what, o, item)
 		if what == "buy" then
 			if o:getNumber() > 1 then
 				local q = GetQuantity.new(nil, nil, o:getNumber(), o:getNumber(), function(qty) self:doBuy(who, o, item, qty, d) end)

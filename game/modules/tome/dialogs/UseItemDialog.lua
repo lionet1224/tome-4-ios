@@ -39,6 +39,34 @@ function _M:init(center_mouse, actor, object, item, inven, onuse, no_use, dst_ac
 	self:generateList()
 	local name = object:getName()
 	local w = self.font_bold:size(name)
+
+	-- iOS port: an action sheet - the description on top, big buttons under it
+	if require("engine.TouchInput").active() then
+		local FontPackage = require "engine.FontPackage"
+		local Button = require "engine.ui.Button"
+		local TextzoneList = require "engine.ui.TextzoneList"
+		local bigfont = core.display.newFont(FontPackage:getFont("default"), 22)
+		engine.ui.Dialog.init(self, name, game.w * 0.72, game.h * 0.92)
+		local desc_h = math.floor(self.ih * 0.5)
+		local desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.iw, height=desc_h, dest_area={h=desc_h}}
+		local ok, d = pcall(object.getDesc, object, {do_color=true}, actor:getInven(object:wornInven()), nil, actor)
+		if ok and d then desc:switchItem(d, d) end
+		local uis = {{left=0, top=0, ui=desc}}
+		local x, y, rowh = 0, desc_h + 12, 0
+		for i, it in ipairs(self.list) do
+			local b = Button.new{text=it.name, font=bigfont, fct=function() self:use(it) end}
+			if i == 1 then b.glow = 0.6 end
+			if x + b.w > self.iw then x = 0 y = y + rowh + 8 rowh = 0 end
+			uis[#uis+1] = {left=x, top=y, ui=b}
+			x = x + b.w + 8
+			rowh = math.max(rowh, b.h)
+		end
+		self:loadUI(uis)
+		self:setupUI()
+		self.key:addBinds{ EXIT = function() game:unregisterDialog(self) end, }
+		return
+	end
+
 	engine.ui.Dialog.init(self, name, 1, 1)
 
 	local list = List.new{width=math.max(w, self.max) + 10, nb_items=#self.list, list=self.list, fct=function(item) self:use(item) end}
