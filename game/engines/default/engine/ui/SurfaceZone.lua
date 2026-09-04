@@ -29,8 +29,15 @@ function _M:init(t)
 	self.w = assert(t.width, "no surface zone width")
 	self.h = assert(t.height, "no surface zone height")
 	self.alpha = t.alpha or 200
+	-- iOS port: scroll_h = a content surface taller than the visible zone; the
+	-- zone then scrolls (finger drag via engine.ui.Dialog, wheel here)
+	self.content_h = (t.scroll_h and t.scroll_h > self.h) and math.floor(t.scroll_h) or self.h
+	if self.content_h > self.h then
+		self.scrollbar = {pos=0, max=self.content_h - self.h, w=0}
+		self.can_focus_mouse = true
+	end
 
-	self.s = core.display.newSurface(self.w, self.h)
+	self.s = core.display.newSurface(self.w, self.content_h)
 
 	self.texture, self.texture_w, self.texture_h = self.s:glTexture()
 
@@ -45,6 +52,12 @@ function _M:generate()
 
 	self.s:updateTexture(self.texture)
 
+	if self.scrollbar then
+		self.mouse:registerZone(0, 0, self.w, self.h, function(button, x, y, xrel, yrel, bx, by, event)
+			if event == "button" and button == "wheelup" then self.scrollbar.pos = util.bound(self.scrollbar.pos - 40, 0, self.scrollbar.max)
+			elseif event == "button" and button == "wheeldown" then self.scrollbar.pos = util.bound(self.scrollbar.pos + 40, 0, self.scrollbar.max) end
+		end)
+	end
 	self.can_focus = false
 end
 
@@ -53,6 +66,15 @@ function _M:update()
 end
 
 function _M:display(x, y)
+	if self.scrollbar then
+		local pos = util.bound(self.scrollbar.pos or 0, 0, self.scrollbar.max)
+		self.scrollbar.pos = pos
+		local u2 = self.w / self.texture_w
+		local v1, v2 = pos / self.texture_h, (pos + self.h) / self.texture_h
+		if self.text_shadow then self.texture:toScreenPrecise(x+2, y+2, self.w, self.h, 0, u2, v1, v2, 0, 0, 0, self.text_shadow) end
+		self.texture:toScreenPrecise(x, y, self.w, self.h, 0, u2, v1, v2)
+		return
+	end
 	if self.text_shadow then self.texture:toScreenFull(x+2, y+2, self.w, self.h, self.texture_w, self.texture_h, 0, 0, 0, self.text_shadow) end
 	self.texture:toScreenFull(x, y, self.w, self.h, self.texture_w, self.texture_h)
 end

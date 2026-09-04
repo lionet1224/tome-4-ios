@@ -47,8 +47,7 @@ function _M:init(actor, start_tab)
 	start_tab = start_tab and tabs_list[start_tab] and start_tab or "general"
 
 	self.font = core.display.newFont(FontPackage:getFont("mono_small", "mono"))
-	-- iOS port: the sheet is laid out for a tall desktop window; a smaller mono font keeps it on one screen
-	if require("engine.TouchInput").active() then self.font = core.display.newFont(FontPackage:getFont("mono_small", "mono"), 13) end
+
 	self.font_w, self.font_h = self.font:size(' ')
 	self.font_h = self.font:lineSkip()
 
@@ -157,7 +156,10 @@ Mouse: Hover over stat for info
 	-- everything below is anchored on the intro's height; make it the taller of the two header blocks
 	if self.c_playtime.h > self.c_tut.h then self.c_tut.h = self.c_playtime.h end
 
-	self.c_desc = SurfaceZone.new{width=self.iw, height=self.ih - self.c_general.h - self.vs.h - self.c_tut.h,alpha=0}
+	-- iOS port: the pane is laid out for a tall desktop window; on the phone it keeps its
+	-- layout on a taller surface and scrolls by finger
+	local pane_h = self.ih - self.c_general.h - self.vs.h - self.c_tut.h
+	self.c_desc = SurfaceZone.new{width=self.iw, height=pane_h, alpha=0, scroll_h=require("engine.TouchInput").active() and pane_h * 2.2 or nil}
 
 	self.equip_frame = { -- display equipment
 		dialog = self,
@@ -503,7 +505,7 @@ function _M:drawDialog(kind, actor_to_compare)
 		local path = "https://te4.org/characters/"..profile.auth.drupid.."/tome/"..player.__te4_uuid
 		local LinkTxt = ("Online URL: #LIGHT_BLUE##{underline}#%s#{normal}#"):tformat(path)
 		local Link_w, Link_h = self.font:size(LinkTxt)
-		h = self.c_desc.h - Link_h
+		h = (self.c_desc.content_h or self.c_desc.h) - Link_h
 		w = (self.c_desc.w - Link_w) * 0.5
 		self:mouseLink(path, _t"You can find your character sheet online", s:drawColorStringBlended(self.font, LinkTxt, w, h, 255, 255, 255, true))
 	end
@@ -1500,13 +1502,13 @@ Ability to reduce opponent resistances to your damage]]
 			local talent_type_name = tt["talent_type"] and tt["talent_type"].description or tt_name or ""
 			local talents = tt["talents"]
 			if tt_name then
-				if h + self.font_h*2 >= self.c_desc.h then h = 0 w = w + self.c_desc.w / 6 end
+				if h + self.font_h*2 >= (self.c_desc.content_h or self.c_desc.h) then h = 0 w = w + self.c_desc.w / 6 end
 				self:mouseTooltip(talent_type_name, s:drawColorStringBlended(self.font, ("#{bold}##KHAKI#%s#{normal}#"):format(tt_name), w, h, 255, 255, 255, true)) h = h + self.font_h
 			end
 
 			-- Display the talents in the talent type
 			for _, t in ipairs(talents) do
-				if h + self.font_h >= self.c_desc.h then h = 0 w = w + self.c_desc.w / 6 end
+				if h + self.font_h >= (self.c_desc.content_h or self.c_desc.h) then h = 0 w = w + self.c_desc.w / 6 end
 				self:mouseTooltip(t.desc, s:drawColorStringBlended(self.font, (get_talent_color(t.talent).."%s".."#{normal}#"):format(t.name), w, h, 255, 255, 255, true)) h = h + self.font_h
 
 			end
