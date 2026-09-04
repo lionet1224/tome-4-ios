@@ -31,7 +31,10 @@ module(..., package.seeall, class.inherit(Dialog))
 function _M:init(actor)
 	self.actor = actor
 	self.ui = "deathbox"
-	Dialog.init(self, _t"You have #LIGHT_RED#died#LAST#!", 500, 600)
+	-- iOS port: the fixed 500x600 box does not fit a phone in landscape (645 high)
+	local W, H = 500, 600
+	if require("engine.TouchInput").active() then W, H = math.floor(game.w * 0.7), math.floor(game.h * 0.92) end
+	Dialog.init(self, _t"You have #LIGHT_RED#died#LAST#!", W, H)
 
 	actor:saveUUID()
 

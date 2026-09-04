@@ -2732,11 +2732,10 @@ function _M:setupMouse(reset)
 		end
 
 		-- iOS port: tap yourself = wait a turn, or take the stairs when standing on them
-		if require("engine.TouchInput").active() and button == "left" and not xrel and not yrel and event == "button" and self.key == self.normal_key and self.player and tmx == self.player.x and tmy == self.player.y and self.zone and not self.zone.wilderness then
+		if require("engine.TouchInput").active() and button == "left" and not xrel and not yrel and event == "button" and self.key == self.normal_key and self.player and tmx == self.player.x and tmy == self.player.y and self.zone then
 			local g = self.level.map(tmx, tmy, Map.TERRAIN)
-			if g and g.change_level then print("[TOUCH] self tap -> stairs") self.key:triggerVirtual("CHANGE_LEVEL")
-			else print("[TOUCH] self tap -> wait") self.key:triggerVirtual("MOVE_STAY") end
-			return
+			if g and g.change_level then print("[TOUCH] self tap -> stairs/zone") self.key:triggerVirtual("CHANGE_LEVEL") return end
+			if not self.zone.wilderness then print("[TOUCH] self tap -> wait") self.key:triggerVirtual("MOVE_STAY") return end
 		end
 
 		-- Default left button action
