@@ -303,6 +303,10 @@ function _M:init()
 	self.touch_wheel = TouchWheel.new(self)
 	local TouchInput = require "engine.TouchInput"
 	TouchInput.wheel = self.touch_wheel
+	TouchInput.on_hold = function(x, y)
+		local r = self.touch_attack_rect
+		return r and x >= r.x and x < r.x + r.w and y >= r.y and y < r.y + r.h and true or false
+	end
 	TouchInput.on_pinch = function(delta)
 		local map = game.level and game.level.map
 		if map and map.setZoom then map:setZoom(delta, game.player and game.player.x, game.player and game.player.y) end

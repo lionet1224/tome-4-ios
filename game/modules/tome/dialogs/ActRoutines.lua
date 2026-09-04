@@ -38,7 +38,8 @@ function _M:stepList()
 	local P = mod.class.Player
 	for i, st in ipairs(r.steps) do
 		local tgt = (st.kind == "talent" or st.kind == "item") and (" -> "..(P.ACT_TARGET_NAMES[st.target or "nearest"] or st.target)) or ((st.kind == "wait") and "" or (" -> "..(P.ACT_TARGET_NAMES[st.target or "nearest"] or st.target)))
-		list[#list+1] = {name=("%d. %s%s%s"):format(i, self.actor:actStepName(st), tgt, st.if_unusable == "wait" and _t" [wait]" or ""), idx=i}
+		local mode = st.if_unusable == "wait" and _t" [wait]" or st.if_unusable == "approach" and _t" [step in]" or ""
+		list[#list+1] = {name=("%d. %s%s%s"):format(i, self.actor:actStepName(st), tgt, mode), idx=i}
 	end
 	if #list == 0 then list[1] = {name=_t"(no steps: tap Add)", idx=nil} end
 	return list
@@ -48,7 +49,7 @@ function _M:build()
 	local bh = 50
 	self.c_routines = List.new{width=self.lw, height=self.ih - bh * 2 - 60, scrollbar=true, list=self:routineList(), fct=function(item) if item.idx then self.actor.act_active = item.idx self:refresh() end end, select=function(item) end}
 	self.c_steps = List.new{width=self.rw, height=self.ih - bh * 2 - 60, scrollbar=true, list=self:stepList(), fct=function(item) self.sel_step = item.idx print("[ACT] editor select", tostring(item.idx)) end, select=function(item) end}
-	self.c_help = Textzone.new{width=self.iw, auto_height=true, text=_t"Left: routines (tap = make active). Right: the steps in order; tap one to select it, then use the buttons. Target cycles what the selected step aims at."}
+	self.c_help = Textzone.new{width=self.iw, auto_height=true, text=_t"Left: routines (tap = make active). Right: the steps in order; tap one to select it, then use the buttons. Target cycles what a step aims at. Skip/Wait/Step: what a tap does when the step cannot fire (skip it, wait a turn, or step toward the target)."}
 	local b_new = btn(_t"New", function() self:newRoutine() end)
 	local b_rename = btn(_t"Rename", function() self:renameRoutine() end)
 	local b_copy = btn(_t"Copy", function() self:copyRoutine() end)
@@ -58,7 +59,7 @@ function _M:build()
 	local b_up = btn(_t"Up", function() self:moveStep(-1) end)
 	local b_down = btn(_t"Down", function() self:moveStep(1) end)
 	local b_target = btn(_t"Target", function() if self.sel_step then self:cycleTarget(self.sel_step) end end)
-	local b_wait = btn(_t"Skip/Wait", function() self:toggleWait() end)
+	local b_wait = btn(_t"Skip/Wait/Step", function() self:toggleWait() end)
 	local b_done = btn(_t"Done", function() game:unregisterDialog(self) end)
 	self.uis_def = {
 		{left=0, top=0, ui=self.c_help},
@@ -116,7 +117,7 @@ function _M:addStep()
 	local tal = {}
 	for tid, lvl in pairs(a.talents) do
 		local t = a:getTalentFromId(tid)
-		if t and t.mode == "activated" and not t.hide then tal[#tal+1] = {name=t.name, step={kind="talent", tid=tid, target="nearest", if_unusable="skip"}} end
+		if t and t.mode == "activated" and not t.hide then tal[#tal+1] = {name=t.name, step={kind="talent", tid=tid, target="nearest", if_unusable="approach"}} end
 	end
 	table.sort(tal, function(x, y) return x.name < y.name end)
 	for _, it in ipairs(tal) do list[#list+1] = it end
@@ -151,7 +152,12 @@ end
 function _M:toggleWait()
 	local r = self.actor:actRoutine()
 	local st = self.sel_step and r.steps[self.sel_step]
-	if st then st.if_unusable = st.if_unusable == "wait" and "skip" or "wait" self:refresh() end
+	if st then
+		-- skip -> wait -> step in (closes distance when out of range) -> skip
+		local nxt = {skip="wait", wait="approach", approach="skip"}
+		st.if_unusable = nxt[st.if_unusable or "skip"] or "skip"
+		self:refresh()
+	end
 end
 function _M:cycleTarget(i)
 	local r = self.actor:actRoutine()

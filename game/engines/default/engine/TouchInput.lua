@@ -44,6 +44,7 @@ end
 -- providers (set by the game module)
 _M.wheel = nil      -- object with zoneOf(x,y) / openAt(side,x,y) / move(x,y) / release() / cancel() / open
 _M.on_pinch = nil   -- function(delta)
+_M.on_hold = nil    -- function(x, y) -> true when a hold there should act at once (buttons), not on release
 _M.script_ready = nil -- function() -> true once the game module is really playable
 
 -- gesture state
@@ -125,6 +126,7 @@ function _M.fingerMove(id, x, y)
 		return
 	end
 	if t.held then
+		if t.hold_fired then return end
 		if far and not t.hover then t.hover = true print("[TOUCH] hover-scrub") end
 		if t.hover then motion("none", x, y, x - px, y - py) end
 		return
@@ -163,6 +165,7 @@ function _M.fingerUp(id, x, y)
 	end
 	if t.multi then return end
 	if t.held then
+		if t.hold_fired then park() return end
 		if not t.hover and not t.moved then
 			print("[TOUCH] long-press -> right click at", t.x0, t.y0)
 			click("right", t.x0, t.y0)
@@ -202,7 +205,14 @@ function _M.tick()
 		elseif not in_zone and now() - t.t0 >= _M.LONG_PRESS_MS then
 			t.held = true
 			print("[TOUCH] hold")
-			motion("none", t.x0, t.y0, 0, 0) -- hover there so a tooltip can show
+			if _M.on_hold and _M.on_hold(t.x0, t.y0) then
+				-- a button: act while the finger is still down
+				t.hold_fired = true
+				print("[TOUCH] hold -> right click now at", t.x0, t.y0)
+				click("right", t.x0, t.y0)
+			else
+				motion("none", t.x0, t.y0, 0, 0) -- hover there so a tooltip can show
+			end
 		end
 	end
 	if _M.park_cursor then

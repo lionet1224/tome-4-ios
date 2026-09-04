@@ -1429,7 +1429,7 @@ function _M:actRoutines()
 		local steps
 		local mh = self:getInven("MAINHAND") and self:getInven("MAINHAND")[1]
 		if mh and mh.archery and self.T_SHOOT and self:knowTalent(self.T_SHOOT) then
-			steps = {{kind="talent", tid=self.T_SHOOT, target="nearest", if_unusable="skip"}, {kind="back", target="nearest", if_unusable="skip"}}
+			steps = {{kind="talent", tid=self.T_SHOOT, target="nearest", if_unusable="approach"}, {kind="back", target="nearest", if_unusable="skip"}}
 		else
 			steps = {{kind="bump", target="nearest", if_unusable="skip"}, {kind="approach", target="nearest", if_unusable="skip"}}
 		end
@@ -1561,7 +1561,7 @@ function _M:actDo(step)
 		if tgt == self then print("[ACT] talent self", t.name) self:useTalent(t.id, nil, nil, nil, self) return true end
 		if not tgt then return false, _t"no target" end
 		local d = core.fov.distance(self.x, self.y, tgt.x, tgt.y)
-		if d > self:getTalentRange(t) or not self:hasLOS(tgt.x, tgt.y) then return false, _t"out of range" end
+		if d > self:getTalentRange(t) or not self:hasLOS(tgt.x, tgt.y) then return false, _t"out of range", tgt end
 		print("[ACT] talent", t.name, tgt.name)
 		self:useTalent(t.id, nil, nil, nil, tgt)
 		return true
@@ -1580,7 +1580,7 @@ function _M:actDo(step)
 	if not tgt or tgt == "manual" or tgt == self then return false, _t"no enemy" end
 	local adj = math.max(math.abs(tgt.x - self.x), math.abs(tgt.y - self.y)) <= 1
 	if kind == "bump" then
-		if not adj then return false, _t"not adjacent" end
+		if not adj then return false, _t"not adjacent", tgt end
 		print("[ACT] bump", tgt.name)
 		self:move(tgt.x, tgt.y)
 		return true
@@ -1612,11 +1612,21 @@ function _M:actStep()
 	for _ = 1, #r.steps do
 		r.pos = util.bound(r.pos or 1, 1, #r.steps)
 		local step = r.steps[r.pos]
-		local ok, why = self:actDo(step)
+		local ok, why, far_target = self:actDo(step)
 		if ok then
 			r.pos = r.pos % #r.steps + 1
 			self.changed = true
 			return
+		end
+		if step.if_unusable == "approach" and far_target then
+			-- out of range: close in one tile and keep this step for the next tap
+			local nx, ny = self:actPathStep(far_target)
+			if nx then
+				print("[ACT] step in", nx, ny, far_target.name)
+				self:move(nx, ny)
+				self.changed = true
+				return
+			end
 		end
 		if step.if_unusable == "wait" then
 			game.logPlayer(self, "Waiting for %s (%s).", self:actStepName(step), why or "")
