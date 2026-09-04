@@ -115,6 +115,7 @@ function _M:build()
 	self.b_primary = Button.new{text=_t"Select an item", width=260, font=self.bigfont, fct=function() self:primary() end}
 	self.b_more = Button.new{text=_t"More...", width=150, font=self.bigfont, fct=function() self:more() end}
 	self.b_compare = Button.new{text=_t"Compare", width=170, font=self.bigfont, fct=function() self:compare() end}
+	self.b_keep = Button.new{text=_t"Keep", width=120, font=self.bigfont, fct=function() self:keep() end}
 	self.uis_def = {
 		{left=0, top=0, ui=self.c_tabs},
 		{left=0, top=self.c_tabs.h + 6, ui=self.c_strip},
@@ -123,6 +124,7 @@ function _M:build()
 		{right=0, bottom=0, ui=self.b_primary},
 		{right=self.b_primary, bottom=0, ui=self.b_more},
 		{right=self.b_more, bottom=0, ui=self.b_compare},
+		{right=self.b_compare, bottom=0, ui=self.b_keep},
 	}
 end
 
@@ -180,9 +182,10 @@ function _M:primaryFor(e)
 	local o = e.object
 	if self.chooser then return _t"Choose", "choose" end
 	if e.worn or e.inven ~= self.actor.INVEN_INVEN then return _t"Take off", "takeoff" end
-	if o.__transmo then return _t"Keep (to inventory)", "toinven" end
+	-- chest items: wearing / using is the point; "Keep" has its own button
 	if o:wornInven() and self.actor:getInven(o:wornInven()) then return _t"Wield / wear", "wear" end
 	if o:canUseObject() then return _t"Use", "use" end
+	if o.__transmo then return _t"Keep (to inventory)", "toinven" end
 	return _t"Drop", "drop"
 end
 
@@ -194,7 +197,13 @@ function _M:updateButtons()
 	for _, ui in ipairs(self.uis) do
 		if ui.ui == self.b_primary then ui.x = self.iw - self.b_primary.w ui.ui.mouse.delegate_offset_x = ui.x
 		elseif ui.ui == self.b_more then ui.x = self.iw - self.b_primary.w - self.b_more.w - 6 ui.ui.mouse.delegate_offset_x = ui.x
-		elseif ui.ui == self.b_compare then ui.x = self.iw - self.b_primary.w - self.b_more.w - self.b_compare.w - 12 ui.ui.mouse.delegate_offset_x = ui.x end
+		elseif ui.ui == self.b_compare then ui.x = self.iw - self.b_primary.w - self.b_more.w - self.b_compare.w - 12 ui.ui.mouse.delegate_offset_x = ui.x
+		elseif ui.ui == self.b_keep then
+			-- only for chest items: otherwise parked off-screen
+			local chest = self.cur and self.cur.object and self.cur.object.__transmo
+			ui.x = chest and (self.iw - self.b_primary.w - self.b_more.w - self.b_compare.w - self.b_keep.w - 18) or -10000
+			ui.ui.mouse.delegate_offset_x = ui.x
+		end
 	end
 end
 
@@ -216,6 +225,16 @@ function _M:primary()
 	local UseItemDialog = require "mod.dialogs.UseItemDialog"
 	local ud = UseItemDialog.new(false, self.actor, e.object, e.item, e.inven, function(_, _, _, stop) self:onUsed(stop) end)
 	ud:use({action=act})
+end
+
+--- Chest item: move it to the normal inventory (it will not be transmogrified)
+function _M:keep()
+	local e = self.cur
+	if not e or not e.object.__transmo then return end
+	print("[TOUCH] inventory keep", e.object.name)
+	local UseItemDialog = require "mod.dialogs.UseItemDialog"
+	local ud = UseItemDialog.new(false, self.actor, e.object, e.item, e.inven, function(_, _, _, stop) self:onUsed(stop) end)
+	ud:use({action="toinven"})
 end
 
 --- Side by side with what is worn in the item's slot

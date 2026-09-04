@@ -22,7 +22,11 @@ function _M:init(actor)
 	self.key:addBinds{ EXIT = function() game:unregisterDialog(self) end }
 end
 
-local function btn(text, fct) return Button.new{text=text, fct=fct} end
+local bfont
+local function btn(text, fct)
+	bfont = bfont or core.display.newFont(require("engine.FontPackage"):getFont("default"), 22)
+	return Button.new{text=text, fct=fct, font=bfont}
+end
 
 function _M:routineList()
 	local list = {}
@@ -46,7 +50,7 @@ function _M:stepList()
 end
 
 function _M:build()
-	local bh = 50
+	local bh = 56
 	self.c_routines = List.new{width=self.lw, height=self.ih - bh * 2 - 60, scrollbar=true, list=self:routineList(), fct=function(item) if item.idx then self.actor.act_active = item.idx self:refresh() end end, select=function(item) end}
 	self.c_steps = List.new{width=self.rw, height=self.ih - bh * 2 - 60, scrollbar=true, list=self:stepList(), fct=function(item) self.sel_step = item.idx print("[ACT] editor select", tostring(item.idx)) end, select=function(item) end}
 	self.c_help = Textzone.new{width=self.iw, auto_height=true, text=_t"Left: routines (tap = make active). Right: the steps in order; tap one to select it, then use the buttons. Target cycles what a step aims at. Skip/Wait/Step: what a tap does when the step cannot fire (skip it, wait a turn, or step toward the target)."}
@@ -61,13 +65,15 @@ function _M:build()
 	local b_target = btn(_t"Target", function() if self.sel_step then self:cycleTarget(self.sel_step) end end)
 	local b_wait = btn(_t"Skip/Wait/Step", function() self:toggleWait() end)
 	local b_done = btn(_t"Done", function() game:unregisterDialog(self) end)
+	-- two rows of buttons: routines (bottom row), steps + Done (row above)
+	local row2 = b_add.h + 8
 	self.uis_def = {
 		{left=0, top=0, ui=self.c_help},
 		{left=0, top=self.c_help.h + 10, ui=self.c_routines},
 		{left=self.lw + 20, top=self.c_help.h + 10, ui=self.c_steps},
 		{left=0, bottom=0, ui=b_new}, {left=b_new, bottom=0, ui=b_rename}, {left=b_rename, bottom=0, ui=b_copy}, {left=b_copy, bottom=0, ui=b_del},
-		{left=self.lw + 20, bottom=0, ui=b_add}, {left=b_add, bottom=0, ui=b_rem}, {left=b_rem, bottom=0, ui=b_up}, {left=b_up, bottom=0, ui=b_down}, {left=b_down, bottom=0, ui=b_target}, {left=b_target, bottom=0, ui=b_wait},
-		{right=0, bottom=0, ui=b_done},
+		{left=0, bottom=row2, ui=b_add}, {left=b_add, bottom=row2, ui=b_rem}, {left=b_rem, bottom=row2, ui=b_up}, {left=b_up, bottom=row2, ui=b_down}, {left=b_down, bottom=row2, ui=b_target}, {left=b_target, bottom=row2, ui=b_wait},
+		{right=0, bottom=row2, ui=b_done},
 	}
 end
 
