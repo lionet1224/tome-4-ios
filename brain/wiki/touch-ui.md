@@ -288,3 +288,7 @@ size; LorePopup/ShowChatLog not exercised by the sweep (need real ids / online c
   Verified: 2 min unattended, 6 kills, 19 actions.
 - Chat dialog (engine/dialogs/Chat.lua): on touch sized to content; long speeches become a scrolling
   TextzoneList so the answers stay visible. Chats have no close box (they ignore Escape).
+Auto-act stop reasons name the cause ("<dialog title> opened", "a talent needs aiming", "a menu took
+over", "life below 50%", "<resource> below 25%", "<creature> spotted", "you touched the screen",
+"nothing left to do here"). The HUD must not stop auto on dialogs (the Running/Resting popups are
+dialogs); only autoActTick decides. 150 s unattended run: 42 actions, 9 explores, 7 kills.
