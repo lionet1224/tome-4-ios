@@ -297,3 +297,11 @@ Idle mode (2026-09-04): while AUTO runs the screen stays awake (idleTimerDisable
 haptic + posts a local notification "ToME needs you: <reason>" (UNUserNotificationCenter, banner shown
 in foreground via delegate). C: src/ios_safearea.m (keep_awake/haptic/notify/brightness),
 core.display.keepAwake/haptic/notify/brightness; link UserNotifications + AudioToolbox.
+
+## 19. Touch character sheet (2026-09-04)
+CharacterSheet:initTouch (touch only): Tabs General/Attack/Defense/Talents/Equipment, TouchStatList
+rows (label | value, section headers), detail pane (tap a row → its TOOLTIP_* text), Level up /
+Inventory buttons. Rows come from running the desktop drawDialog(kind) against a recording surface
+proxy (drawColorStringBlended returns 7 values; mouseTooltip attaches tips by x,y), sorted by column
+then y; "Label : value" split at the first colon; Equipment tab lists worn slots from inven_def.
+Leftover: talent category lines are not detected as headers; Tab font patch did not visibly apply.
