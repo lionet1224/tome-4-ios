@@ -2168,7 +2168,6 @@ function _M:displayTouchAttack(x, y, bw)
 			return true
 		end, nil, "touch_auto", false, 1)
 	end
-	p:autoActTick()
 	local on = p.auto_act
 	local pulse = on and (0.6 + 0.4 * math.sin(core.game.getTime() / 200)) or 1
 	core.display.drawQuad(ax, y, bw, bw, on and 60 or 24, on and 40 or 26, on and 16 or 30, 235)
@@ -2353,13 +2352,13 @@ function _M:display(nb_keyframes)
 	else
 		-- iOS port: cooldown pips, Cast/Cancel while targeting, the Attack
 		-- button, the wheels. All of it hides behind open dialogs.
+		if game.player and game.player.autoActTick then game.player:autoActTick() end
 		if game.dialogs and #game.dialogs > 0 then
 			if game.mouse.areas_name and game.mouse.areas_name.touch_attack then game.mouse:unregisterZone("touch_attack") end
 			if game.mouse.areas_name and game.mouse.areas_name.touch_act_strip then game.mouse:unregisterZone("touch_act_strip") end
 			if game.mouse.areas_name and game.mouse.areas_name.touch_auto then game.mouse:unregisterZone("touch_auto") end
 			self.touch_attack_rect = nil
 			self.touch_auto_rect = nil
-			if game.player and game.player.auto_act then game.player:autoActStop("something needs you") end
 		else
 			self:displayTouchPips()
 			self:displayTouchTargeting()

@@ -1705,9 +1705,20 @@ function _M:autoActTick()
 		local t = d.title and tostring(d.title) or ""
 		if t:find("Running") or t:find("Resting") then popup = true else blocking = blocking + 1 end
 	end
-	if blocking > 0 then self:autoActStop("something needs you") return end
+	if blocking > 0 then
+		local title
+		for _, d in ipairs(game.dialogs or {}) do
+			local t = d.title and tostring(d.title) or ""
+			if not (t:find("Running") or t:find("Resting")) then title = t:gsub("#[^#]*#", "") end
+		end
+		self:autoActStop(title and title ~= "" and (title.." opened") or "a window opened")
+		return
+	end
 	if popup or self.running or self.resting then return end
-	if game.key ~= game.normal_key then self:autoActStop("something needs you") return end
+	if game.key ~= game.normal_key then
+		self:autoActStop(game.key == game.targetmode_key and "a talent needs aiming" or "a menu took over")
+		return
+	end
 	if not game.paused or not self:enoughEnergy() then return end
 	local now = core.game.getTime()
 	if now - (self.auto_last or 0) < 200 then return end
