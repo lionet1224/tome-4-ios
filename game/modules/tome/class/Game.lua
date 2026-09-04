@@ -2803,6 +2803,7 @@ end
 --- iOS port: save synchronously when the app goes to the background, so a
 -- suspended-then-killed app loses nothing
 function _M:onBackground()
+	if self.player and self.player.autoActStop then self.player:autoActStop("the app went to the background") self.player:autoActRestoreScreen() end
 	if self.creating_player or not self.player or self.player.dead or not self.level or not self.save_name then return end
 	if self.zone_loading or (savefile_pipe and savefile_pipe.saving) then return end
 	print("[IOS] background save:", self.save_name)

@@ -18,7 +18,7 @@ module(..., package.seeall, class.make)
 
 _M.LONG_PRESS_MS = 450
 _M.MOVE_TOLERANCE = 18
-_M.DEFAULTS = {wheel=true, trigger="hold", pos="finger", zone="thirds", wedges=8, hold_ms=160, unlock_all=true, emulate=false, auto_life=50, auto_res=25, auto_rare=true}
+_M.DEFAULTS = {wheel=true, trigger="hold", pos="finger", zone="thirds", wedges=8, hold_ms=160, unlock_all=true, emulate=false, auto_life=50, auto_res=25, auto_rare=true, auto_dim=true}
 
 function _M.setting(k)
 	local t = config.settings.touch

@@ -701,6 +701,47 @@ static int sdl_safe_area(lua_State *L)
 	return 6;
 }
 
+#ifdef TE4_IOS
+void te4_ios_keep_awake(int on);
+void te4_ios_haptic(int kind);
+void te4_ios_notify(const char *title, const char *body);
+float te4_ios_brightness(float set);
+#endif
+/* iOS port: keep the screen awake (auto-act) */
+static int sdl_keep_awake(lua_State *L)
+{
+#ifdef TE4_IOS
+	te4_ios_keep_awake(lua_toboolean(L, 1));
+#endif
+	return 0;
+}
+/* iOS port: haptic feedback: 0 success, 1 warning, 2 warning + vibration */
+static int sdl_haptic(lua_State *L)
+{
+#ifdef TE4_IOS
+	te4_ios_haptic((int)luaL_optnumber(L, 1, 1));
+#endif
+	return 0;
+}
+/* iOS port: local notification (title, body) */
+static int sdl_notify(lua_State *L)
+{
+#ifdef TE4_IOS
+	te4_ios_notify(luaL_checkstring(L, 1), luaL_optstring(L, 2, ""));
+#endif
+	return 0;
+}
+/* iOS port: screen brightness 0..1 (set when given), returns the current one */
+static int sdl_brightness(lua_State *L)
+{
+	float v = -1;
+#ifdef TE4_IOS
+	v = te4_ios_brightness(lua_isnumber(L, 1) ? (float)lua_tonumber(L, 1) : -1);
+#endif
+	lua_pushnumber(L, v);
+	return 1;
+}
+
 static int sdl_screen_size(lua_State *L)
 {
 	lua_pushnumber(L, screen->w / screen_zoom);
@@ -3583,6 +3624,10 @@ static const struct luaL_Reg displaylib[] =
 	{"redrawingForSavefileScreenshot", redrawing_for_savefile_screenshot},
 	{"size", sdl_screen_size},
 	{"safeArea", sdl_safe_area},
+	{"keepAwake", sdl_keep_awake},
+	{"haptic", sdl_haptic},
+	{"notify", sdl_notify},
+	{"brightness", sdl_brightness},
 	{"windowPos", sdl_window_pos},
 	{"newFont", sdl_new_font},
 	{"newSurface", sdl_new_surface},

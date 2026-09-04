@@ -1651,7 +1651,24 @@ function _M:autoActStart()
 	self.auto_last = 0
 	game.logPlayer(self, "#GOLD#Auto-act on.#LAST# Tap anywhere to stop.")
 	print("[AUTO] start")
+	-- idle mode: screen stays on, dimmed a little; restored on stop / background
+	if core.display.keepAwake then core.display.keepAwake(true) end
+	local TI = require "engine.TouchInput"
+	if core.display.brightness and TI.setting("auto_dim") ~= false then
+		local cur = core.display.brightness()
+		if cur and cur > 0.4 then self.auto_brightness = cur core.display.brightness(0.35) end
+	end
 end
+
+--- Undo the idle-mode screen settings (also called when the app goes to the background)
+function _M:autoActRestoreScreen()
+	if core.display.keepAwake then core.display.keepAwake(false) end
+	if self.auto_brightness and core.display.brightness then core.display.brightness(self.auto_brightness) end
+	self.auto_brightness = nil
+end
+
+-- stops the player caused: no buzz for those
+local quiet_stops = {["you touched the screen"]=true, ["stopped"]=true}
 
 function _M:autoActStop(why)
 	if not self.auto_act then return end
@@ -1660,6 +1677,12 @@ function _M:autoActStop(why)
 	print("[AUTO] stop", why or "")
 	if self.running then self:runStop(why) end
 	if self.resting then self:restStop(why) end
+	self:autoActRestoreScreen()
+	if why and not quiet_stops[why] then
+		print("[AUTO] buzz + notify")
+		if core.display.haptic then core.display.haptic(2) end
+		if core.display.notify then core.display.notify("ToME needs you", why) end
+	end
 end
 
 --- Why auto-act must stop now, or nil

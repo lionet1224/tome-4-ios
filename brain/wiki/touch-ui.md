@@ -292,3 +292,8 @@ Auto-act stop reasons name the cause ("<dialog title> opened", "a talent needs a
 over", "life below 50%", "<resource> below 25%", "<creature> spotted", "you touched the screen",
 "nothing left to do here"). The HUD must not stop auto on dialogs (the Running/Resting popups are
 dialogs); only autoActTick decides. 150 s unattended run: 42 actions, 9 explores, 7 kills.
+Idle mode (2026-09-04): while AUTO runs the screen stays awake (idleTimerDisabled) and dims to 0.35
+(restored on stop/background, setting auto_dim); a stop that needs the player vibrates + warning
+haptic + posts a local notification "ToME needs you: <reason>" (UNUserNotificationCenter, banner shown
+in foreground via delegate). C: src/ios_safearea.m (keep_awake/haptic/notify/brightness),
+core.display.keepAwake/haptic/notify/brightness; link UserNotifications + AudioToolbox.

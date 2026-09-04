@@ -86,6 +86,7 @@ clang++ $TARGET -o "$APP/t-engine" "${OBJS[@]}" "$PREFIX/lib/libSDL2main.a" \
 	-lz -liconv \
 	-framework ImageIO -framework CoreServices \
 	-framework OpenGLES -framework OpenAL -framework UIKit -framework Foundation \
+	-framework UserNotifications -framework AudioToolbox \
 	-framework CoreGraphics -framework QuartzCore -framework AVFoundation \
 	-framework GameController -framework CoreMotion -framework CoreHaptics \
 	-framework Metal -framework CoreAudio -framework AudioToolbox \
