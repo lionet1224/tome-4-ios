@@ -1698,8 +1698,15 @@ function _M:autoActTick()
 			n = n + 1
 		until not ok or game.paused or n >= 12 or (os.clock() - t0) > 0.02
 	end
-	if self.running or self.resting then return end -- (their progress popup is not "a dialog" for us)
-	if game.key ~= game.normal_key or (game.dialogs and #game.dialogs > 0) then self:autoActStop("something needs you") return end
+	if self.running or self.resting then return end
+	-- the run/rest progress popups are not "a dialog" for us (they linger a frame after the run ends)
+	local blocking = 0
+	for _, d in ipairs(game.dialogs or {}) do
+		local t = d.title and tostring(d.title) or ""
+		if not (t:find("Running") or t:find("Resting")) then blocking = blocking + 1 end
+	end
+	if game.key ~= game.normal_key or blocking > 0 then self:autoActStop("something needs you") return end
+	if #game.dialogs > 0 then return end -- wait for the popup to go
 	if not game.paused or not self:enoughEnergy() then return end
 	local now = core.game.getTime()
 	if now - (self.auto_last or 0) < 200 then return end
