@@ -23,15 +23,20 @@ h2{font:700 24px/1.2 Alegreya,Georgia,serif;margin:44px 0 12px}
 .top .enc{margin-left:auto;font-size:14px;color:var(--mute)}.top .enc b{color:var(--good);font-weight:600}
 .top .close{width:48px;height:48px;border-radius:12px;background:var(--card);border:1px solid var(--edge);display:grid;place-items:center;font-size:22px;color:var(--text);cursor:pointer}
 /* three columns */
-.cols{position:absolute;left:88px;right:88px;top:64px;bottom:36px;display:grid;grid-template-columns:300px 1fr 400px;gap:12px}
+.cols{position:absolute;left:88px;right:88px;top:64px;bottom:36px;display:grid;grid-template-columns:340px 1fr 380px;gap:12px}
 .col{background:var(--card);border-radius:18px;border:1px solid var(--edge);overflow:hidden;display:flex;flex-direction:column;min-height:0}
 .col h3{margin:0;padding:12px 16px 8px;font:600 12px "IBM Plex Sans";letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
 /* equipment */
-.slots{display:grid;grid-template-columns:1fr;gap:6px;padding:0 10px 10px;overflow-y:auto;scrollbar-width:none}.slots::-webkit-scrollbar{display:none}
-.slot{height:60px;border-radius:14px;background:var(--card-2);border:2px solid transparent;display:grid;grid-template-columns:40px 1fr;gap:10px;align-items:center;padding:6px 10px;position:relative;cursor:pointer}
-.slot .ic{width:40px;height:40px;border-radius:10px;background:#0E0F12;display:grid;place-items:center;font-size:24px}
-.slot .nm{font-size:11px;color:var(--mute);letter-spacing:.06em;text-transform:uppercase}
-.slot .it{font-size:14px;line-height:1.2;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doll{position:relative;flex:1;padding:4px 10px 10px}
+.figure{position:absolute;left:50%;top:22px;transform:translateX(-50%);width:132px;height:240px;border-radius:66px 66px 20px 20px;background:radial-gradient(ellipse at 50% 20%,#3a3d48,#1a1c22 70%);border:1px solid var(--edge);display:grid;place-items:center}
+.figure .man{font-size:110px;line-height:1;filter:drop-shadow(0 8px 12px rgba(0,0,0,.6))}
+.figure .lbl{position:absolute;bottom:8px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.slots{position:absolute;inset:0;pointer-events:none}
+.slot{position:absolute;width:64px;height:76px;border-radius:14px;background:var(--card-2);border:2px solid transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;pointer-events:auto}
+.slot .ic{width:44px;height:44px;border-radius:10px;background:#0E0F12;display:grid;place-items:center;font-size:26px}
+.slot .nm{font-size:10px;color:var(--mute);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.slot .it{display:none}
+.slot.empty .ic{opacity:.35}
 .slot.empty .it{color:var(--mute);font-style:italic}
 .slot.ok{border-color:var(--good);background:#1E2E22}.slot.no{border-color:var(--bad);opacity:.6}.slot.sel{border-color:var(--gold)}
 /* list */
@@ -71,7 +76,7 @@ h2{font:700 24px/1.2 Alegreya,Georgia,serif;margin:44px 0 12px}
 .ghost[hidden]{display:none!important}
 .toast{position:absolute;left:50%;top:76px;transform:translateX(-50%);background:rgba(0,0,0,.8);border:1px solid var(--edge);border-radius:12px;padding:8px 16px;font-size:15px;z-index:8}
 .toast[hidden]{display:none!important}
-.hint{position:absolute;left:50%;bottom:46px;transform:translateX(-50%);font-size:13px;color:var(--mute);z-index:8;pointer-events:none}
+.hint{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);font-size:13px;color:var(--mute);z-index:8;pointer-events:none}
 /* page bits */
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0 6px}
 .pchip{border:1px solid var(--rule);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 14px;font:500 14px "IBM Plex Sans";cursor:pointer}.pchip.on{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -84,13 +89,13 @@ h2{font:700 24px/1.2 Alegreya,Georgia,serif;margin:44px 0 12px}
 <div class="wrap">
   <div class="eyebrow">ToME on iPhone · inventory · 1398 × 645 logical, camera and home bar drawn</div>
   <h1>ToME Pack Screen</h1>
-  <p class="lede">Three panes: <b>what you wear</b>, <b>what you carry</b>, and <b>the item in hand compared with what's in its slot</b>. Tap a row to compare. Double-tap to wear it. Hold a row, drag it onto a slot; slots turn green where it fits. Drag a worn slot into the list to take it off. Example items only.</p>
+  <p class="lede">Three panes: <b>your character and what it wears</b>, <b>what you carry</b>, and <b>the item in hand compared with what's in its slot</b>. Tap a row to compare. Double-tap to wear it. Hold a row, drag it onto a slot; slots turn green where it fits. Drag a worn slot into the list to take it off. Example items only.</p>
 
   <div class="phone" id="phone"><div class="screen" id="screen">
     <div class="island"></div><div class="home"></div>
     <div class="top"><div class="title">Pack</div><div class="enc">Encumbrance <b id="enc">27 / 98</b></div><div class="close">✕</div></div>
     <div class="cols">
-      <div class="col"><h3>Wearing</h3><div class="slots" id="slots"></div></div>
+      <div class="col"><h3>Wearing</h3><div class="doll"><div class="figure"><div class="man">🧝</div><div class="lbl">your character</div></div><div class="slots" id="slots"></div></div></div>
       <div class="col"><div class="chips" id="chips"></div><div class="rows" id="rows"></div></div>
       <div class="col"><h3 id="dtitle">Item</h3><div class="detail" id="detail"><div class="empty-detail">Tap an item to see how it compares with what you're wearing.</div></div></div>
     </div>
@@ -108,7 +113,7 @@ h2{font:700 24px/1.2 Alegreya,Georgia,serif;margin:44px 0 12px}
 
   <h2>What is on screen</h2>
   <ol class="key">
-    <li><b>Wearing</b><span>Every slot as a card: icon, slot name, what's in it. Tap a card to see that item on the right (primary action becomes Take off). Cards light green or red while you drag something over them.</span></li>
+    <li><b>Wearing</b><span>Your character in the middle (the game draws the real sprite with its gear), the slots around it as on the desktop doll, finger-sized. Tap a slot to see that item on the right (the action becomes Take off). Slots light green or red while you drag something.</span></li>
     <li><b>Carrying</b><span>Filter chips instead of tabs (All, Weapons, Armour, Jewelry, Inscriptions, Tools, Other, Chest), horizontally scrollable. Rows: icon, name, one line of numbers, and a tag on the right: <b style="display:inline">better</b>, <b style="display:inline">worse</b>, <b style="display:inline">new slot</b>, or <b style="display:inline">worn</b>. Rows are 68 px.</span></li>
     <li><b>Compare card</b><span>Selected item on top, then a table: each stat with the new value, the worn value, and an arrow where they differ. Below it the item's powers in the game's own colours. The big button does the obvious thing (Wear, Use, Take off, Keep). Drop, Transmogrify and More sit under it as chips.</span></li>
     <li><b>Gestures</b><span>Tap = select and compare. Double-tap = the primary action. Hold a row until it lifts, drag it, drop on a slot. Hold a worn card, drag into the list = take off. Drag and drop and the list scroll don't fight: a plain drag scrolls, a hold-then-drag moves.</span></li>
@@ -119,7 +124,7 @@ h2{font:700 24px/1.2 Alegreya,Georgia,serif;margin:44px 0 12px}
     <li><em>Chips vs tabs</em><span>Filter chips that scroll sideways (shown) feel more native than a tab bar. Keep, or do you want the tab bar back?</span></li>
     <li><em>Compare table</em><span>Which stats matter enough to always show? Shown: damage/armour, defence, accuracy or crit, weight. Everything else lives in the powers text below.</span></li>
     <li><em>Double-tap</em><span>Wear/Use on double-tap is fast but easy to trigger by accident on a bumpy bus. Keep it, or hold-then-release on the primary button only?</span></li>
-    <li><em>Wearing pane</em><span>One column of slot rows (shown) or a paper-doll picture with the slots around it, like the desktop?</span></li>
+    <li><em>Doll</em><span>The figure is a placeholder here; in the game it's your actual sprite. Big enough, or should the doll pane be wider at the list's expense?</span></li>
   </ul>
 </div>
 
@@ -128,7 +133,10 @@ h2{font:700 24px/1.2 Alegreya,Georgia,serif;margin:44px 0 12px}
 const W=1398,H=645, screen=document.getElementById('screen');
 function fit(){const s=Math.min(1,(document.getElementById('phone').parentElement.clientWidth-28)/W);screen.style.transform=`scale(${s})`;const p=document.getElementById('phone');p.style.width=(W*s+28)+'px';p.style.height=(H*s+28)+'px';screen.dataset.s=s}
 window.addEventListener('resize',fit);fit();
-const SLOTS=[['main','Main hand','⚔'],['off','Off hand','🛡'],['body','Body','🥋'],['head','Head','⛑'],['cloak','Cloak','🧣'],['hands','Hands','🧤'],['feet','Feet','🥾'],['belt','Belt','🎗'],['finger1','Finger','💍'],['finger2','Finger','💍'],['neck','Neck','📿'],['light','Light','🏮'],['tool','Tool','🔧'],['quiver','Quiver','🏹']];
+// slot, label, icon, x, y (inside the wearing pane; the figure sits between the columns)
+const SLOTS=[['head','Head','⛑',14,4],['neck','Neck','📿',14,88],['cloak','Cloak','🧣',14,172],['body','Body','🥋',14,256],['hands','Hands','🧤',14,340],
+ ['main','Main hand','⚔',236,4],['off','Off hand','🛡',236,88],['belt','Belt','🎗',236,172],['feet','Feet','🥾',236,256],['light','Light','🏮',236,340],
+ ['finger1','Finger','💍',52,410],['finger2','Finger','💍',124,410],['tool','Tool','🔧',196,410],['quiver','Quiver','🏹',268,410]];
 const S=[['dmg','Damage'],['arm','Armour'],['def','Defence'],['acc','Accuracy'],['crit','Crit'],['enc','Weight']];
 let worn={main:{n:'iron greatsword',ic:'⚔',k:'weapon · greatsword',dmg:'13–21',acc:'+8',crit:'2%',enc:'3.0',ego:'Requires Strength 11.'},body:{n:'rough leather armour',ic:'🥋',k:'armour · light',arm:'4',def:'2',enc:'9.0',ego:''},light:{n:'brass lantern',ic:'🏮',k:'light source',enc:'1.0',ego:'<span class=b>Light radius +2</span>'}};
 let items=[
@@ -156,7 +164,7 @@ function renderRows(){const list=items.filter(i=>cat==='all'?i.cat!=='transmo':i
   r.addEventListener('pointerup',e=>{clearTimeout(hold);if(drag)return;const now=Date.now();if(sel===id&&now-t0<400){t0=0;primary();return}t0=now;select(id)});
   r.addEventListener('pointerleave',()=>{if(!drag)clearTimeout(hold)});
  })}
-function renderSlots(){document.getElementById('slots').innerHTML=SLOTS.map(s=>{const w=worn[s[0]];const cls=(drag&&!drag.worn)?(drag.slot===s[0]||(drag.slot==='finger1'&&s[0]==='finger2')?'ok':'no'):(selWorn===s[0]?'sel':'');return `<div class="slot ${w?'':'empty'} ${cls}" data-s="${s[0]}"><div class="ic">${w?w.ic:s[2]}</div><div><div class="nm">${s[1]}</div><div class="it">${w?w.n:'nothing'}</div></div></div>`}).join('');
+function renderSlots(){document.getElementById('slots').innerHTML=SLOTS.map(s=>{const w=worn[s[0]];const cls=(drag&&!drag.worn)?(drag.slot===s[0]||(drag.slot==='finger1'&&s[0]==='finger2')?'ok':'no'):(selWorn===s[0]?'sel':'');return `<div class="slot ${w?'':'empty'} ${cls}" data-s="${s[0]}" style="left:${s[3]}px;top:${s[4]}px" title="${w?w.n:'nothing'}"><div class="ic">${w?w.ic:s[2]}</div><div class="nm">${s[1]}</div><div class="it">${w?w.n:'nothing'}</div></div>`}).join('');
  [...document.querySelectorAll('.slot')].forEach(el=>{const s=el.dataset.s;let hold;
   el.addEventListener('pointerdown',e=>{if(!worn[s])return;hold=setTimeout(()=>startDrag(Object.assign({worn:true,slotId:s},worn[s]),true,e),450)});
   el.addEventListener('pointerup',()=>{clearTimeout(hold);if(drag)return;if(worn[s]){selWorn=s;sel=null;renderSlots();renderRows();renderDetail()}});
