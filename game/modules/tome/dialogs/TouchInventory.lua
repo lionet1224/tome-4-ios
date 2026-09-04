@@ -80,6 +80,8 @@ function _M:init(title, actor, filter, action, on_select)
 	self.base_title = (title or _t"Inventory"):gsub("%s+%-%s+.*$", "") -- the caller passes "Title - Encumbrance x/y"
 	self.tab = "all"
 	self.bigfont = core.display.newFont(FontPackage:getFont("default"), 22)
+	-- what class/Game.lua's chest-at-the-stairs flow pokes on the old dialog
+	self.c_inven = {switchTab=function(_, t) self:switchTab(t and t.kind) end}
 	Dialog.init(self, title or self.base_title, game.w * 0.96, game.h * 0.96)
 	self:build()
 	self:loadUI(self.uis_def)
@@ -120,6 +122,13 @@ function _M:build()
 		{right=0, bottom=0, ui=self.b_primary},
 		{right=self.b_primary, bottom=0, ui=self.b_more},
 	}
+end
+
+function _M:switchTab(kind)
+	if not kind then return end
+	for _, t in ipairs(self.c_tabs.tabs) do if t.kind == kind then self.c_tabs:select(kind) return end end
+	self.tab = kind
+	self:refresh()
 end
 
 function _M:tabFilter()
