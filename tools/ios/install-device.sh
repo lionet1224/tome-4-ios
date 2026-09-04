@@ -26,7 +26,7 @@ if ! codesign --verify --deep --strict "$APP" >/dev/null 2>&1; then
 	rm -f "$ENT"
 	echo "[install] re-signed with $ID"
 fi
-codesign -dvv "$APP" 2>&1 | grep -q TeamIdentifier || { echo "app is not signed - aborting"; exit 1; }
+codesign --verify --deep --strict "$APP" || { echo "app signature does not verify - aborting"; exit 1; }
 xcrun devicectl device install app --device "$DEV" "$APP"
 xcrun devicectl device process launch --device "$DEV" org.te4.tome.dev || true
 echo "[install] done: Tales of Maj'Eyal is on the phone"
