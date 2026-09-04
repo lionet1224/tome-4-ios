@@ -108,7 +108,11 @@ function _M:init(actor, start_tab)
 
 	self.vs = Separator.new{dir="vertical", size=self.iw}
 
-	self.c_tut = Textzone.new{width=self.iw * 0.6, auto_height=true, no_color_bleed=true, font = self.font, text=_t[[
+	local touch = require("engine.TouchInput").active()
+	self.c_tut = Textzone.new{width=self.iw * (touch and 0.5 or 0.6), auto_height=true, no_color_bleed=true, font = self.font, text=touch and _t[[
+Values #00FF00#in brackets ( )#LAST# show changes since the last look.
+Hold a stat for details.
+]] or _t[[
 Values #00FF00#in brackets ( )#LAST# show changes made from last character sheet checking.
 Keyboard: #00FF00#'u'#LAST# to save character dump. #00FF00#TAB key#LAST# to switch between tabs.
 Mouse: Hover over stat for info
@@ -147,7 +151,9 @@ Mouse: Hover over stat for info
 		all_kills_kind.boss or 0
 	)
 
-	self.c_playtime = Textzone.new{width=self.iw * 0.4, auto_height=true, no_color_bleed=true, font = self.font, text=playtimetext}
+	self.c_playtime = Textzone.new{width=self.iw * (touch and 0.45 or 0.4), auto_height=true, no_color_bleed=true, font = self.font, text=playtimetext}
+	-- everything below is anchored on the intro's height; make it the taller of the two header blocks
+	if self.c_playtime.h > self.c_tut.h then self.c_tut.h = self.c_playtime.h end
 
 	self.c_desc = SurfaceZone.new{width=self.iw, height=self.ih - self.c_general.h - self.vs.h - self.c_tut.h,alpha=0}
 
@@ -183,7 +189,7 @@ Mouse: Hover over stat for info
 		{left=self.iw * 0.5, top=0, ui=self.c_playtime},
 		{left=15, top=self.c_tut.h, ui=self.c_general},
 --		{right=130, top=50, ui=self.b_show_equipment}, -- misaligned mouse zone?
-		{right=200, top=self.c_tut.h, ui=self.b_show_equipment},
+		{right=touch and 0 or 200, top=self.c_tut.h, ui=self.b_show_equipment},
 		{right=self.b_show_equipment, top=self.c_tut.h, ui=self.b_levelup},
 		{left=15+self.c_general.w, top=self.c_tut.h, ui=self.c_attack},
 		{left=15+self.c_general.w+self.c_attack.w, top=self.c_tut.h, ui=self.c_defence},

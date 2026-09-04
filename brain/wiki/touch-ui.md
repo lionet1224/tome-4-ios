@@ -253,3 +253,12 @@ creature hold menu. Decisions: one step per tap, no conditions in v1, left wheel
   Buy/Sell button → the store's action callback; implements updateStore/generateList. UNTESTED (no
   shop reachable in the sim run).
 - UseItemDialog: touch layout = description + big buttons (first one glows) = the action sheet.
+
+## 16. Dialog sweep (2026-09-04)
+`tools/touch/sweep.lua` (run via touch.script on the sim: opens ~22 dialogs, T.shot each; shots land in
+Documents/t-engine/4.0/tome/shot-*.png; capture happens in TouchInput.frameEnd so dialogs are drawn).
+Generic touch fixes from it: Button default font 30 (unless a font is passed), List/TreeList/ListColumns
+rows ≥ 44px, small fixed-size dialogs (≤720x520) scaled 1.5x in Dialog.init, CharacterSheet header
+(shorter intro, header height = taller block, buttons anchored right), DeathDialog sized to screen,
+detailed talent descriptions always on. Known leftovers: ShowMap draws the minimap at its tiny native
+size; LorePopup/ShowChatLog not exercised by the sweep (need real ids / online chat).

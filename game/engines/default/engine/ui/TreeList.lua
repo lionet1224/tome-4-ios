@@ -45,6 +45,7 @@ function _M:init(t)
 	self.sel_by_col = t.sel_by_col and {} or nil
 
 	self.fh = t.item_height or (self.font_h + 6)
+	if not t.item_height and require("engine.TouchInput").active() then self.fh = math.max(self.fh, 44) end -- iOS port
 
 	self.plus = _M:getUITexture("ui/plus.png")
 	self.minus = _M:getUITexture("ui/minus.png")

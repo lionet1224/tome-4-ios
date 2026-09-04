@@ -34,6 +34,7 @@ function _M:init(t)
 	self.nb_rows = t.nb_items
 	self.font = t.font or self.font
 	self.row_height = t.item_height or (self.font_h + 6)
+	if not t.item_height and require("engine.TouchInput").active() then self.row_height = math.max(self.row_height, 44) end -- iOS port
 	self.h = t.height or self.row_height * ( (self.nb_rows or 0) + (self.hide_columns and 0 or 1) )
 	self.sortable = t.sortable
 	self.scrollbar = t.scrollbar

@@ -361,6 +361,10 @@ function _M:init(title, w, h, x, y, alpha, font, showup, skin)
 	-- (800x600 pickup chooser, 600x400 birther, ...) overflow a 402pt phone
 	-- screen and put their buttons off-screen; found by ui_overflow telemetry.
 	if game and game.w and game.h and type(w) == "number" and type(h) == "number" then
+		-- touch UI: fixed desktop sizes were laid out for 100% fonts; scale them
+		-- with the phone font so their content still fits, then clamp
+		-- (only the small desktop boxes; screen-relative dialogs are already right)
+		if __IOS__ and require("engine.TouchInput").active() and w > 40 and h > 40 and w <= 720 and h <= 520 then w, h = w * 1.5, h * 1.5 end
 		if w > game.w - 10 then w = game.w - 10 end
 		if h > game.h - 40 then h = game.h - 40 end
 	end

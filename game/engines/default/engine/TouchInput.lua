@@ -225,6 +225,16 @@ function _M.tick()
 	_M.scriptTick()
 end
 
+--- Called by the engine at the very end of a frame (everything drawn)
+function _M.frameEnd()
+	local name = _M.pending_shot
+	if not name then return end
+	_M.pending_shot = nil
+	local w, h = core.display.size()
+	local png = core.display.getScreenshot and core.display.getScreenshot(0, 0, w, h)
+	if png then local fh = fs.open("/shot-"..name..".png", "w") if fh then fh:write(png) fh:close() print("[SCRIPT] shot", name) end end
+end
+
 --- Desktop emulation: called by engine.Mouse before it dispatches a real mouse event.
 -- Returns true when the event was consumed as a finger.
 function _M.mouseAsFinger(button, x, y, isup)
@@ -284,10 +294,9 @@ function _M.scriptTick()
 		function T.key(name) local k = engine.KeyBind.current if k then k:triggerVirtual(name) end T.wait(120) end
 		function T.log(...) print("[SCRIPT]", ...) end
 		function T.shot(name)
-			local w, h = core.display.size()
-			local png = core.display.getScreenshot and core.display.getScreenshot(0, 0, w, h)
-			if png then local fh = fs.open("/shot-"..name..".png", "w") if fh then fh:write(png) fh:close() print("[SCRIPT] shot", name) end end
-			T.wait(60)
+			-- taken at the end of the next frame, once dialogs are drawn (frameEnd)
+			_M.pending_shot = name
+			T.wait(120)
 		end
 		_M.script = {co=coroutine.create(function() body(T) end), wake_fct=function() return wake end, game=game}
 		print("[TOUCH] script started", path)

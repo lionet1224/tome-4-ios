@@ -210,6 +210,7 @@ function _M:display(nb_keyframes)
 
 	-- Update tweening engine
 	if nb_keyframes > 0 then tween.update(nb_keyframes) end
+	require("engine.TouchInput").frameEnd()
 end
 
 --- Register a timer

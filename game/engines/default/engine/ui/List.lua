@@ -51,6 +51,7 @@ function _M:generate()
 	self.max = #self.list
 
 	local fw, fh = self.w, self.font_h + 6
+	if require("engine.TouchInput").active() then fh = math.max(fh, 44) end -- iOS port: finger rows
 	self.fw, self.fh = fw, fh
 
 	self.frame = self:makeFrame(nil, fw, fh)

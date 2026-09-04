@@ -31,6 +31,11 @@ frame_oy1 = -5
 frame_oy2 = 5
 
 function _M:init(t)
+	-- iOS port: finger-sized buttons everywhere (dialogs that pass their own font keep it)
+	if not t.font and require("engine.TouchInput").active() then
+		_M.touch_font = _M.touch_font or core.display.newFont(require("engine.FontPackage"):getFont("default"), 30)
+		t.font = _M.touch_font
+	end
 	self.text = assert(t.text, "no button text")
 	self.fct = assert(t.fct, "no button fct")
 	self.on_select = t.on_select
