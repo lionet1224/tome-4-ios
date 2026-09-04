@@ -1,0 +1,194 @@
+<title>ToME Pack Screen</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--paper:#ECEAE3;--ink:#1E1C18;--ink-2:#5A564D;--rule:#D3CFC3;--accent:#9E7A22;--accent-ink:#6E5415;--panel:#F6F5F0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--paper:#141518;--ink:#E9E4D6;--ink-2:#A7A297;--rule:#2C2E34;--accent:#D2AA4A;--accent-ink:#E4C36E;--panel:#1C1E23}}
+:root[data-theme="dark"]{--paper:#141518;--ink:#E9E4D6;--ink-2:#A7A297;--rule:#2C2E34;--accent:#D2AA4A;--accent-ink:#E4C36E;--panel:#1C1E23}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 80px}
+h1{font:700 40px/1.05 Alegreya,Georgia,serif;margin:0 0 8px;letter-spacing:-.01em}
+h2{font:700 24px/1.2 Alegreya,Georgia,serif;margin:44px 0 12px}
+.lede{max-width:64ch;color:var(--ink-2);margin:0 0 22px}.lede b{color:var(--ink);font-weight:600}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink);font-weight:600}
+.phone{position:relative;margin:0 auto;border-radius:40px;background:#0B0B0D;padding:14px;box-shadow:0 30px 60px -30px rgba(0,0,0,.6);width:max-content}
+.screen{position:relative;overflow:hidden;border-radius:28px;background:#0F1013;width:1398px;height:645px;transform-origin:top left;
+ --bg:#15161B;--card:#1D1F26;--card-2:#24272F;--edge:#33363F;--gold:#D2AA4A;--gold-2:#F0D48A;--text:#EAE3D1;--mute:#8E8878;--good:#7BD389;--bad:#E07A6A;--blue:#7FB2E5;
+ font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--text);user-select:none;-webkit-user-select:none;touch-action:none}
+.island{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:34px;height:110px;border-radius:20px;background:#000;z-index:9;pointer-events:none}
+.home{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:210px;height:7px;border-radius:4px;background:rgba(255,255,255,.55);z-index:9;pointer-events:none}
+/* app chrome */
+.top{position:absolute;left:88px;right:88px;top:0;height:64px;display:flex;align-items:center;gap:14px;padding:0 6px}
+.top .title{font:700 24px Alegreya,serif;color:var(--gold-2)}
+.top .enc{margin-left:auto;font-size:14px;color:var(--mute)}.top .enc b{color:var(--good);font-weight:600}
+.top .close{width:48px;height:48px;border-radius:12px;background:var(--card);border:1px solid var(--edge);display:grid;place-items:center;font-size:22px;color:var(--text);cursor:pointer}
+/* three columns */
+.cols{position:absolute;left:88px;right:88px;top:64px;bottom:36px;display:grid;grid-template-columns:300px 1fr 400px;gap:12px}
+.col{background:var(--card);border-radius:18px;border:1px solid var(--edge);overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.col h3{margin:0;padding:12px 16px 8px;font:600 12px "IBM Plex Sans";letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+/* equipment */
+.slots{display:grid;grid-template-columns:1fr;gap:6px;padding:0 10px 10px;overflow-y:auto;scrollbar-width:none}.slots::-webkit-scrollbar{display:none}
+.slot{height:60px;border-radius:14px;background:var(--card-2);border:2px solid transparent;display:grid;grid-template-columns:40px 1fr;gap:10px;align-items:center;padding:6px 10px;position:relative;cursor:pointer}
+.slot .ic{width:40px;height:40px;border-radius:10px;background:#0E0F12;display:grid;place-items:center;font-size:24px}
+.slot .nm{font-size:11px;color:var(--mute);letter-spacing:.06em;text-transform:uppercase}
+.slot .it{font-size:14px;line-height:1.2;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot.empty .it{color:var(--mute);font-style:italic}
+.slot.ok{border-color:var(--good);background:#1E2E22}.slot.no{border-color:var(--bad);opacity:.6}.slot.sel{border-color:var(--gold)}
+/* list */
+.chips{display:flex;gap:6px;padding:10px 12px 6px;overflow-x:auto;scrollbar-width:none;flex:none}.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;height:40px;padding:0 16px;border-radius:20px;background:var(--card-2);border:1px solid var(--edge);color:var(--mute);font:500 15px "IBM Plex Sans";display:grid;place-items:center;cursor:pointer}
+.chip.on{background:var(--gold);color:#1B1510;border-color:var(--gold)}
+.rows{overflow-y:auto;scrollbar-width:none;padding:0 8px 8px;flex:1}.rows::-webkit-scrollbar{display:none}
+.row{height:68px;border-radius:14px;display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center;padding:0 12px;cursor:pointer;position:relative}
+.row+.row{margin-top:2px}
+.row .ic{width:52px;height:52px;border-radius:12px;background:#0E0F12;display:grid;place-items:center;font-size:30px}
+.row .nm{font-size:17px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .sub{font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row.sel{background:#2B2718;outline:2px solid var(--gold)}
+.row .tag{font:600 12px "IBM Plex Sans";letter-spacing:.06em;text-transform:uppercase;padding:5px 10px;border-radius:10px}
+.tag.up{background:#1E2E22;color:var(--good)}.tag.down{background:#2E1E1C;color:var(--bad)}.tag.new{background:#2E2A1C;color:var(--gold-2)}.tag.worn{background:#1C2430;color:var(--blue)}
+.row.drag{opacity:.35}
+/* detail */
+.detail{padding:0 14px 14px;overflow-y:auto;scrollbar-width:none;flex:1;display:flex;flex-direction:column;gap:12px}.detail::-webkit-scrollbar{display:none}
+.hero{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:center}
+.hero .ic{width:64px;height:64px;border-radius:14px;background:#0E0F12;display:grid;place-items:center;font-size:36px}
+.hero .nm{font:700 20px Alegreya,serif;line-height:1.15}.hero .kind{font-size:13px;color:var(--mute)}
+.cmp{border-radius:14px;background:var(--card-2);overflow:hidden}
+.cmp .hd{display:grid;grid-template-columns:1fr 78px 78px;padding:8px 12px;font:600 11px "IBM Plex Sans";letter-spacing:.1em;text-transform:uppercase;color:var(--mute);border-bottom:1px solid var(--edge)}
+.cmp .hd span:nth-child(2){color:var(--gold-2)}
+.cmp .ln{display:grid;grid-template-columns:1fr 78px 78px;padding:9px 12px;font-size:15px;font-variant-numeric:tabular-nums;border-bottom:1px solid rgba(255,255,255,.04)}
+.cmp .ln:last-child{border-bottom:0}
+.cmp .ln .v{text-align:right}.cmp .ln .w{text-align:right;color:var(--mute)}
+.cmp .ln.up .v{color:var(--good)}.cmp .ln.down .v{color:var(--bad)}
+.cmp .ln.up .v::after{content:" ▲";font-size:11px}.cmp .ln.down .v::after{content:" ▼";font-size:11px}
+.egos{font-size:14px;line-height:1.45;color:var(--text)}.egos .g{color:var(--good)}.egos .b{color:var(--blue)}
+.actions{margin-top:auto;display:grid;gap:8px}
+.primary{height:60px;border-radius:16px;background:var(--gold);color:#1B1510;font:600 19px "IBM Plex Sans";display:grid;place-items:center;cursor:pointer}
+.primary.take{background:var(--card-2);color:var(--text);border:1px solid var(--edge)}
+.secondary{display:flex;gap:8px}.secondary .chip{flex:1;height:48px;border-radius:14px}
+.empty-detail{color:var(--mute);font-size:15px;padding:40px 10px;text-align:center}
+.ghost{position:absolute;width:64px;height:64px;border-radius:14px;background:#0E0F12;border:2px solid var(--gold);display:grid;place-items:center;font-size:36px;pointer-events:none;z-index:8;box-shadow:0 12px 30px rgba(0,0,0,.6)}
+.ghost[hidden]{display:none!important}
+.toast{position:absolute;left:50%;top:76px;transform:translateX(-50%);background:rgba(0,0,0,.8);border:1px solid var(--edge);border-radius:12px;padding:8px 16px;font-size:15px;z-index:8}
+.toast[hidden]{display:none!important}
+.hint{position:absolute;left:50%;bottom:46px;transform:translateX(-50%);font-size:13px;color:var(--mute);z-index:8;pointer-events:none}
+/* page bits */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0 6px}
+.pchip{border:1px solid var(--rule);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 14px;font:500 14px "IBM Plex Sans";cursor:pointer}.pchip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.note{font-size:14px;color:var(--ink-2)}
+.key{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px 28px;padding:0;margin:0;list-style:none}
+.key li{padding:10px 0;border-top:1px solid var(--rule)}.key b{display:block;font-weight:600}.key span{color:var(--ink-2);font-size:15px}
+.q{list-style:none;padding:0;margin:0;display:grid;gap:10px}.q li{display:grid;grid-template-columns:auto 1fr;gap:12px;padding:12px 14px;background:var(--panel);border-radius:8px}.q li em{font-style:normal;color:var(--accent-ink);font-weight:600}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">ToME on iPhone · inventory · 1398 × 645 logical, camera and home bar drawn</div>
+  <h1>ToME Pack Screen</h1>
+  <p class="lede">Three panes: <b>what you wear</b>, <b>what you carry</b>, and <b>the item in hand compared with what's in its slot</b>. Tap a row to compare. Double-tap to wear it. Hold a row, drag it onto a slot; slots turn green where it fits. Drag a worn slot into the list to take it off. Example items only.</p>
+
+  <div class="phone" id="phone"><div class="screen" id="screen">
+    <div class="island"></div><div class="home"></div>
+    <div class="top"><div class="title">Pack</div><div class="enc">Encumbrance <b id="enc">27 / 98</b></div><div class="close">✕</div></div>
+    <div class="cols">
+      <div class="col"><h3>Wearing</h3><div class="slots" id="slots"></div></div>
+      <div class="col"><div class="chips" id="chips"></div><div class="rows" id="rows"></div></div>
+      <div class="col"><h3 id="dtitle">Item</h3><div class="detail" id="detail"><div class="empty-detail">Tap an item to see how it compares with what you're wearing.</div></div></div>
+    </div>
+    <div class="ghost" id="ghost" hidden></div>
+    <div class="toast" id="toast" hidden></div>
+    <div class="hint" id="hint">tap = compare · double-tap = wear · hold + drag = move</div>
+  </div></div>
+
+  <div class="toolbar"><span class="eyebrow" style="margin-right:6px">Try</span>
+    <button class="pchip" data-do="sel">Select the mail armour</button>
+    <button class="pchip" data-do="worn">Select a worn slot</button>
+    <button class="pchip" data-do="reset">Reset</button>
+    <span style="flex:1"></span><span class="note">Laptop: double-click = double-tap, press-and-hold then drag = drag.</span>
+  </div>
+
+  <h2>What is on screen</h2>
+  <ol class="key">
+    <li><b>Wearing</b><span>Every slot as a card: icon, slot name, what's in it. Tap a card to see that item on the right (primary action becomes Take off). Cards light green or red while you drag something over them.</span></li>
+    <li><b>Carrying</b><span>Filter chips instead of tabs (All, Weapons, Armour, Jewelry, Inscriptions, Tools, Other, Chest), horizontally scrollable. Rows: icon, name, one line of numbers, and a tag on the right: <b style="display:inline">better</b>, <b style="display:inline">worse</b>, <b style="display:inline">new slot</b>, or <b style="display:inline">worn</b>. Rows are 68 px.</span></li>
+    <li><b>Compare card</b><span>Selected item on top, then a table: each stat with the new value, the worn value, and an arrow where they differ. Below it the item's powers in the game's own colours. The big button does the obvious thing (Wear, Use, Take off, Keep). Drop, Transmogrify and More sit under it as chips.</span></li>
+    <li><b>Gestures</b><span>Tap = select and compare. Double-tap = the primary action. Hold a row until it lifts, drag it, drop on a slot. Hold a worn card, drag into the list = take off. Drag and drop and the list scroll don't fight: a plain drag scrolls, a hold-then-drag moves.</span></li>
+  </ol>
+
+  <h2>Questions for you</h2>
+  <ul class="q">
+    <li><em>Chips vs tabs</em><span>Filter chips that scroll sideways (shown) feel more native than a tab bar. Keep, or do you want the tab bar back?</span></li>
+    <li><em>Compare table</em><span>Which stats matter enough to always show? Shown: damage/armour, defence, accuracy or crit, weight. Everything else lives in the powers text below.</span></li>
+    <li><em>Double-tap</em><span>Wear/Use on double-tap is fast but easy to trigger by accident on a bumpy bus. Keep it, or hold-then-release on the primary button only?</span></li>
+    <li><em>Wearing pane</em><span>One column of slot rows (shown) or a paper-doll picture with the slots around it, like the desktop?</span></li>
+  </ul>
+</div>
+
+<script>
+(function(){
+const W=1398,H=645, screen=document.getElementById('screen');
+function fit(){const s=Math.min(1,(document.getElementById('phone').parentElement.clientWidth-28)/W);screen.style.transform=`scale(${s})`;const p=document.getElementById('phone');p.style.width=(W*s+28)+'px';p.style.height=(H*s+28)+'px';screen.dataset.s=s}
+window.addEventListener('resize',fit);fit();
+const SLOTS=[['main','Main hand','⚔'],['off','Off hand','🛡'],['body','Body','🥋'],['head','Head','⛑'],['cloak','Cloak','🧣'],['hands','Hands','🧤'],['feet','Feet','🥾'],['belt','Belt','🎗'],['finger1','Finger','💍'],['finger2','Finger','💍'],['neck','Neck','📿'],['light','Light','🏮'],['tool','Tool','🔧'],['quiver','Quiver','🏹']];
+const S=[['dmg','Damage'],['arm','Armour'],['def','Defence'],['acc','Accuracy'],['crit','Crit'],['enc','Weight']];
+let worn={main:{n:'iron greatsword',ic:'⚔',k:'weapon · greatsword',dmg:'13–21',acc:'+8',crit:'2%',enc:'3.0',ego:'Requires Strength 11.'},body:{n:'rough leather armour',ic:'🥋',k:'armour · light',arm:'4',def:'2',enc:'9.0',ego:''},light:{n:'brass lantern',ic:'🏮',k:'light source',enc:'1.0',ego:'<span class=b>Light radius +2</span>'}};
+let items=[
+ {id:1,n:'arcing iron greatsword of massacre',ic:'⚔',k:'weapon · greatsword',cat:'weapons',slot:'main',dmg:'23–34',acc:'+9',crit:'4%',enc:'3.0',ego:'<span class=g>+12 lightning damage on hit</span>, <span class=b>+15% physical damage</span>. Requires Strength 12.'},
+ {id:2,n:'iron mail armour',ic:'🥋',k:'armour · heavy',cat:'armors',slot:'body',arm:'8',def:'3',enc:'14.0',ego:'<span class=g>+4 armour hardiness</span>. Requires Strength 12.'},
+ {id:3,n:'hardened leather boots of speed',ic:'🥾',k:'armour · feet',cat:'armors',slot:'feet',arm:'2',def:'1',enc:'2.0',ego:'<span class=g>+10% movement speed</span>.'},
+ {id:4,n:'copper ring of the mind',ic:'💍',k:'jewelry · ring',cat:'jewelry',slot:'finger1',enc:'0.1',ego:'<span class=b>+2 Willpower, +2 Cunning</span>.'},
+ {id:5,n:'infusion of regeneration',ic:'🧪',k:'inscription',cat:'inscriptions',enc:'0.2',ego:'Heals 60 over 5 turns. Cooldown 12.'},
+ {id:6,n:'rune of phase door',ic:'📜',k:'inscription',cat:'inscriptions',enc:'0.2',ego:'Teleports you 6 tiles. Cooldown 8.'},
+ {id:7,n:'iron shield',ic:'🛡',k:'armour · shield',cat:'armors',slot:'off',arm:'2',def:'6',enc:'7.0',ego:'Block value 20.'},
+ {id:8,n:'elm shortbow',ic:'🏹',k:'weapon · bow',cat:'weapons',slot:'main',dmg:'10–16',acc:'+6',crit:'3%',enc:'4.0',ego:''},
+ {id:9,n:"miner's pick",ic:'⛏',k:'tool',cat:'tools',slot:'tool',enc:'4.5',ego:'Digs through walls. Cooldown 20.'},
+ {id:10,n:'scrying orb',ic:'🔮',k:'quest item',cat:'misc',enc:'1.0',ego:'It shows lore about the world.'},
+ {id:11,n:'ancient dwarven waraxe',ic:'🪓',k:'weapon · axe',cat:'transmo',slot:'main',dmg:'19–30',acc:'+5',crit:'5%',enc:'3.5',ego:'Chest: will be transmogrified when you leave the level.'},
+];
+const CATS=[['all','All'],['weapons','Weapons'],['armors','Armour'],['jewelry','Jewelry'],['inscriptions','Inscriptions'],['tools','Tools'],['misc','Other'],['transmo','Chest']];
+let cat='all', sel=null, selWorn=null, drag=null;
+function num(s){if(!s)return null;const m=String(s).match(/-?\d+(\.\d+)?/g);if(!m)return null;return m.length>1?(+m[0]+ +m[1])/2:+m[0]}
+function tag(it){if(!it.slot)return '';const w=worn[it.slot];if(!w)return '<span class="tag new">new slot</span>';const a=num(it.dmg||it.arm||it.def),b=num(w.dmg||w.arm||w.def);if(a==null||b==null)return '';return a>b?'<span class="tag up">better</span>':a<b?'<span class="tag down">worse</span>':''}
+function renderChips(){document.getElementById('chips').innerHTML=CATS.map(c=>`<div class="chip ${c[0]===cat?'on':''}" data-c="${c[0]}">${c[1]}</div>`).join('');[...document.querySelectorAll('#chips .chip')].forEach(c=>c.onclick=()=>{cat=c.dataset.c;renderChips();renderRows()})}
+function renderRows(){const list=items.filter(i=>cat==='all'?i.cat!=='transmo':i.cat===cat);document.getElementById('rows').innerHTML=list.map(i=>`<div class="row ${sel===i.id?'sel':''} ${drag&&drag.id===i.id?'drag':''}" data-id="${i.id}"><div class="ic">${i.ic}</div><div><div class="nm">${i.n}</div><div class="sub">${i.k} · ${[i.dmg&&'dmg '+i.dmg,i.arm&&'armour '+i.arm,i.def&&'def '+i.def,i.enc+' enc'].filter(Boolean).join(' · ')}</div></div>${tag(i)}</div>`).join('');
+ [...document.querySelectorAll('.row')].forEach(r=>{const id=+r.dataset.id;let t0=0,hold,started=false;
+  r.addEventListener('pointerdown',e=>{started=false;hold=setTimeout(()=>{startDrag(items.find(i=>i.id===id),false,e)},450)});
+  r.addEventListener('pointermove',()=>{if(!drag)clearTimeout(hold)});
+  r.addEventListener('pointerup',e=>{clearTimeout(hold);if(drag)return;const now=Date.now();if(sel===id&&now-t0<400){t0=0;primary();return}t0=now;select(id)});
+  r.addEventListener('pointerleave',()=>{if(!drag)clearTimeout(hold)});
+ })}
+function renderSlots(){document.getElementById('slots').innerHTML=SLOTS.map(s=>{const w=worn[s[0]];const cls=(drag&&!drag.worn)?(drag.slot===s[0]||(drag.slot==='finger1'&&s[0]==='finger2')?'ok':'no'):(selWorn===s[0]?'sel':'');return `<div class="slot ${w?'':'empty'} ${cls}" data-s="${s[0]}"><div class="ic">${w?w.ic:s[2]}</div><div><div class="nm">${s[1]}</div><div class="it">${w?w.n:'nothing'}</div></div></div>`}).join('');
+ [...document.querySelectorAll('.slot')].forEach(el=>{const s=el.dataset.s;let hold;
+  el.addEventListener('pointerdown',e=>{if(!worn[s])return;hold=setTimeout(()=>startDrag(Object.assign({worn:true,slotId:s},worn[s]),true,e),450)});
+  el.addEventListener('pointerup',()=>{clearTimeout(hold);if(drag)return;if(worn[s]){selWorn=s;sel=null;renderSlots();renderRows();renderDetail()}});
+  el.addEventListener('pointerleave',()=>{if(!drag)clearTimeout(hold)});
+ })}
+function select(id){sel=id;selWorn=null;renderRows();renderSlots();renderDetail()}
+function line(k,l,a,b){if(a==null&&b==null)return '';const na=num(a),nb=num(b);let c='';if(na!=null&&nb!=null&&na!==nb){c=na>nb?'up':'down';if(k==='enc')c=c==='up'?'down':'up'}return `<div class="ln ${c}"><span>${l}</span><span class="v">${a||'—'}</span><span class="w">${b||'—'}</span></div>`}
+function renderDetail(){const d=document.getElementById('detail'),t=document.getElementById('dtitle');
+ let it=null,w=null,isWorn=false;
+ if(sel){it=items.find(i=>i.id===sel);w=it.slot?worn[it.slot]:null}else if(selWorn){it=worn[selWorn];isWorn=true}
+ if(!it){t.textContent='Item';d.innerHTML='<div class="empty-detail">Tap an item to see how it compares with what you\'re wearing.</div>';return}
+ t.textContent=isWorn?'Wearing':(w?'Compared with what you wear':'Item');
+ const cmp=(it.slot||isWorn)?`<div class="cmp"><div class="hd"><span>Stat</span><span>${isWorn?'Worn':'New'}</span><span>${isWorn?'':'Worn'}</span></div>${S.map(s=>line(s[0],s[1],it[s[0]],isWorn?null:(w?w[s[0]]:null))).join('')}</div>`:'';
+ const prim=isWorn?'Take off':it.slot?'Wear':it.cat==='inscriptions'?'Use':it.cat==='transmo'?'Keep':'Drop';
+ d.innerHTML=`<div class="hero"><div class="ic">${it.ic}</div><div><div class="nm">${it.n}</div><div class="kind">${it.k}${w&&!isWorn?' · replaces '+w.n:''}</div></div></div>${cmp}<div class="egos">${it.ego||'<span style="color:var(--mute)">No special powers.</span>'}</div>
+ <div class="actions"><div class="primary ${isWorn?'take':''}" id="prim">${prim}</div><div class="secondary"><div class="chip">Drop</div><div class="chip">Transmogrify</div><div class="chip">More…</div></div></div>`;
+ document.getElementById('prim').onclick=primary}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,1600)}
+function wear(it,slotId){slotId=slotId||it.slot;if(!slotId)return;const old=worn[slotId];worn[slotId]={n:it.n,ic:it.ic,k:it.k,dmg:it.dmg,arm:it.arm,def:it.def,acc:it.acc,crit:it.crit,enc:it.enc,ego:it.ego};items=items.filter(i=>i.id!==it.id);if(old)items.push(Object.assign({id:Date.now(),cat:old.k.startsWith('weapon')?'weapons':old.k.startsWith('armour')?'armors':'misc',slot:slotId},old));sel=null;selWorn=slotId;toast(`You wear ${it.n}.`);renderAll()}
+function takeoff(slotId){const w=worn[slotId];if(!w)return;delete worn[slotId];items.push(Object.assign({id:Date.now(),cat:w.k.startsWith('weapon')?'weapons':w.k.startsWith('armour')?'armors':'misc',slot:slotId},w));sel=null;selWorn=null;toast(`You take off ${w.n}.`);renderAll()}
+function primary(){if(sel){const it=items.find(i=>i.id===sel);if(it.slot)wear(it);else toast(it.cat==='inscriptions'?`You use ${it.n}.`:`Kept.`)}else if(selWorn)takeoff(selWorn)}
+function renderAll(){renderSlots();renderRows();renderDetail();document.getElementById('enc').textContent=(20+items.reduce((a,i)=>a+num(i.enc),0)).toFixed(0)+' / 98'}
+// drag and drop
+const ghost=document.getElementById('ghost');
+function startDrag(it,fromWorn,e){drag=Object.assign({},it,{worn:fromWorn});ghost.hidden=false;ghost.textContent=it.ic;moveGhost(e);renderSlots();renderRows();document.getElementById('hint').textContent=fromWorn?'drop in the list to take it off':'drop on a green slot to wear it'}
+function moveGhost(e){const s=+screen.dataset.s||1,r=screen.getBoundingClientRect();ghost.style.left=((e.clientX-r.left)/s-32)+'px';ghost.style.top=((e.clientY-r.top)/s-90)+'px'}
+screen.addEventListener('pointermove',e=>{if(drag)moveGhost(e)});
+screen.addEventListener('pointerup',e=>{if(!drag)return;const el=document.elementFromPoint(e.clientX,e.clientY);const slot=el&&el.closest('.slot');const rows=el&&el.closest('.rows');const d=drag;drag=null;ghost.hidden=true;document.getElementById('hint').textContent='tap = compare · double-tap = wear · hold + drag = move';
+ if(!d.worn&&slot){const s=slot.dataset.s;if(d.slot===s||(d.slot==='finger1'&&s==='finger2'))wear(items.find(i=>i.id===d.id),s);else{toast(`${d.n} does not go there.`);renderAll()}}
+ else if(d.worn&&rows){takeoff(d.slotId)}else renderAll()});
+document.querySelectorAll('.pchip').forEach(b=>b.onclick=()=>{const w=b.dataset.do;if(w==='sel')select(2);if(w==='worn'){selWorn='main';sel=null;renderAll()}if(w==='reset')location.reload()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){sel=null;selWorn=null;renderAll()}});
+renderChips();renderAll();
+})();
+</script>

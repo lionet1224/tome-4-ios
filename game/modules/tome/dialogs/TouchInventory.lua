@@ -35,6 +35,18 @@ function EquipStrip:generate()
 	self.key:reset()
 	self.labels = {}
 	self.mouse:registerZone(0, 0, self.w, self.h, function(button, x, y, xrel, yrel, bx, by, event)
+		-- hold-then-drag on a worn slot = pick that item up
+		if event == "motion" and self.on_drag and not self.dragging then
+			local TI = require "engine.TouchInput"
+			local t = TI.t
+			if t and t.held and t.hover and self.last_screen_x then
+				local i0 = math.floor((t.x0 - self.last_screen_x) / (self.box + self.gap)) + 1
+				local s0 = self.slots[i0]
+				local inv = s0 and self.actor.inven[s0.id]
+				if inv and inv[1] then self.dragging = true self.on_drag({object=inv[1], inven=s0.id, item=1, worn=true}, s0) end
+			end
+			return
+		end
 		if event ~= "button" or button ~= "left" then return end
 		local i = math.floor(x / (self.box + self.gap)) + 1
 		local s = self.slots[i]
@@ -56,13 +68,25 @@ function EquipStrip:label(str)
 	end
 	return d
 end
-function EquipStrip:display(x, y, nb_keyframes)
+function EquipStrip:slotAt(sx)
+	if not self.last_screen_x then return nil end
+	local i = math.floor((sx - self.last_screen_x) / (self.box + self.gap)) + 1
+	return self.slots[i], i
+end
+
+function EquipStrip:display(x, y, nb_keyframes, screen_x, screen_y)
+	self.last_screen_x, self.last_screen_y = screen_x, screen_y
 	for i, s in ipairs(self.slots) do
 		local bx = x + (i - 1) * (self.box + self.gap)
 		local inv = self.actor.inven[s.id]
 		local o = inv and inv[1]
 		core.display.drawQuad(bx, y, self.box, self.box, 20, 20, 24, o and 210 or 90)
-		if i == self.sel then for _, e in ipairs{{bx, y, self.box, 2}, {bx, y + self.box - 2, self.box, 2}, {bx, y, 2, self.box}, {bx + self.box - 2, y, 2, self.box}} do core.display.drawQuad(e[1], e[2], e[3], e[4], 255, 215, 0, 255) end end
+		if i == self.sel or i == self.drop_hint then
+			local ok = i == self.drop_hint and self.drop_ok
+			local r, g, b = 255, 215, 0
+			if i == self.drop_hint then r, g, b = ok and 120 or 230, ok and 230 or 80, ok and 120 or 60 end
+			for _, e in ipairs{{bx, y, self.box, 3}, {bx, y + self.box - 3, self.box, 3}, {bx, y, 3, self.box}, {bx + self.box - 3, y, 3, self.box}} do core.display.drawQuad(e[1], e[2], e[3], e[4], r, g, b, 255) end
+		end
 		if o then pcall(o.toScreen, o, nil, bx + 4, y + 4, self.box - 8, self.box - 8) end
 		local name = tostring(s.def.name or s.def.short_name):lower():gsub("^in ", ""):gsub("^on ", ""):gsub("^around ", "")
 		if #name > 9 then name = name:sub(1, 8) end
@@ -88,6 +112,67 @@ function _M:init(title, actor, filter, action, on_select)
 	self:setupUI()
 	self:refresh()
 	self.key:addBinds{ EXIT = function() game:unregisterDialog(self) end }
+	-- drag and drop: a hold-then-drag picks an item up, its release is reported here
+	require("engine.TouchInput").on_hover_end = function(x, y) self:dropAt(x, y) end
+end
+
+--- Hold-then-drag started on an item (list row or worn slot)
+function _M:startDrag(e)
+	self.drag = e
+	self.cur = e
+	print("[TOUCH] drag item", tostring(e.object.name), e.worn and "(worn)" or "")
+end
+
+--- Which strip slot (if any) is under screen x,y and whether the dragged item fits it
+function _M:dropTarget(x, y)
+	local st = self.c_strip
+	if not st.last_screen_y or y < st.last_screen_y or y > st.last_screen_y + st.h then return nil end
+	local slot, i = st:slotAt(x)
+	if not slot then return nil end
+	local o = self.drag and self.drag.object
+	local ok = o and not self.drag.worn and o:wornInven() and self.actor:canWearObject(o, slot.def.short_name or slot.def.name) and true or false
+	return slot, i, ok
+end
+
+function _M:dropAt(x, y)
+	local e = self.drag
+	self.drag = nil
+	self.c_list.dragging = nil
+	self.c_strip.dragging = nil
+	self.c_strip.drop_hint = nil
+	if not e then return end
+	local UseItemDialog = require "mod.dialogs.UseItemDialog"
+	local onuse = function(_, _, _, stop) self:onUsed(stop) end
+	local slot, i, ok = self:dropTarget(x, y)
+	if slot and not e.worn then
+		if not ok then game.logPlayer(self.actor, "%s does not go there.", e.object:getName{do_color=true}) print("[TOUCH] drop refused") return end
+		print("[TOUCH] drop -> wear", tostring(e.object.name), slot.def.name)
+		local inv = self.actor:getInven(slot.id)
+		if inv and #inv >= (inv.max or 1) then self.actor:doWear(e.inven, e.item, e.object, self.actor, slot.id, 1)
+		else self.actor:doWear(e.inven, e.item, e.object, self.actor) end
+		self:onUsed(false)
+		return
+	end
+	-- a worn item dropped on the list = take it off
+	local l = self.c_list
+	if e.worn and l.last_screen_y and y >= l.last_screen_y and y <= l.last_screen_y + l.h and x >= l.last_screen_x and x <= l.last_screen_x + l.w then
+		print("[TOUCH] drop -> take off", tostring(e.object.name))
+		UseItemDialog.new(false, self.actor, e.object, e.item, e.inven, onuse):use({action="takeoff"})
+		return
+	end
+	print("[TOUCH] drop cancelled")
+end
+
+--- The dragged item follows the finger; the slot under it lights up
+function _M:innerDisplay(x, y, nb_keyframes)
+	local e = self.drag
+	if not e then return end
+	local TI = require "engine.TouchInput"
+	local t = TI.t
+	if not t then return end
+	local slot, i, ok = self:dropTarget(t.x, t.y)
+	self.c_strip.drop_hint, self.c_strip.drop_ok = (slot and not e.worn) and i or nil, ok
+	pcall(e.object.toScreen, e.object, nil, t.x - 30, t.y - 70, 60, 60)
 end
 
 local TABS = {
@@ -105,12 +190,12 @@ function _M:build()
 	local tabs = {}
 	for _, t in ipairs(TABS) do if t.kind ~= "transmo" or self.actor:attr("has_transmo") then tabs[#tabs+1] = {title=t.title, kind=t.kind} end end
 	self.c_tabs = Tabs.new{width=self.iw, tabs=tabs, on_change=function(kind) self.tab = kind if self.c_list then self:refresh() end end}
-	self.c_strip = EquipStrip.new{width=self.iw, actor=self.actor, on_select=function(e, slot) self:selectWorn(e, slot) end}
+	self.c_strip = EquipStrip.new{width=self.iw, actor=self.actor, on_select=function(e, slot) self:selectWorn(e, slot) end, on_drag=function(e) self:startDrag(e) end}
 	local bh = 56
 	local list_h = self.ih - self.c_tabs.h - self.c_strip.h - bh - 30
 	self.list_w = math.floor(self.iw * 0.56)
 	self.c_list = TouchItemList.new{width=self.list_w, height=list_h, actor=self.actor, scrollbar=true, items={},
-		on_select=function(e) self:selectEntry(e) end, on_use=function(e) self:primary() end}
+		on_select=function(e) self:selectEntry(e) end, on_use=function(e) self:primary() end, on_drag=function(e) self:startDrag(e) end}
 	self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.iw - self.list_w - 20, height=list_h, dest_area={h=list_h}}
 	self.b_primary = Button.new{text=_t"Select an item", width=260, font=self.bigfont, fct=function() self:primary() end}
 	self.b_more = Button.new{text=_t"More...", width=150, font=self.bigfont, fct=function() self:more() end}
@@ -271,6 +356,7 @@ function _M:generate()
 	Dialog.generate(self)
 end
 function _M:unload()
+	require("engine.TouchInput").on_hover_end = nil
 	local inven = self.actor:getInven(self.actor.INVEN_INVEN)
 	if inven then for _, o in ipairs(inven) do o:forAllStack(function(so) so.__new_pickup = nil end) end end
 end

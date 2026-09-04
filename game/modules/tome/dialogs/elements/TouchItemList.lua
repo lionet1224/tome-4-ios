@@ -45,6 +45,7 @@ function _M:init(t)
 	self.actor = t.actor
 	self.on_select = t.on_select
 	self.on_use = t.on_use
+	self.on_drag = t.on_drag -- function(entry): a hold-then-drag started on this row
 	self.items = t.items or {}
 	self.icon_size = 48
 	self.row_h = 66
@@ -63,12 +64,32 @@ function _M:generate()
 	self.mouse:registerZone(0, 0, self.w, self.h, function(button, x, y, xrel, yrel, bx, by, event)
 		if event == "button" and button == "wheelup" then if self.scrollbar then self.scroll_inertia = math.min(self.scroll_inertia, 0) - 5 end return
 		elseif event == "button" and button == "wheeldown" then if self.scrollbar then self.scroll_inertia = math.max(self.scroll_inertia, 0) + 5 end return end
+		-- hold-then-drag on a row = pick the item up (drag and drop)
+		if event == "motion" and self.on_drag and not self.dragging then
+			local TI = require "engine.TouchInput"
+			local t = TI.t
+			if t and t.held and t.hover and self.last_screen_y then
+				local sy0 = t.y0 - self.last_screen_y + (self.scrollbar and self.scrollbar.pos or 0)
+				local e = self.items[math.floor(sy0 / self.row_h) + 1]
+				if e then self.dragging = true self.on_drag(e) end
+			end
+			return
+		end
 		if event ~= "button" or (button ~= "left" and button ~= "right") then return end
 		local sy = y + (self.scrollbar and self.scrollbar.pos or 0)
 		local i = math.floor(sy / self.row_h) + 1
 		local e = self.items[i]
 		if not e then return end
 		if button == "right" then if self.on_use then self.on_use(e) end return end
+		-- double tap = the row's primary action
+		local now = core.game.getTime()
+		if self.last_tap_i == i and now - (self.last_tap_t or 0) < 400 then
+			self.last_tap_i, self.last_tap_t = nil, nil
+			self:select(i)
+			if self.on_use then print("[TOUCH] double tap", tostring(e.object.name)) self.on_use(e) end
+			return
+		end
+		self.last_tap_i, self.last_tap_t = i, now
 		self:select(i)
 	end)
 	self.key:addBinds{
@@ -154,6 +175,7 @@ function _M:setItems(items)
 end
 
 function _M:display(x, y, nb_keyframes, screen_x, screen_y)
+	self.last_screen_x, self.last_screen_y = screen_x, screen_y
 	if self.scrollbar then
 		self.scrollbar.pos = util.minBound(self.scrollbar.pos + self.scroll_inertia, 0, self.scrollbar.max)
 		if self.scroll_inertia > 0 then self.scroll_inertia = math.max(self.scroll_inertia - 1, 0)

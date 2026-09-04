@@ -46,6 +46,7 @@ _M.wheel = nil      -- object with zoneOf(x,y) / openAt(side,x,y) / move(x,y) / 
 _M.on_pinch = nil   -- function(delta)
 _M.on_hold = nil    -- function(x, y) -> true when a hold there should act at once (buttons), not on release
 _M.on_any_touch = nil -- function(x, y): every finger-down (auto-act stops on it)
+_M.on_hover_end = nil -- function(x, y): a hold-then-drag was released there (drag and drop)
 _M.script_ready = nil -- function() -> true once the game module is really playable
 
 -- gesture state
@@ -176,6 +177,8 @@ function _M.fingerUp(id, x, y)
 		if not t.hover and not t.moved then
 			print("[TOUCH] long-press -> right click at", t.x0, t.y0)
 			click("right", t.x0, t.y0)
+		elseif _M.on_hover_end then
+			pcall(_M.on_hover_end, x, y)
 		end
 		return -- after a hover-scrub the cursor (and its tooltip) stays put
 	end
