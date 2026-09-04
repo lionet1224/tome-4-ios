@@ -262,3 +262,9 @@ rows ≥ 44px, small fixed-size dialogs (≤720x520) scaled 1.5x in Dialog.init,
 (shorter intro, header height = taller block, buttons anchored right), DeathDialog sized to screen,
 detailed talent descriptions always on. Known leftovers: ShowMap draws the minimap at its tiny native
 size; LorePopup/ShowChatLog not exercised by the sweep (need real ids / online chat).
+- `mod/dialogs/TouchGallery.lua` (Game menu > "Touch UI gallery" on touch): every dialog with faked
+  state (spawned NPC for Chat, game:getStore("SWORD_WEAPON"):loadup+interact for a shop, two weapons
+  dropped for the pickup dialog, first lore def with string lore for LorePopup(def, w), achiev_defs[1],
+  UberTalent). sweep.lua iterates entries(); `touch.script_early=true` starts the script before the
+  level exists (birther), T.waitFor(). Death dialog must NOT be faked: its init consumes a life and
+  bails (dont_show) leaving a half-built dialog (b8 nil error).

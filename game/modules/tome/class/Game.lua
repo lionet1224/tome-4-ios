@@ -2451,6 +2451,7 @@ do return end
 				{ _t"Show Achievements", function() self:unregisterDialog(menu) self:registerDialog(require("mod.dialogs.ShowAchievements").new(_t"Tales of Maj'Eyal Achievements", self.player)) end },
 				{ _t"Show known Lore", function() self:unregisterDialog(menu) self:registerDialog(require("mod.dialogs.ShowLore").new(_t"Tales of Maj'Eyal Lore", self.party)) end },
 				{ _t"Show ingredients", function() self:unregisterDialog(menu) self:registerDialog(require("mod.dialogs.ShowIngredients").new(self.party)) end },
+				require("engine.TouchInput").active() and { _t"Touch UI gallery", function() self:unregisterDialog(menu) self:registerDialog(require("mod.dialogs.TouchGallery").new()) end } or nil,
 				"highscores",
 				{ _t"Inventory", function() self:unregisterDialog(menu) self.key:triggerVirtual("SHOW_INVENTORY") end },
 				{ _t"Character Sheet", function() self:unregisterDialog(menu) self.key:triggerVirtual("SHOW_CHARACTER_SHEET") end },

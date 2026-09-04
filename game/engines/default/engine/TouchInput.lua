@@ -264,6 +264,7 @@ function _M.scriptTick()
 	if not path then return end
 	-- the boot menu has a fake level/player: wait for a real game module
 	local ingame = game and game.__mod_info and game.__mod_info.short_name ~= "boot" and game.level and game.player and game.player.x
+	if config.settings.touch.script_early and game and game.__mod_info and game.__mod_info.short_name ~= "boot" then ingame = true end
 	if ingame and _M.script_ready and not _M.script_ready() then ingame = false end
 	if _M.script and _M.script.game ~= game then _M.script, _M.script_done = nil, nil end
 	if _M.script_done then return end
@@ -276,6 +277,7 @@ function _M.scriptTick()
 		local T = {}
 		local wake = 0
 		function T.wait(ms) wake = now() + ms coroutine.yield() end
+		function T.waitFor(fct, timeout) local t0 = now() while not fct() and now() - t0 < (timeout or 120000) do T.wait(300) end end
 		local function down(x, y) _M.fingerDown(1, x, y) end
 		local function up(x, y) _M.fingerUp(1, x, y) end
 		function T.tap(x, y) down(x, y) T.wait(60) up(x, y) T.wait(120) end

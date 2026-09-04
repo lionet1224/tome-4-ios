@@ -163,8 +163,11 @@ function _M:display(x, y, nb_keyframes, screen_x, screen_y)
 			local maxw = right - tx - 8
 			if e.text_price then maxw = maxw - e.text_price.w - 12 end
 			if e.text_badge then maxw = maxw - e.text_badge.w - 12 end
-			self:drawText(e.text_name, tx, ry + 8, maxw)
-			self:drawText(e.text_sub, tx, ry + 10 + (e.text_name and e.text_name.h or 20), maxw)
+			-- clip the two text lines to their column (the price / hint sit to the right)
+			core.display.glScissor(true, screen_x + tx - x, screen_y, math.max(1, maxw), self.h)
+			self:drawText(e.text_name, tx, ry + 8)
+			self:drawText(e.text_sub, tx, ry + 10 + (e.text_name and e.text_name.h or 20))
+			core.display.glScissor(true, screen_x, screen_y, self.w, self.h)
 			local rx = x + right - 8
 			if e.text_price then rx = rx - e.text_price.w self:drawText(e.text_price, rx, ry + 10) rx = rx - 12 end
 			if e.text_badge then rx = rx - e.text_badge.w self:drawText(e.text_badge, rx, ry + 10) end
