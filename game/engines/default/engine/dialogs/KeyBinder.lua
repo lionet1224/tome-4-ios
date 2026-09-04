@@ -39,18 +39,18 @@ function _M:init(key_source, force_all, gesture_source)
 
 	if self.gesture then
 		self.c_tree = TreeList.new{width=self.iw, height=self.ih, sel_by_col=true, scrollbar=true, columns={
-			{width=40, display_prop="name"},
-			{width=20, display_prop="b1"},
-			{width=20, display_prop="b2"},
-			{width=20, display_prop="g"},
+			{width=require("engine.TouchInput").active() and 58 or 40, display_prop="name"},
+			{width=require("engine.TouchInput").active() and 14 or 20, display_prop="b1"},
+			{width=require("engine.TouchInput").active() and 14 or 20, display_prop="b2"},
+			{width=require("engine.TouchInput").active() and 14 or 20, display_prop="g"},
 		}, tree=self.tree,
 			fct=function(item, sel, v) self:use(item, sel, v) end,
 		}
 	else
 		self.c_tree = TreeList.new{width=self.iw, height=self.ih, sel_by_col=true, scrollbar=true, columns={
-			{width=40, display_prop="name"},
-			{width=30, display_prop="b1"},
-			{width=30, display_prop="b2"},
+			{width=require("engine.TouchInput").active() and 58 or 40, display_prop="name"},
+			{width=require("engine.TouchInput").active() and 21 or 30, display_prop="b1"},
+			{width=require("engine.TouchInput").active() and 21 or 30, display_prop="b2"},
 		}, tree=self.tree,
 			fct=function(item, sel, v) self:use(item, sel, v) end,
 		}

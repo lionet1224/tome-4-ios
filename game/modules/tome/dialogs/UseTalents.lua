@@ -59,19 +59,23 @@ function _M:init(actor)
 	Dialog.init(self, ("Use Talents: %s"):tformat(actor:getName()), game.w * 0.8, game.h * 0.8)
 
 	local vsep = Separator.new{dir="horizontal", size=self.ih - 10}
-	self.c_tut = Textzone.new{width=math.floor(self.iw / 2 - vsep.w / 2), height=1, auto_height=true, no_color_bleed=true, text=_t[[
+
+	local lw = math.floor(require("engine.TouchInput").active() and (self.iw * 0.62 - vsep.w / 2) or (self.iw / 2 - vsep.w / 2))
+
+	local rw = self.iw - lw - vsep.w
+	self.c_tut = Textzone.new{width=rw, height=1, auto_height=true, no_color_bleed=true, text=_t[[
 You can bind a non-passive talent to a hotkey by pressing the corresponding hotkey while selecting a talent or by right-clicking on the talent.
 Check out the keybinding screen in the game menu to bind hotkeys to a key (default is 1-0 plus control, shift, or alt).
 Right click or press '~' to configure talent confirmation and automatic use.
 ]]}
-	self.c_desc = TextzoneList.new{width=math.floor(self.iw / 2 - vsep.w / 2), height=self.ih - self.c_tut.h - 20, scrollbar=true, no_color_bleed=true}
+	self.c_desc = TextzoneList.new{width=rw, height=self.ih - self.c_tut.h - 20, scrollbar=true, no_color_bleed=true}
 
 	self:generateList()
 
 	local cols = {
 		{name=_t"", width={40,"fixed"}, display_prop="char"},
-		{name=_t"Talent", width=80, display_prop="name"},
-		{name=_t"Status", width=20, display_prop=function(item)
+		{name=_t"Talent", width=require("engine.TouchInput").active() and 72 or 80, display_prop="name"},
+		{name=_t"Status", width=require("engine.TouchInput").active() and 28 or 20, display_prop=function(item)
 			if item.talent then return TalentStatus(actor, actor:getTalentFromId(item.talent)) else return "" end
 		end},
 		{name=_t"Hotkey", width={75,"fixed"}, display_prop="hotkey"},
@@ -81,7 +85,7 @@ Right click or press '~' to configure talent confirmation and automatic use.
 			else return "" end
 		end},
 	}
-	self.c_list = TreeList.new{width=math.floor(self.iw / 2 - vsep.w / 2), height=self.ih - 10, all_clicks=true, scrollbar=true, columns=cols, tree=self.list, fct=function(item, sel, button) self:use(item, button) end, select=function(item, sel) self:select(item) end, on_drag=function(item, sel) self:onDrag(item) end}
+	self.c_list = TreeList.new{width=lw, height=self.ih - 10, all_clicks=true, scrollbar=true, columns=cols, tree=self.list, fct=function(item, sel, button) self:use(item, button) end, select=function(item, sel) self:select(item) end, on_drag=function(item, sel) self:onDrag(item) end}
 	self.c_list.cur_col = 2
 
 	self:loadUI{

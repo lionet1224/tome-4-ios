@@ -32,13 +32,14 @@ module(..., package.seeall, class.inherit(Dialog))
 function _M:init()
 	Dialog.init(self, _t"Video Options", game.w * 0.8, game.h * 0.8)
 
-	self.c_desc = Textzone.new{width=math.floor(self.iw / 2 - 10), height=self.ih, text=_t""}
+	local lw = math.floor(self.iw * (require("engine.TouchInput").active() and 0.58 or 0.5) - 10)
+	self.c_desc = Textzone.new{width=self.iw - lw - 20, height=self.ih, text=_t""}
 
 	self:generateList()
 
-	self.c_list = TreeList.new{width=math.floor(self.iw / 2 - 10), height=self.ih - 10, scrollbar=true, columns={
-		{width=60, display_prop="name"},
-		{width=40, display_prop="status"},
+	self.c_list = TreeList.new{width=lw, height=self.ih - 10, scrollbar=true, columns={
+		{width=require("engine.TouchInput").active() and 68 or 60, display_prop="name"},
+		{width=require("engine.TouchInput").active() and 32 or 40, display_prop="status"},
 	}, tree=self.list, fct=function(item) end, select=function(item, sel) self:select(item) end}
 
 	self:loadUI{

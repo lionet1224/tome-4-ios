@@ -51,7 +51,7 @@ compile() { # src -> obj (skipped when up to date)
 OBJS=()
 
 # engine core: all top-level src/*.c except the desktop GL loader
-for s in "$ROOT"/src/*.c; do
+for s in "$ROOT"/src/*.c "$ROOT"/src/*.m; do
 	case "$(basename "$s")" in
 		glew.c) continue ;;
 	esac

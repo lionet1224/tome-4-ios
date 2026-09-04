@@ -364,9 +364,11 @@ function _M:init(title, w, h, x, y, alpha, font, showup, skin)
 		-- touch UI: fixed desktop sizes were laid out for 100% fonts; scale them
 		-- with the phone font so their content still fits, then clamp
 		-- (only the small desktop boxes; screen-relative dialogs are already right)
-		if __IOS__ and require("engine.TouchInput").active() and w > 40 and h > 40 and w <= 720 and h <= 520 then w, h = w * 1.5, h * 1.5 end
-		if w > game.w - 10 then w = game.w - 10 end
-		if h > game.h - 40 then h = game.h - 40 end
+		local TI = require("engine.TouchInput")
+		if __IOS__ and TI.active() and w > 40 and h > 40 and w <= 720 and h <= 520 then w, h = w * 1.5, h * 1.5 end
+		local sa = TI.active() and TI.safeArea() or {l=0, t=0, r=0, b=0}
+		if w > game.w - sa.l - sa.r - 10 then w = game.w - sa.l - sa.r - 10 end
+		if h > game.h - sa.t - sa.b - 40 then h = game.h - sa.t - sa.b - 40 end
 	end
 	if self.force_ui_inside then
 		self._lastui = self.ui
@@ -458,12 +460,17 @@ end
 function _M:resize(w, h, nogen)
 	local gamew, gameh = core.display.size()
 	-- iOS port: auto-sized dialogs (simplePopup with long text, ...) bypass
-	-- the init clamp; keep every dialog on-screen here too
-	if w > gamew - 10 then w = gamew - 10 end
-	if h > gameh - 40 then h = gameh - 40 end
+	-- the init clamp; keep every dialog on-screen and clear of the camera /
+	-- home indicator here too
+	local TI = require("engine.TouchInput")
+	local sa = TI.active() and TI.safeArea() or {l=0, t=0, r=0, b=0}
+	if w > gamew - sa.l - sa.r - 10 then w = gamew - sa.l - sa.r - 10 end
+	if h > gameh - sa.t - sa.b - 40 then h = gameh - sa.t - sa.b - 40 end
 	self.w, self.h = math.floor(w), math.floor(h)
-	self.display_x = math.floor(self.force_x or (gamew - self.w) / 2)
-	self.display_y = math.floor(self.force_y or (gameh - self.h) / 2)
+	self.display_x = math.floor(self.force_x or (sa.l + (gamew - sa.l - sa.r - self.w) / 2))
+	self.display_y = math.floor(self.force_y or (sa.t + (gameh - sa.t - sa.b - self.h) / 2))
+	if not self.force_x then self.display_x = util.bound(self.display_x, sa.l, math.max(sa.l, gamew - sa.r - self.w)) end
+	if not self.force_y then self.display_y = util.bound(self.display_y, sa.t, math.max(sa.t, gameh - sa.b - self.h)) end
 	if self.title then
 		self.ix, self.iy = 5, 8 + 3 + self.font_bold_h
 		self.iw, self.ih = w - 2 * 5, h - 8 - 8 - 3 - self.font_bold_h

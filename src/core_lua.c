@@ -682,6 +682,25 @@ static bool no_text_aa = FALSE;
 
 extern bool is_fullscreen;
 extern bool is_borderless;
+#ifdef TE4_IOS
+void te4_ios_safe_area(float *l, float *t, float *r, float *b, float *pw, float *ph);
+#endif
+/* iOS port: safe-area insets in the engine's logical units (l, t, r, b) */
+static int sdl_safe_area(lua_State *L)
+{
+	float l = 0, t = 0, r = 0, b = 0, pw = 0, ph = 0;
+#ifdef TE4_IOS
+	te4_ios_safe_area(&l, &t, &r, &b, &pw, &ph);
+	if (pw > 0) {
+		float f = (screen->w / screen_zoom) / pw;
+		l *= f; t *= f; r *= f; b *= f;
+	}
+#endif
+	lua_pushnumber(L, l); lua_pushnumber(L, t); lua_pushnumber(L, r); lua_pushnumber(L, b);
+	lua_pushnumber(L, pw); lua_pushnumber(L, ph);
+	return 6;
+}
+
 static int sdl_screen_size(lua_State *L)
 {
 	lua_pushnumber(L, screen->w / screen_zoom);
@@ -3563,6 +3582,7 @@ static const struct luaL_Reg displaylib[] =
 	{"forceRedrawForScreenshot", sdl_redraw_screen_for_screenshot},
 	{"redrawingForSavefileScreenshot", redrawing_for_savefile_screenshot},
 	{"size", sdl_screen_size},
+	{"safeArea", sdl_safe_area},
 	{"windowPos", sdl_window_pos},
 	{"newFont", sdl_new_font},
 	{"newSurface", sdl_new_surface},

@@ -37,7 +37,8 @@ function _M:init()
 	Dialog.init(self, _t"Game Options", game.w * 0.8, game.h * 0.8)
 
 	self.vsep = Separator.new{dir="horizontal", size=self.ih - 10}
-	self.c_desc = Textzone.new{width=math.floor((self.iw - self.vsep.w)/2), height=self.ih, text=""}
+	self.touch_lw = math.floor((self.iw - self.vsep.w) * (require("engine.TouchInput").active() and 0.58 or 0.5))
+	self.c_desc = Textzone.new{width=self.iw - self.vsep.w - self.touch_lw, height=self.ih, text=""}
 
 	local tabs = {
 		{title=_t"UI", kind="ui"},
@@ -82,9 +83,9 @@ function _M:switchTo(kind)
 	self['generateList'..kind:capitalize()](self)
 	self:triggerHook{"GameOptions:generateList", list=self.list, kind=kind}
 
-	self.c_list = TreeList.new{width=math.floor((self.iw - self.vsep.w)/2), height=self.ih - 10, scrollbar=true, columns={
-		{width=60, display_prop="name"},
-		{width=40, display_prop="status"},
+	self.c_list = TreeList.new{width=self.touch_lw, height=self.ih - 10, scrollbar=true, columns={
+		{width=require("engine.TouchInput").active() and 68 or 60, display_prop="name"},
+		{width=require("engine.TouchInput").active() and 32 or 40, display_prop="status"},
 	}, tree=self.list, fct=function(item) end, select=function(item, sel) self:select(item) end}
 	if self.uis and self.uis[2] then
 		self:replaceUI(self.uis[2].ui, self.c_list)

@@ -143,12 +143,13 @@ function _M:openAt(side, x, y)
 	local w, h = game.w, game.h
 	self.r_out = math.floor(h * 0.275)
 	self.r_in = math.floor(self.r_out * 0.31)
+	local sa = TouchInput.safeArea()
 	if _M.setting("pos") == "corner" then
-		self.cx = side == "L" and (self.r_out + 30) or (w - self.r_out - 30)
-		self.cy = h - self.r_out - 20
+		self.cx = side == "L" and (sa.l + self.r_out + 30) or (w - sa.r - self.r_out - 30)
+		self.cy = h - sa.b - self.r_out - 20
 	else
-		self.cx = util.bound(x, self.r_out + 8, w - self.r_out - 8)
-		self.cy = util.bound(y, self.r_out + 50, h - self.r_out - 8)
+		self.cx = util.bound(x, sa.l + self.r_out + 8, w - sa.r - self.r_out - 8)
+		self.cy = util.bound(y, sa.t + self.r_out + 50, h - sa.b - self.r_out - 8)
 	end
 	print("[TOUCH] wheel open", side, self.cx, self.cy)
 end

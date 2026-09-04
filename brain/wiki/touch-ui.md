@@ -268,3 +268,13 @@ size; LorePopup/ShowChatLog not exercised by the sweep (need real ids / online c
   UberTalent). sweep.lua iterates entries(); `touch.script_early=true` starts the script before the
   level exists (birther), T.waitFor(). Death dialog must NOT be faked: its init consumes a life and
   bails (dont_show) leaving a half-built dialog (b8 nil error).
+
+## 17. Safe area + cut-off audit (2026-09-04)
+- `src/ios_safearea.m` (UIKit safeAreaInsets) → core.display.safeArea() → TouchInput.safeArea()
+  {l,t,r,b} logical (override `touch.safe`). Dialogs clamp+center inside it (Dialog.init/resize),
+  HUD places shift (Minimalist:applySafeArea), Act/Cast/Cancel/pips/wheels inset.
+  `touch.show_island=true` draws the Dynamic Island pill + home indicator (TouchInput.frameEnd) so
+  simulator screenshots show occlusion; the sweep runs with it on.
+- Audit fixes: List auto-height capped to 74% of the safe height with a scrollbar (game menu); character
+  sheet mono font 13 on touch; wider list panes / columns in UseTalents (62%), GameOptions/VideoOptions
+  (58%), KeyBinder (58/21/21). Leftovers: prodigies grid overflows (rare), map dialog minimap tiny.

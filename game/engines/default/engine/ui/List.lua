@@ -59,6 +59,12 @@ function _M:generate()
 	self.frame_usel = self:makeFrame("ui/selector", fw, fh)
 
 	if not self.h then self.h = self.nb_items * fh end
+	-- iOS port: an auto-sized menu taller than the phone screen scrolls instead of overflowing
+	if require("engine.TouchInput").active() then
+		local sa = require("engine.TouchInput").safeArea()
+		local maxh = math.floor((game.h - sa.t - sa.b) * 0.74 / fh) * fh
+		if self.h > maxh then self.h = maxh self.scrollbar = self.scrollbar or true end
+	end
 
 	self.max_display = math.min(self.max, math.floor(self.h / fh))
 

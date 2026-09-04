@@ -225,8 +225,43 @@ function _M.tick()
 	_M.scriptTick()
 end
 
+--- Safe-area insets {l, t, r, b} in logical units (Dynamic Island / notch and
+-- home indicator on iOS; `touch.safe = {l=,t=,r=,b=}` overrides, e.g. on the Mac)
+function _M.safeArea()
+	local ts = config.settings.touch
+	if ts and ts.safe then return ts.safe end
+	local w = (type(game) == "table" and game.w) or (core.display.size())
+	if not _M._safe or _M._safe_w ~= w then
+		local l, t, r, b, pw, ph = 0, 0, 0, 0, 0, 0
+		if core.display.safeArea then l, t, r, b, pw, ph = core.display.safeArea() end
+		_M._safe = {l=l or 0, t=t or 0, r=r or 0, b=b or 0, pw=pw or 0, ph=ph or 0}
+		_M._safe_w = w
+	end
+	return _M._safe
+end
+
+--- Draw a synthetic Dynamic Island where the real one sits (simulator
+-- screenshots do not include it): `touch.show_island = true`
+local function drawIsland()
+	local sa = _M.safeArea()
+	if not (sa.l and sa.l > 0) then return end
+	local w, h = core.display.size()
+	local f = (sa.pw and sa.pw > 0) and (w / sa.pw) or 1.5
+	local iw, ih, ix = 37 * f, 126 * f, 11 * f   -- points: 37x126 pill, 11 from the edge
+	local iy = (h - ih) / 2
+	local rr = iw / 2
+	core.display.drawQuad(ix, iy + rr, iw, ih - 2 * rr, 0, 0, 0, 255)
+	if core.display.drawRingWedge then
+		core.display.drawRingWedge(ix + rr, iy + rr, 0, rr, 0, 360, 0, 0, 0, 255)
+		core.display.drawRingWedge(ix + rr, iy + ih - rr, 0, rr, 0, 360, 0, 0, 0, 255)
+	end
+	-- home indicator
+	core.display.drawQuad(w / 2 - 70 * f, h - 8 * f - 5 * f, 140 * f, 5 * f, 255, 255, 255, 140)
+end
+
 --- Called by the engine at the very end of a frame (everything drawn)
 function _M.frameEnd()
+	if config.settings.touch and config.settings.touch.show_island then pcall(drawIsland) end
 	local name = _M.pending_shot
 	if not name then return end
 	_M.pending_shot = nil

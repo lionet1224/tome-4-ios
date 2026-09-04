@@ -333,6 +333,7 @@ function _M:init()
 
 	self:resetPlaces()
 	table.merge(self.places, config.settings.tome.uiset_minimalist and config.settings.tome.uiset_minimalist.places or {}, true)
+	self:applySafeArea()
 
 	local w, h = core.display.size()
 
@@ -383,6 +384,25 @@ function _M:checkGameOption(name)
 	return not list[name]
 end
 
+--- iOS port: keep the HUD clear of the camera cut-out and the home indicator
+function _M:applySafeArea()
+	local TI = require "engine.TouchInput"
+	if not TI.active() then return end
+	local sa = TI.safeArea()
+	local w = (type(game) == "table" and game.w) or core.display.size()
+	for _, k in ipairs{"player", "resources", "gamelog"} do
+		local d = self.places[k]
+		if d and d.x and d.x < sa.l then d.x = sa.l end
+	end
+	for _, k in ipairs{"minimap", "buffs", "chatlog"} do
+		local d = self.places[k]
+		if d and d.x then
+			local dw = d.w or (k == "minimap" and 239 or k == "buffs" and 40 or 0)
+			if d.x + dw > w - sa.r then d.x = w - sa.r - dw end
+		end
+	end
+end
+
 function _M:resetPlaces()
 	local w, h = core.display.size()
 
@@ -401,6 +421,7 @@ function _M:resetPlaces()
 		mainicons = {x=w - tb_bg[6] * 0.5, y=h - tb_bg[7] * 6 * 0.5 - 5, scale=1, a=1},
 		hotkeys = {x=10, y=h - th, w=w-60, h=th, scale=1, a=1},
 	}
+	self:applySafeArea()
 end
 
 function _M:boundPlaces(w, h)
@@ -2050,7 +2071,8 @@ function _M:displayTouchPips()
 	local n = TouchWheel.setting("wedges")
 	local base = 12 * (p.hotkey_page - 1)
 	local size, gap = 44, 4
-	local x0, y0 = game.w - 24 - n * (size + gap), 210
+	local sa = require("engine.TouchInput").safeArea()
+	local x0, y0 = game.w - sa.r - 24 - n * (size + gap), 210
 	for i = 1, n do
 		local hk = p.hotkey[base + i]
 		local x = x0 + (i - 1) * (size + gap)
@@ -2080,7 +2102,8 @@ end
 function _M:displayTouchTargeting()
 	local targeting = game.key == game.targetmode_key
 	local bw, gap = 112, 10
-	local x1, y = game.w - 24 - bw * 2 - gap, game.h - 24 - bw
+	local sa = TouchWheel.safeArea and TouchWheel.safeArea() or require("engine.TouchInput").safeArea()
+	local x1, y = game.w - sa.r - 24 - bw * 2 - gap, game.h - sa.b - 24 - bw
 	local x2 = x1 + bw + gap
 	local function zone(name, x, fct)
 		if not game.mouse:updateZone(name, x, y, bw, bw, nil, 1) then

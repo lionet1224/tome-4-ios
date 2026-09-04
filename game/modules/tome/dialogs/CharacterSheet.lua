@@ -47,6 +47,8 @@ function _M:init(actor, start_tab)
 	start_tab = start_tab and tabs_list[start_tab] and start_tab or "general"
 
 	self.font = core.display.newFont(FontPackage:getFont("mono_small", "mono"))
+	-- iOS port: the sheet is laid out for a tall desktop window; a smaller mono font keeps it on one screen
+	if require("engine.TouchInput").active() then self.font = core.display.newFont(FontPackage:getFont("mono_small", "mono"), 13) end
 	self.font_w, self.font_h = self.font:size(' ')
 	self.font_h = self.font:lineSkip()
 
