@@ -852,7 +852,8 @@ function _M:mouseEvent(button, x, y, xrel, yrel, bx, by, event)
 	local TouchInput = require "engine.TouchInput"
 	local touch = TouchInput.active() and TouchInput.t
 	if touch and touch.moved and not touch.held then
-		if button == "left" and event == "button" then
+		-- neither the press that starts a drag nor its release reaches the widgets
+		if button == "left" and (event == "button" or event == "button-down") then
 			-- finger lifted after a drag: keep a pixel scroller moving (momentum)
 			local f = self.touch_fling
 			if f and f.sb and math.abs(f.v) > 0.05 and core.game.getTime() - f.t < 120 then f.active = true else self.touch_fling = nil end
@@ -884,9 +885,15 @@ function _M:mouseEvent(button, x, y, xrel, yrel, bx, by, event)
 						self.touch_scroll = 0
 						if not self.touch_fling or self.touch_fling.sb ~= sb then self.touch_fling = {sb=sb, w=w, v=0, t=core.game.getTime()} end
 					elseif ticks ~= 0 then
-						-- row scrollers (lists): one row per step
-						local dir = ticks > 0 and "wheeldown" or "wheelup"
-						for _ = 1, math.abs(ticks) do w.mouse:delegate(dir, bx, by, nil, nil, bx, by, "button") end
+						-- row scrollers (lists): one row per step. Move the scroll directly
+						-- when we can: a synthesized wheel event would also re-select the
+						-- row under the finger and highlight it
+						if type(w.scroll) == "number" and w.max and w.max_display then
+							w.scroll = util.bound(w.scroll + ticks, 1, math.max(1, w.max - w.max_display + 1))
+						else
+							local dir = ticks > 0 and "wheeldown" or "wheelup"
+							for _ = 1, math.abs(ticks) do w.mouse:delegate(dir, bx, by, nil, nil, bx, by, "button") end
+						end
 					end
 					break
 				end

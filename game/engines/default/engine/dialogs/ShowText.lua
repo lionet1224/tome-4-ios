@@ -36,10 +36,20 @@ function _M:init(title, file, replace, w, h, on_exit, accept_key)
 
 	self.c_desc = Textzone.new{width=math.floor(self.iw - 10), height=self.ih, no_color_bleed=true, auto_height=true, text=self.text}
 
+	-- iOS port: a text taller than the phone screen scrolls instead of being cut
+	local resize_h = not rh
+	if require("engine.TouchInput").active() and self.c_desc.h > self.ih then
+		local TextzoneList = require "engine.ui.TextzoneList"
+		local tz = TextzoneList.new{width=math.floor(self.iw - 10), height=self.ih, no_color_bleed=true, scrollbar=true, dest_area={h=self.ih}}
+		tz:switchItem(self.text, self.text)
+		self.c_desc = tz
+		resize_h = false
+	end
+
 	self:loadUI{
 		{left=0, top=0, ui=self.c_desc},
 	}
-	self:setupUI(not rw, not rh)
+	self:setupUI(not rw, resize_h)
 
 	self.key:addBinds{
 		ACCEPT = accept_key and "EXIT",
