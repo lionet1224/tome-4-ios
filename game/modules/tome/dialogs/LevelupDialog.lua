@@ -1089,7 +1089,9 @@ function _M:getTalentDesc(item)
 
 		local traw = self.actor:getTalentLevelRaw(t.id)
 		local lvl_alt = self.actor:alterTalentLevelRaw(t, traw) - traw
-		if config.settings.tome.show_detailed_talents_desc then
+		-- iOS port: always the detailed display on touch (no keyboard to press 'x')
+		local touch = require("engine.TouchInput").active()
+		if config.settings.tome.show_detailed_talents_desc or touch then
 			local list = {}
 			for i = 1, 5 do
 				local d = self.actor:getTalentReqDesc(item.talent, i-traw):toTString():tokenize(" ()[]")
@@ -1116,7 +1118,7 @@ function _M:getTalentDesc(item)
 					if i < #list then res:add(", ") end
 				end
 			end))
-			text:add(true, true, {"font", "italic"}, {"color", "GREY"}, _t"<Press 'x' to swap to simple display>", {"color", "LAST"}, {"font", "normal"})
+			if not touch then text:add(true, true, {"font", "italic"}, {"color", "GREY"}, _t"<Press 'x' to swap to simple display>", {"color", "LAST"}, {"font", "normal"}) end
 		else
 			local diff_full = function(i2, i1, res)
 				res:add({"color", "LIGHT_GREEN"}, i1, {"color", "LAST"}, " [->", {"color", "YELLOW_GREEN"}, i2, {"color", "LAST"}, "]")
@@ -1149,7 +1151,7 @@ function _M:getTalentDesc(item)
 				text:merge(req)
 				text:merge(self.actor:getTalentFullDescription(t, 1000):diffWith(self.actor:getTalentFullDescription(t), diff_color))
 			end
-			text:add(true, true, {"font", "italic"}, {"color", "GREY"}, _t"<Press 'x' to swap to advanced display>", {"color", "LAST"}, {"font", "normal"})
+			if not touch then text:add(true, true, {"font", "italic"}, {"color", "GREY"}, _t"<Press 'x' to swap to advanced display>", {"color", "LAST"}, {"font", "normal"}) end
 		end
 	end
 

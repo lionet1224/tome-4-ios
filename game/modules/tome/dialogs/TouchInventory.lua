@@ -114,6 +114,7 @@ function _M:build()
 	self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.iw - self.list_w - 20, height=list_h, dest_area={h=list_h}}
 	self.b_primary = Button.new{text=_t"Select an item", width=260, font=self.bigfont, fct=function() self:primary() end}
 	self.b_more = Button.new{text=_t"More...", width=150, font=self.bigfont, fct=function() self:more() end}
+	self.b_compare = Button.new{text=_t"Compare", width=170, font=self.bigfont, fct=function() self:compare() end}
 	self.uis_def = {
 		{left=0, top=0, ui=self.c_tabs},
 		{left=0, top=self.c_tabs.h + 6, ui=self.c_strip},
@@ -121,6 +122,7 @@ function _M:build()
 		{left=self.list_w + 20, top=self.c_tabs.h + self.c_strip.h + 12, ui=self.c_desc},
 		{right=0, bottom=0, ui=self.b_primary},
 		{right=self.b_primary, bottom=0, ui=self.b_more},
+		{right=self.b_more, bottom=0, ui=self.b_compare},
 	}
 end
 
@@ -191,7 +193,8 @@ function _M:updateButtons()
 	-- keep the two buttons anchored bottom-right after the width change
 	for _, ui in ipairs(self.uis) do
 		if ui.ui == self.b_primary then ui.x = self.iw - self.b_primary.w ui.ui.mouse.delegate_offset_x = ui.x
-		elseif ui.ui == self.b_more then ui.x = self.iw - self.b_primary.w - self.b_more.w - 6 ui.ui.mouse.delegate_offset_x = ui.x end
+		elseif ui.ui == self.b_more then ui.x = self.iw - self.b_primary.w - self.b_more.w - 6 ui.ui.mouse.delegate_offset_x = ui.x
+		elseif ui.ui == self.b_compare then ui.x = self.iw - self.b_primary.w - self.b_more.w - self.b_compare.w - 12 ui.ui.mouse.delegate_offset_x = ui.x end
 	end
 end
 
@@ -213,6 +216,27 @@ function _M:primary()
 	local UseItemDialog = require "mod.dialogs.UseItemDialog"
 	local ud = UseItemDialog.new(false, self.actor, e.object, e.item, e.inven, function(_, _, _, stop) self:onUsed(stop) end)
 	ud:use({action=act})
+end
+
+--- Side by side with what is worn in the item's slot
+function _M:compare()
+	local e = self.cur
+	if not e then return end
+	local o = e.object
+	local wi = o:wornInven()
+	if not wi or not self.actor:getInven(wi) then Dialog:simplePopup(_t"Compare", _t"This is not something you wear.") return end
+	local worn = {}
+	for _, w in ipairs(self.actor:getInven(wi)) do if w ~= o then worn[#worn+1] = w end end
+	local on_wear = nil
+	if not e.worn and e.inven == self.actor.INVEN_INVEN then
+		on_wear = function()
+			local UseItemDialog = require "mod.dialogs.UseItemDialog"
+			local ud = UseItemDialog.new(false, self.actor, o, e.item, e.inven, function(_, _, _, stop) self:onUsed(stop) end)
+			ud:use({action="wear"})
+		end
+	end
+	print("[TOUCH] compare", o.name, #worn)
+	game:registerDialog(require("mod.dialogs.TouchCompare").new(self.actor, o, worn, on_wear))
 end
 
 function _M:more()
