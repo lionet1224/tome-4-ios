@@ -31,6 +31,11 @@ frame_oy1 = -1
 frame_oy2 = 1
 
 function _M:init(t)
+	-- iOS port: finger-sized tabs (dialogs passing a font keep it)
+	if not t.font and require("engine.TouchInput").active() then
+		_M.touch_font = _M.touch_font or core.display.newFont(require("engine.FontPackage"):getFont("default"), 24)
+		t.font = _M.touch_font
+	end
 	self.title = assert(t.title, "no tab title")
 	self.text = t.text or ""
 	self.selected = t.default

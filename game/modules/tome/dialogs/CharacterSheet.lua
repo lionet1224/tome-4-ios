@@ -39,6 +39,8 @@ cs_player_dup = nil
 local tabs_list = {general=true, attack=true, defense=true, talents=true, equipment=true}
 
 function _M:init(actor, start_tab)
+	-- iOS port: the touch layout (tabs, finger rows, detail pane) lives in initTouch
+	if require("engine.TouchInput").active() then return self:initTouch(actor, start_tab) end
 	if actor.showCharacterSheet then actor = actor:showCharacterSheet() end
 
 	if _M.cs_player_dup and _M.cs_player_dup.name ~= actor.name then _M.cs_player_dup = nil end
@@ -1884,4 +1886,166 @@ function _M:dump()
 	fff:close()
 
 	Dialog:simplePopup(_t"Character dump complete", ("File: %s"):tformat(fs.getRealPath(file)))
+end
+
+
+------------------------------------------------------------------------
+-- iOS port: touch layout. The numbers and explanations come from the same
+-- drawDialog() as the desktop sheet: it is run against a recording surface
+-- and the recorded lines become finger-sized rows.
+------------------------------------------------------------------------
+local TouchStatList = require "mod.dialogs.elements.TouchStatList"
+local Tabs = require "engine.ui.Tabs"
+local TextzoneList = require "engine.ui.TextzoneList"
+
+function _M:initTouch(actor, start_tab)
+	self.actor = actor
+	self.font = core.display.newFont(FontPackage:getFont("mono_small", "mono"))
+	self.font_w, self.font_h = self.font:size(' ')
+	self.font_h = self.font:lineSkip()
+	self.talent_sorting = config.settings.tome.charsheet_talent_sorting or 1
+	self.equip_set = self.actor.off_weapon_slots and "off" or "main"
+	self.bigfont = core.display.newFont(FontPackage:getFont("default"), 22)
+	self.kind = (start_tab == "defense") and "defence" or (start_tab or "general")
+	Dialog.init(self, ("Character Sheet: %s"):tformat(self.actor:getName()), game.w * 0.96, game.h * 0.96)
+	self.w_desktop = self.w
+
+	local tabs = {
+		{title=_t"General", kind="general"},
+		{title=_t"Attack", kind="attack"},
+		{title=_t"Defense", kind="defence"},
+		{title=_t"Talents", kind="talents"},
+		{title=_t"Equipment", kind="equipment"},
+	}
+	self.c_tabs = Tabs.new{width=self.iw, tabs=tabs, on_change=function(kind) self.kind = kind if self.c_list then self:refreshTouch() end end}
+	local bh = 56
+	local list_h = self.ih - self.c_tabs.h - bh - 24
+	self.list_w = math.floor(self.iw * 0.56)
+	self.c_list = TouchStatList.new{width=self.list_w, height=list_h, scrollbar=true, rows={}, on_select=function(r) self:showTouchDetail(r) end}
+	self.c_info = TextzoneList.new{focus_check=true, scrollbar=true, width=self.iw - self.list_w - 20, height=list_h, dest_area={h=list_h}}
+	self.b_levelup = Button.new{text=_t"Level up", width=170, font=self.bigfont, fct=function() game:unregisterDialog(self) game.key:triggerVirtual("LEVELUP") end}
+	self.b_inven = Button.new{text=_t"Inventory", width=170, font=self.bigfont, fct=function() game:unregisterDialog(self) game.key:triggerVirtual("SHOW_INVENTORY") end}
+	if (actor.unused_stats or 0) > 0 or (actor.unused_talents or 0) > 0 or (actor.unused_generics or 0) > 0 or (actor.unused_talents_types or 0) > 0 then self.b_levelup.glow = 0.6 end
+	self:loadUI{
+		{left=0, top=0, ui=self.c_tabs},
+		{left=0, top=self.c_tabs.h + 8, ui=self.c_list},
+		{left=self.list_w + 20, top=self.c_tabs.h + 8, ui=self.c_info},
+		{right=0, bottom=0, ui=self.b_levelup},
+		{right=self.b_levelup, bottom=0, ui=self.b_inven},
+	}
+	self:setupUI()
+	for _, t in ipairs(tabs) do if t.kind == self.kind then self.c_tabs:select(self.kind) end end
+	self:refreshTouch()
+	self.key:addBinds{ EXIT = function() game:unregisterDialog(self) end }
+end
+
+--- Run the desktop drawing code against a recorder and return its lines
+function _M:collectTouchLines(kind)
+	local entries = {}
+	local font_h = self.font_h
+	local proxy = {}
+	function proxy:erase() end
+	function proxy:drawColorStringBlended(font, text, x, y)
+		local w = font:size((tostring(text):gsub("#[^#]*#", "")))
+		entries[#entries+1] = {text=tostring(text), x=x or 0, y=y or 0}
+		return 0, 0, 0, w, font_h, x, y
+	end
+	proxy.drawStringBlended = proxy.drawColorStringBlended
+	self.c_desc = {s=proxy, w=1400, h=100000, content_h=100000, update=function() end, can_focus=false,
+		mouse={registerZones=function() end, reset=function() end}, key={reset=function() end}}
+	self.w = 1400
+	local old_tip, old_zones, old_link = self.mouseTooltip, self.mouseZones, self.mouseLink
+	self.mouseTooltip = function(_, text, _, _, _, w, h, x, y)
+		for i = #entries, 1, -1 do local e = entries[i] if e.x == x and e.y == y then e.tip = text break end end
+	end
+	self.mouseZones = function() end
+	self.mouseLink = function() end
+	local ok, err = pcall(self.drawDialog, self, kind)
+	self.mouseTooltip, self.mouseZones, self.mouseLink = old_tip, old_zones, old_link
+	self.w = self.w_desktop
+	if not ok then print("[TOUCH] character sheet collect failed", err) end
+	table.sort(entries, function(a, b)
+		if math.abs(a.x - b.x) > 40 then return a.x < b.x end
+		return a.y < b.y
+	end)
+	return entries
+end
+
+local function strip(t) return (tostring(t):gsub("#[^#]*#", "")) end
+
+--- Lines -> rows: "#LIGHT_BLUE#Resources:" is a header, "Label : value" splits at the first colon
+function _M:touchRowsFromLines(entries)
+	local rows = {}
+	for _, e in ipairs(entries) do
+		local plain = strip(e.text)
+		if plain:match("^%s*$") then
+		elseif (plain:match(":%s*$") and not plain:match("^%s")) or e.text:match("^#LIGHT_BLUE#") then
+			rows[#rows+1] = {head=true, label=(plain:gsub(":%s*$", "")), tip=e.tip}
+		else
+			local label, value = plain:match("^%s*(.-)%s*:%s*(.-)%s*$")
+			if label and value and value ~= "" then
+				-- keep the value's colours: cut the original text after the first colon
+				local cv = e.text:match(":%s*(.-)%s*$") or value
+				rows[#rows+1] = {label=label, value=cv, tip=e.tip}
+			else
+				rows[#rows+1] = {label=(plain:gsub("^%s+", "")), value="", tip=e.tip, colored=e.text}
+			end
+		end
+	end
+	return rows
+end
+
+function _M:touchEquipmentRows()
+	local rows = {}
+	for id, def in ipairs(self.actor.inven_def) do
+		local inv = self.actor.inven[id]
+		if def.is_worn and inv and def.show_equip ~= false then
+			rows[#rows+1] = {head=true, label=def.name}
+			if #inv == 0 then rows[#rows+1] = {label=_t"(empty)", value=""} end
+			for _, o in ipairs(inv) do
+				local ok, name = pcall(o.getName, o, {do_color=true})
+				rows[#rows+1] = {label=ok and name or o.name, value="", object=o}
+			end
+		end
+	end
+	return rows
+end
+
+function _M:refreshTouch()
+	local rows
+	if self.kind == "equipment" then
+		rows = self:touchEquipmentRows()
+	else
+		rows = self:touchRowsFromLines(self:collectTouchLines(self.kind))
+		if self.kind == "general" then
+			local kills = self.actor.all_kills_kind or {}
+			local secs = (game.total_playtime or 0) + (os.time() - (game.last_update or game.real_starttime or os.time()))
+			local head = {
+				{head=true, label=_t"Adventure"},
+				{label=_t"Day / month", value=("%d / %s"):format(game.turn / game.calendar.DAY, game.calendar:getMonthName(game.calendar:getDayOfYear(game.turn)))},
+				{label=_t"Time playing", value=("%dh %02dm"):format(math.floor(secs / 3600), math.floor(secs / 60) % 60)},
+				{label=_t"Creatures killed", value=tostring(kills.creature or 0)},
+				{label=_t"Elites / rares / bosses", value=("#YELLOW#%d#LAST# / #SALMON#%d#LAST# / #ORANGE#%d#LAST#"):format(kills.elite or 0, kills.rare or 0, kills.boss or 0)},
+			}
+			for i = #head, 1, -1 do table.insert(rows, 1, head[i]) end
+		end
+	end
+	self.c_list:setRows(rows)
+	self.c_info:erase()
+	local hint = _t"#GREY#Tap a line for its explanation.#LAST#"
+	self.c_info:switchItem(hint, hint)
+end
+
+function _M:showTouchDetail(r)
+	local text
+	if r.object then
+		local ok, d = pcall(r.object.getDesc, r.object, {do_color=true}, nil, nil, self.actor)
+		text = ok and d or tostring(r.object.name)
+	elseif r.tip then
+		text = r.tip
+	else
+		text = r.colored or (r.label..(r.value ~= "" and (": "..r.value) or ""))
+	end
+	self.c_info:erase()
+	self.c_info:switchItem(text, text)
 end
