@@ -51,6 +51,7 @@ function _M:init(mm_mode)
 	self.b_zout = Button.new{text=_t"Zoom out", width=math.floor((bw - 8) / 2), font=bigfont, fct=function() self:zoom(-1) end}
 	self.b_center = Button.new{text=_t"Find me", width=bw, font=bigfont, fct=function() self:centerOn(game.player.x, game.player.y) end}
 	self.b_close = Button.new{text=_t"Close", width=bw, font=bigfont, fct=function() game:unregisterDialog(self) end}
+	self.b_places = Button.new{text=_t"Places", width=bw, font=bigfont, fct=function() game:unregisterDialog(self) game:registerDialog(require("mod.dialogs.TouchPlaces").new()) end}
 
 	local px = self.map_w + gap
 	self:loadUI{
@@ -59,6 +60,7 @@ function _M:init(mm_mode)
 		{left=px, top=110 + self.b_exit.h + 8, ui=self.b_center},
 		{left=px, top=110 + (self.b_exit.h + 8) * 2, ui=self.b_zin},
 		{left=px + math.floor((bw - 8) / 2) + 8, top=110 + (self.b_exit.h + 8) * 2, ui=self.b_zout},
+		{left=px, bottom=self.b_close.h + 8, ui=self.b_places},
 		{left=px, bottom=0, ui=self.b_close},
 	}
 	self.key:addBind("EXIT", function() game:unregisterDialog(self) end)

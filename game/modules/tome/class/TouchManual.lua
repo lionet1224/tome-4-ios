@@ -229,6 +229,7 @@ function _M:openMore()
 	local list = {}
 	local function key(name, k) list[#list+1] = {name=name, fct=function() game.key:triggerVirtual(k) end} end
 	if p.unused_stats > 0 or p.unused_talents > 0 or p.unused_generics > 0 or p.unused_talents_types > 0 or p.unused_prodigies > 0 then key(_t"Level up!", "LEVELUP") end
+	list[#list+1] = {name=_t"Places", fct=function() game:registerDialog(require("mod.dialogs.TouchPlaces").new()) end}
 	key(_t"Inventory", "SHOW_INVENTORY")
 	key(_t"Character sheet", "SHOW_CHARACTER_SHEET")
 	key(_t"Talents", "USE_TALENTS")
