@@ -1788,7 +1788,7 @@ function _M:actMenu()
 	list[#list+1] = {name=_t"Edit routines...", edit=true}
 	Dialog:listPopup(_t"Act", _t"Tap Act to do the next step of the active routine; tap a box in the strip above it to jump to that step. Hold a creature and choose 'Mark for Act' to use it as the marked target.", list, math.floor(game.w * 0.5), math.floor(game.h * 0.7), function(item)
 		if not item then return end
-		if item.edit then game:registerDialog(require("mod.dialogs.ActRoutines").new(self))
+		if item.edit then game:registerDialog((require("engine.TouchInput").active() and require("mod.dialogs.TouchRoutines") or require("mod.dialogs.ActRoutines")).new(self))
 		elseif item.restart then r.pos = 1 self.act_preview_key = nil print("[ACT] restart")
 		elseif item.skip then r.pos = (util.bound(r.pos or 1, 1, #r.steps)) % #r.steps + 1 self.act_preview_key = nil print("[ACT] skip ->", r.pos)
 		elseif item.idx then self.act_active = item.idx self.act_preview_key = nil print("[ACT] routine", item.idx) end

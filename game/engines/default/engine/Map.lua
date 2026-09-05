@@ -258,6 +258,11 @@ end
 function _M:makeCMap()
 	--util.show_backtrace()
 	self._map = core.map.newMap(self.w, self.h, self.mx, self.my, self.viewport.mwidth, self.viewport.mheight, self.tile_w, self.tile_h, self.zdepth, util.isHex() and 1 or 0)
+	-- iOS port: a loaded map remembers its zoom, but the C map above is created at 1x;
+	-- push the zoom into it (and onto the class, which the target cursor reads) so
+	-- the Lua side and the drawn tiles agree
+	self.zoom = self.zoom or _M.zoom or 1
+	_M.zoom = self.zoom
 	self._map:setObscure(unpack(self.color_obscure))
 	self._map:setShown(unpack(self.color_shown))
 	self._map:setupGridLines(unpack(self.grid_lines))
@@ -396,6 +401,7 @@ function _M:loaded()
 	for i, e in ipairs(self.particles) do if e.zdepth then self.z_particles[e.zdepth][e] = true end end
 
 	self:redisplay()
+	self:applyZoom()
 end
 
 --- Recreate the internal map using new dimensions
@@ -410,6 +416,18 @@ function _M:recreate()
 	end
 
 	self:redisplay()
+	self:applyZoom()
+end
+
+--- iOS port: re-apply a non-default zoom to a freshly created C map
+function _M:applyZoom()
+	if not self._map or (self.zoom or 1) == 1 then return end
+	self.viewport.mwidth = math.floor(self.viewport.width / (self.tile_w * self.zoom))
+	self.viewport.mheight = math.floor(self.viewport.height / (self.tile_h * self.zoom))
+	self._map:setZoom(self.tile_w * self.zoom, self.tile_h * self.zoom, self.viewport.mwidth, self.viewport.mheight)
+	self:checkMapViewBounded()
+	self._map:setScroll(self.mx, self.my, 0)
+	self.changed = true
 end
 
 --- Redisplays the map, storing seen information

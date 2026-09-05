@@ -37,6 +37,7 @@ function _M.entries()
 		{name=_t"How many? prompt", fct=function() game:registerDialog(require("engine.dialogs.GetQuantity").new(_t"How many?", _t"Drop", 3, 20, function(q) game.log("Picked %d", q) end)) end},
 		{name=_t"Quest popup", fct=function() local q for id in pairs(p.quests or {}) do q = p:hasQuest(id) if q then break end end if q then game:registerDialog(require("mod.dialogs.QuestPopup").new(q, require("engine.Quest").PENDING)) end end},
 		{name=_t"Lore popup", fct=function() local defs = require("mod.class.interface.PartyLore").lore_defs for _, l in ipairs(defs) do if type(l.lore) == "string" and l.image then require("mod.dialogs.LorePopup").new(l, game.w * 0.6, 0.8) break end end end},
+		{name=_t"Act routines", fct=function() game:registerDialog(require("mod.dialogs.TouchRoutines").new(p)) end, note=_t"steps with icons, picker"},
 		{name=_t"Death screen (preview)", fct=function() game:registerDialog(require("mod.dialogs.DeathDialog").new(p, {preview=true})) end, note=_t"no life used"},
 		{name=_t"Message log", fct=key("SHOW_MESSAGE_LOG")},
 		{name=_t"Level map", fct=key("SHOW_MAP")},
