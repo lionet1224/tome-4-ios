@@ -70,7 +70,7 @@ _M.STEPS = {
 			for uid, e in pairs(game.level.entities) do
 				if e.practice_id == "rat" and (e.dead or (e.life and e.max_life and e.life < e.max_life)) then hurt = true end
 			end
-			return c.seen_target and hurt
+			return hurt -- any kill counts, a bump attack included; the text still teaches the drawer
 		end,
 	},
 	{
@@ -231,7 +231,7 @@ function _M:display()
 		local ok, tx, ty = pcall(s.target, self)
 		if ok and tx and ty and game.level.map:isBound(tx, ty) and game.level.map.seens(tx, ty) then
 			local map = game.level.map
-			local sx, sy = map:getTileToScreen(tx, ty, true)
+			local sx, sy = map:getTileToScreen(tx, ty) -- top-left corner (the centred form put the frame half a tile off)
 			local tw, th = map.tile_w * (map.zoom or 1), map.tile_h * (map.zoom or 1)
 			local pulse = 0.55 + 0.45 * math.sin(now() / 180)
 			K.frame(sx - 3, sy - 3, tw + 6, th + 6, K.GOLD, 3)

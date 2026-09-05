@@ -1019,7 +1019,11 @@ function _M:instanciate(mod, name, new_game, no_reboot, extra_module_info)
 	local hash_valid, hash_err
 	local t = core.game.getTime()
 	local module_md5 = "--"
-	if config.settings.cheat and not __module_extra_info.compute_md5_only then
+	if __IOS__ and not __module_extra_info.compute_md5_only then
+		-- iOS port: hashing every Lua file of the game took 16 s per new game/load on the
+		-- simulator (interpreter only, no JIT); the online validation it feeds is not used here
+		hash_valid, hash_err = false, "iOS: module hash skipped"
+	elseif config.settings.cheat and not __module_extra_info.compute_md5_only then
 		hash_valid, hash_err = false, "cheat mode skipping validation"
 	else
 		if mod.short_name ~= "boot" then
