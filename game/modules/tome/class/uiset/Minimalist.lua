@@ -2104,8 +2104,10 @@ function _M:displayTouchPips()
 		core.display.drawQuad(x, y0, size, size, 12, 12, 14, 210)
 		if c.t.display_entity then c.t.display_entity:toScreen(nil, x, y0, size, size) end
 		core.display.drawQuad(x, y0, size, size, 40, 8, 8, 170)
-		self.touch_wheel:drawLabel(tostring(math.ceil(c.cd)), x + size / 2, y0 + size / 2, 1.2, 1, 0.75, 0.65, 1)
-		self.touch_wheel:drawLabel(tostring(c.i), x + 8, y0 + 9, 0.65, 0.9, 0.8, 0.45, 1)
+		-- turns left in the middle, the slot number small in the corner so they never overlap
+		self.touch_wheel:drawLabel(tostring(math.ceil(c.cd)), x + size / 2, y0 + size / 2 + 3, 1.0, 1, 0.75, 0.65, 1)
+		core.display.drawQuad(x, y0, 16, 14, 12, 12, 14, 220)
+		self.touch_wheel:drawLabel(tostring(c.i), x + 8, y0 + 7, 0.5, 0.9, 0.8, 0.45, 1)
 	end
 end
 

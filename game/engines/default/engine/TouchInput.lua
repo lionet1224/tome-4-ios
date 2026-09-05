@@ -396,7 +396,7 @@ function _M.scriptTick()
 	local s = _M.script
 	-- synthetic fingers are not SDL events, so the idle throttle stops the engine ticking;
 	-- keep the world moving while a script runs (same budget the soak autopilot uses)
-	if game and game.tick and game.level and game.player and not game.paused then
+	if game and game.tick and game.level and game.player and not game.paused and game.__mod_info and game.__mod_info.short_name ~= "boot" then
 		local t0 = now()
 		for _ = 1, 12 do if now() - t0 > 20 or game.paused then break end game:tick() end
 	end

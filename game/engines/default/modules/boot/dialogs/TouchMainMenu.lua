@@ -90,6 +90,14 @@ function _M:buildCards()
 		{name=_t"More", sub=_t"Addons, credits, profile", on_tap=function() self.list[4].fct() end},
 	}
 	secs[#secs+1] = {title=s and _t"Or" or _t"Play", items=main, cols=2, row_h=76, center=true}
+	-- te4.org profile: the touch login sheet (DLC needs it)
+	local who
+	if config.settings.disable_all_connectivity then who = _t"Online features are off"
+	elseif profile and profile.auth and profile.auth.name then who = (_t"Logged in as %s"):tformat(tostring(profile.auth.name))
+	else who = _t"Log in to te4.org for DLC and the vault" end
+	secs[#secs+1] = {title=_t"Account", items={
+		{name=_t"Online profile", sub=who, on_tap=function() game:registerDialog(require("mod.dialogs.TouchLogin").new()) end},
+	}, cols=1, row_h=64, center=true}
 	self.c_flow:setSections(secs)
 end
 
