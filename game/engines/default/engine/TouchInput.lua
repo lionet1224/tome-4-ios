@@ -231,7 +231,20 @@ function _M.gesture(nb_fingers, x, y, d_rot, d_pinch)
 end
 
 --- Called every frame by the engine
+-- the on-screen keyboard belongs to one dialog's text box: hide it as soon as that
+-- dialog is no longer on top (a popup over it, or it closed) so the popup is reachable
+function _M.checkKeyboard()
+	local o = _M.osk
+	if not o then return end
+	local top = game and game.dialogs and game.dialogs[#game.dialogs]
+	if top ~= o.dialog then
+		_M.osk = nil
+		if core.key and core.key.unicodeInput then core.key.unicodeInput(false) end
+	end
+end
+
 function _M.tick()
+	_M.checkKeyboard()
 	local t = _M.t
 	if t and not t.moved and not t.held and not t.wheel then
 		local hold_ms = tonumber(_M.setting("hold_ms")) or 160

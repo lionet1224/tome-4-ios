@@ -54,6 +54,9 @@ function _M:showKeyboard(on)
 		core.key.setTextInputRect(self.last_screen_x, self.last_screen_y, self.w, self.h + extra, game.w, game.h)
 	end
 	core.key.unicodeInput(on and true or false)
+	-- remember which dialog owns the keyboard: TouchInput hides it when another dialog covers it
+	local TI = require "engine.TouchInput"
+	TI.osk = on and {box=self, dialog=game and game.dialogs and game.dialogs[#game.dialogs]} or nil
 end
 
 -- iOS port: give focus to the next text box after this one in the owning dialog; false when there is none
