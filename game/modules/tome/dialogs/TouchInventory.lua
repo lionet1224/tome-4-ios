@@ -13,6 +13,7 @@ local Focusable = require "engine.ui.Focusable"
 local TextzoneList = require "engine.ui.TextzoneList"
 local FontPackage = require "engine.FontPackage"
 local TouchItemList = require "mod.dialogs.elements.TouchItemList"
+local K = require "engine.ui.TouchKit"
 
 module(..., package.seeall, class.inherit(Dialog))
 
@@ -327,8 +328,9 @@ function _M:build()
 	local chips = {}
 	for _, t in ipairs(TABS) do if t.kind ~= "transmo" or self.actor:attr("has_transmo") then chips[#chips+1] = {title=t.title, kind=t.kind} end end
 	self.c_chips = Chips.new{width=self.list_w, items=chips, default="all", on_change=function(kind) self.tab = kind if self.c_list then self:refresh() end end}
-	self.banner_h = 0
-	self.c_list = TouchItemList.new{width=self.list_w, height=ph - self.c_chips.h - 6, actor=self.actor, scrollbar=true, items={},
+	-- a strip under the chips for the chest hint (only when the character owns the chest)
+	self.banner_h = self.actor:attr("has_transmo") and 40 or 0
+	self.c_list = TouchItemList.new{width=self.list_w, height=ph - self.c_chips.h - 6 - self.banner_h, actor=self.actor, scrollbar=true, items={},
 		on_select=function(e) self:selectEntry(e) end, on_use=function(e) self:primary() end, on_drag=function(e) self:startDrag(e) end}
 	local bh = 56
 	self.c_card = Card.new{width=self.card_w, height=200, actor=self.actor}
@@ -343,7 +345,7 @@ function _M:build()
 	self.uis_def = {
 		{left=0, top=0, ui=self.c_doll},
 		{left=self.doll_w + gap, top=0, ui=self.c_chips},
-		{left=self.doll_w + gap, top=self.c_chips.h + 6, ui=self.c_list},
+		{left=self.doll_w + gap, top=self.c_chips.h + 6 + self.banner_h, ui=self.c_list},
 		{left=cx, top=0, ui=self.c_card},
 		{left=cx, top=206, ui=self.c_desc},
 		{left=cx, bottom=bh + 6, ui=self.b_primary},
@@ -403,6 +405,7 @@ function _M:showCurrent()
 	local o = e and e.object
 	local worn = (o and not e.worn) and self:wornFor(o) or nil
 	self.c_card:set(o, worn, o and self:kindOf(o) or nil)
+	self:fitDesc()
 	self.c_desc:erase()
 	if o then
 		local ok, d = pcall(o.getDesc, o, {do_color=true}, (not e.worn) and o:wornInven() and self.actor:getInven(o:wornInven()) or nil, nil, self.actor)
@@ -413,6 +416,27 @@ function _M:showCurrent()
 	self.b_primary:generate()
 	self.b_transmo.text = (o and o.__transmo) and _t"Keep" or _t"Transmog."
 	self.b_transmo:generate()
+end
+
+-- the compare card grows with its stat rows: keep the description below it, scrolling in what is left
+function _M:fitDesc()
+	local h = math.max(90, self.c_card:contentHeight())
+	if self.c_card.h == h and self.c_desc_h_fit == h then return end
+	self.c_card.h = h
+	local bh = 56
+	local top = h + 6
+	local dh = math.max(80, self.ih - top - bh * 2 - 30)
+	local old = self.c_desc
+	self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.card_w, height=dh, dest_area={h=dh}}
+	local entry = self.ui_by_ui[old]
+	if entry then
+		entry.ui = self.c_desc
+		entry.y = self.iy + top
+		self.ui_by_ui[old] = nil
+		self.ui_by_ui[self.c_desc] = entry
+	end
+	self.desc_h = dh
+	self.c_desc_h_fit = h
 end
 
 function _M:selectEntry(e)
@@ -523,13 +547,13 @@ function _M:dropAt(x, y)
 end
 
 function _M:innerDisplay(x, y, nb_keyframes)
-	-- chest flow banner
-	if self.chest_mode and self.tab == "transmo" then
-		local bx, by = x + self.doll_w + 12, y + self.c_chips.h + 6
-		core.display.drawQuad(bx, by, self.list_w, 30, 60, 46, 16, 230)
-		self.c_doll.small = self.c_doll.small or core.display.newFont(FontPackage:getFont("default"), 12)
-		local l = self.c_doll:label(_t"Leaving the level: whatever stays in the chest is transmogrified. Keep or wear what you want.")
-		l._tex:toScreenFull(bx + 10, by + 8, math.min(l.w, self.list_w - 20), l.h, l._tex_w, l._tex_h, 1, 0.9, 0.6, 1)
+	-- chest hint strip under the chips
+	if self.banner_h > 0 and self.tab == "transmo" then
+		local bx, by = x + self.ix + self.doll_w + 12, y + self.iy + self.c_chips.h + 4
+		local strong = self.chest_mode
+		K.quad(bx, by, self.list_w, self.banner_h - 4, strong and {60, 46, 16} or {29, 31, 38})
+		local msg = strong and _t"Leaving the level: whatever stays in the chest is transmogrified into gold. Keep or wear what you want first." or _t"Items in the chest are transmogrified into gold when you leave the level."
+		for i, l in ipairs(K.wrap(msg, K.font(12), self.list_w - 20, 2)) do K.draw(K.text(l, 12, 240, 220, 150, false, self.list_w - 20), bx + 10, by + 4 + (i - 1) * 16) end
 	end
 	local e = self.drag
 	if not e then return end
@@ -537,7 +561,8 @@ function _M:innerDisplay(x, y, nb_keyframes)
 	if not t then return end
 	local s, ok = self:dropTarget(t.x, t.y)
 	self.c_doll.drop_hint, self.c_doll.drop_ok = (s and not e.worn) and s or nil, ok
-	pcall(e.object.toScreen, e.object, nil, t.x - 32, t.y - 80, 64, 64)
+	-- innerDisplay draws in the dialog's translated space: convert the finger position
+	pcall(e.object.toScreen, e.object, nil, x + (t.x - (self.display_x or 0)) - 32, y + (t.y - (self.display_y or 0)) - 80, 64, 64)
 end
 
 function _M:generateList() self:refresh() end
