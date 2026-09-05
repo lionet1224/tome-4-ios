@@ -1620,7 +1620,9 @@ function _M:actStep()
 			self.act_last_ok = true
 			return
 		end
-		if step.if_unusable == "approach" and far_target then
+		-- a talent on cooldown is skipped outright (no turn spent) unless the routine says otherwise
+		local cooling = why == _t"cooling down" and r.skip_cooldown ~= false
+		if not cooling and step.if_unusable == "approach" and far_target then
 			-- out of range: close in one tile and keep this step for the next tap
 			local nx, ny = self:actPathStep(far_target)
 			if nx then
@@ -1631,7 +1633,7 @@ function _M:actStep()
 				return
 			end
 		end
-		if step.if_unusable == "wait" then
+		if not cooling and step.if_unusable == "wait" then
 			game.logPlayer(self, "Waiting for %s (%s).", self:actStepName(step), why or "")
 			self:waitTurn()
 			return

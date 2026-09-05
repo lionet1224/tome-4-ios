@@ -2079,29 +2079,25 @@ function _M:displayTouchPips()
 	local base = 12 * (p.hotkey_page - 1)
 	local size, gap = 44, 4
 	local sa = require("engine.TouchInput").safeArea()
-	local x0, y0 = game.w - sa.r - 24 - n * (size + gap), 210
+	-- only what is cooling down, packed against the right edge
+	local cooling = {}
 	for i = 1, n do
 		local hk = p.hotkey[base + i]
-		local x = x0 + (i - 1) * (size + gap)
-		core.display.drawQuad(x, y0, size, size, 12, 12, 14, hk and 210 or 60)
-		local cd
 		if hk and hk[1] == "talent" then
 			local t = p:getTalentFromId(hk[2])
-			if t then
-				if t.display_entity then t.display_entity:toScreen(nil, x, y0, size, size) end
-				cd = p:isTalentCoolingDown(t)
-				if p:isTalentActive(t.id) then core.display.drawQuad(x, y0 + size - 4, size, 4, 255, 255, 0, 255) end
-			end
-		elseif hk and hk[1] == "inventory" then
-			local o = p:findInAllInventories(hk[2], {no_add_name=true, force_id=true, no_count=true})
-			if o then o:toScreen(nil, x, y0, size, size) end
+			local cd = t and p:isTalentCoolingDown(t)
+			if cd and cd > 0 then cooling[#cooling+1] = {i=i, t=t, cd=cd} end
 		end
-		if cd and cd > 0 then
-			core.display.drawQuad(x, y0, size, size, 40, 8, 8, 170)
-			self.touch_wheel:drawLabel(tostring(math.ceil(cd)), x + size / 2, y0 + size / 2, 1.2, 1, 0.75, 0.65, 1)
-		else
-			self.touch_wheel:drawLabel(tostring(i), x + 8, y0 + 9, 0.65, hk and 0.9 or 0.45, hk and 0.8 or 0.42, hk and 0.45 or 0.36, 1)
-		end
+	end
+	local y0 = 210
+	local x0 = game.w - sa.r - 24 - #cooling * (size + gap)
+	for k, c in ipairs(cooling) do
+		local x = x0 + (k - 1) * (size + gap)
+		core.display.drawQuad(x, y0, size, size, 12, 12, 14, 210)
+		if c.t.display_entity then c.t.display_entity:toScreen(nil, x, y0, size, size) end
+		core.display.drawQuad(x, y0, size, size, 40, 8, 8, 170)
+		self.touch_wheel:drawLabel(tostring(math.ceil(c.cd)), x + size / 2, y0 + size / 2, 1.2, 1, 0.75, 0.65, 1)
+		self.touch_wheel:drawLabel(tostring(c.i), x + 8, y0 + 9, 0.65, 0.9, 0.8, 0.45, 1)
 	end
 end
 

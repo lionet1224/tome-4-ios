@@ -39,7 +39,8 @@ function _M:init(actor)
 	self.content_w = self.iw - self.rail_w - self.detail_w - 2 * gap
 	local bh = 52
 	-- rail: routine cards over four buttons
-	self.c_rail = Flow.new{width=self.rail_w, height=self.ih - bh * 2 - 16}
+	self.c_rail = Flow.new{width=self.rail_w, height=self.ih - bh * 3 - 24}
+	self.b_cool = Button.new{text=_t"Cooldowns: skip", width=self.rail_w, font=font(17), fct=function() local r = self:routine() if r then r.skip_cooldown = (r.skip_cooldown == false) and true or false self.actor.changed = true self:refresh(true) end end}
 	local third = math.floor((self.rail_w - 12) / 3)
 	self.b_use = Button.new{text=_t"Use this routine", width=self.rail_w, font=self.bigfont, fct=function() self:useRoutine() end}
 	self.b_rename = Button.new{text=_t"Rename", width=third, font=font(17), fct=function() self:renameRoutine() end}
@@ -70,6 +71,7 @@ function _M:init(actor)
 	self:loadUI{
 		{left=0, top=0, ui=self.c_rail},
 		{left=0, bottom=bh + 8, ui=self.b_use},
+		{left=0, bottom=2 * (bh + 8), ui=self.b_cool},
 		{left=0, bottom=0, ui=self.b_rename},
 		{left=third + 6, bottom=0, ui=self.b_copy},
 		{left=2 * (third + 6), bottom=0, ui=self.b_delete},
@@ -203,6 +205,11 @@ end
 function _M:refresh(keep_scroll)
 	if not self.built then return end
 	local a = self.actor
+	do -- routine-level option: skip talents on cooldown without spending a turn (default on)
+		local r = self:routine()
+		local nt = (r and r.skip_cooldown == false) and _t"Cooldowns: follow step rule" or _t"Cooldowns: skip"
+		if self.b_cool.text ~= nt then self.b_cool.text = nt self.b_cool:generate() end
+	end
 	-- rail
 	local items = {}
 	for i, r in ipairs(a.act_routines) do
