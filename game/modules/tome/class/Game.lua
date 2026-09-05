@@ -2743,7 +2743,8 @@ function _M:setupMouse(reset)
 				self.uiset.touch_manual:setTarget(a)
 				return
 			end
-			if not (tmx == self.player.x and tmy == self.player.y) and #self.player:actEnemies() > 0 then
+			-- (not on the world map: encounters sit in view for miles and the run logic already halts when one closes in)
+			if not (tmx == self.player.x and tmy == self.player.y) and not (self.zone and self.zone.wilderness) and #self.player:actEnemies() > 0 then
 				self.uiset.touch_manual:setTarget(nil)
 				local t = core.game.getTime()
 				if not self.touch_walk_hint or t - self.touch_walk_hint > 5000 then
