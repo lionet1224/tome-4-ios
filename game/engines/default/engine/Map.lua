@@ -321,6 +321,15 @@ function _M:addPathString(ps)
 end
 
 function _M:loaded()
+	-- iOS port: a loaded map always comes back at 1x. The C map is built at 1x and the
+	-- Lua side must agree with it (a saved zoom used to leave the target cursor and
+	-- hit tests at the old scale); pinch again to zoom after a load.
+	self.zoom = 1
+	_M.zoom = 1
+	if self.viewport and self.tile_w then
+		self.viewport.mwidth = math.floor(self.viewport.width / self.tile_w)
+		self.viewport.mheight = math.floor(self.viewport.height / self.tile_h)
+	end
 	self:makeCMap()
 	__map_store[self] = true
 
@@ -401,7 +410,6 @@ function _M:loaded()
 	for i, e in ipairs(self.particles) do if e.zdepth then self.z_particles[e.zdepth][e] = true end end
 
 	self:redisplay()
-	self:applyZoom()
 end
 
 --- Recreate the internal map using new dimensions
