@@ -44,21 +44,24 @@ function _M:init(t)
 	WithTitle.init(self, t)
 end
 
+-- iOS port: show the on-screen keyboard for this box (SDL is told where the box is
+-- so the view scrolls up to keep it above the keyboard); hide it when focus leaves
+function _M:showKeyboard(on)
+	if not (__IOS__ and core.key and core.key.unicodeInput) then return end
+	if on and core.key.setTextInputRect and self.last_screen_x then
+		core.key.setTextInputRect(self.last_screen_x, self.last_screen_y, self.w, self.h, game.w, game.h)
+	end
+	core.key.unicodeInput(on and true or false)
+end
+
 function _M:on_focus(v)
 	game:onTickEnd(function()
 		self.key:unicodeInput(v)
-		-- iOS port: a text box the player just tapped shows the on-screen keyboard (an
-		-- auto-focused one does not); losing focus hides it. SDL is told where the box
-		-- is so the view scrolls up to keep it above the keyboard.
-		if __IOS__ and core.key and core.key.unicodeInput then
-			local TI = require "engine.TouchInput"
-			local tapped = TI.last_down and (core.game.getTime() - TI.last_down) < 800
-			if v and not tapped then return end
-			if v and core.key.setTextInputRect and self.last_screen_x then
-				core.key.setTextInputRect(self.last_screen_x, self.last_screen_y, self.w, self.h, game.w, game.h)
-			end
-			core.key.unicodeInput(v and true or false)
-		end
+		-- a box the player just tapped shows the keyboard; an auto-focused one waits for a tap
+		local TI = require "engine.TouchInput"
+		local tapped = TI.last_down and (core.game.getTime() - TI.last_down) < 800
+		if v and not tapped then return end
+		self:showKeyboard(v)
 	end)
 end
 
@@ -99,6 +102,7 @@ function _M:generate()
 		if event == "button" and button == "left" then
 			self.cursor = util.bound(math.floor(bx / self.font_mono_w) + self.scroll, 1, #self.tmp+1)
 			self:updateText()
+			self:showKeyboard(true) -- a tap on an already focused box still brings the keyboard up
 		elseif event == "button" and self.on_mouse then
 			self.on_mouse(button, x, y, xrel, yrel, bx, by, event)
 		end
