@@ -49,9 +49,27 @@ end
 function _M:showKeyboard(on)
 	if not (__IOS__ and core.key and core.key.unicodeInput) then return end
 	if on and core.key.setTextInputRect and self.last_screen_x then
-		core.key.setTextInputRect(self.last_screen_x, self.last_screen_y, self.w, self.h, game.w, game.h)
+		-- cover the box and what sits under it (the next field, the buttons) so they rise with it
+		local extra = math.min(160, math.max(0, game.h - (self.last_screen_y + self.h)))
+		core.key.setTextInputRect(self.last_screen_x, self.last_screen_y, self.w, self.h + extra, game.w, game.h)
 	end
 	core.key.unicodeInput(on and true or false)
+end
+
+-- iOS port: give focus to the next text box after this one in the owning dialog; false when there is none
+function _M:focusNextBox()
+	local d = game and game.dialogs and game.dialogs[#game.dialogs]
+	if not d or not d.uis then return false end
+	local seen = false
+	for i, ui in ipairs(d.uis) do
+		if ui.ui == self then seen = true
+		elseif seen and ui.ui.__CLASSNAME == "engine.ui.Textbox" and not ui.hidden then
+			d:setFocus(i)
+			ui.ui:showKeyboard(true)
+			return true
+		end
+	end
+	return false
 end
 
 function _M:on_focus(v)
@@ -107,7 +125,12 @@ function _M:generate()
 			self.on_mouse(button, x, y, xrel, yrel, bx, by, event)
 		end
 	end)
-	self.key:addBind("ACCEPT", function() self.fct(self.text) end)
+	self.key:addBind("ACCEPT", function()
+		-- iOS port: Return moves to the next text box of the dialog (username -> password);
+		-- only the last one submits
+		if __IOS__ and self:focusNextBox() then return end
+		self.fct(self.text)
+	end)
 	self.key:addIgnore("_ESCAPE", true)
 	self.key:addIgnore("_TAB", true)
 	self.key:addIgnore("_UP", true)
