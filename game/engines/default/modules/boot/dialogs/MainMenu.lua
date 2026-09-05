@@ -77,28 +77,8 @@ function _M:init()
 	l[#l+1] = {name=_t"Exit", fct=function() game:onQuit() end}
 	if config.settings.cheat then l[#l+1] = {name=_t"Reboot", fct=function() util.showMainMenu() end} end
 
-	-- iOS port: autopilot goes straight into New Game
-	print("[AUTOPILOT-CHECK] settings.autopilot =", tostring(config.settings.autopilot), "build =", tostring(config.settings.autopilot_build))
-	if config.settings.autopilot and config.settings.autopilot_resume then
-		-- repro mode: load the archived save (tools/soak-resume.sh) instead of a new game
-		local want = tostring(config.settings.autopilot_resume)
-		local found
-		for _, m in ipairs(Module:listSavefiles()) do
-			for _, save in ipairs(m.savefiles or {}) do
-				if m.short_name == "tome" and save.short_name and save.short_name:lower() == want:lower() then found = {mod=m.versions and m.versions[1] or m, save=save} end
-			end
-		end
-		if found then
-			print("[AUTOPILOT] resuming save", want)
-			game:onTickEnd(function() Module:instanciate(found.mod, found.save.short_name, false) end)
-		else
-			print("[AUTOPILOT] resume save not found:", want, "- starting New Game")
-			game:onTickEnd(function() l[1].fct() end)
-		end
-	elseif config.settings.autopilot then
-		print("[AUTOPILOT] auto-starting New Game")
-		game:onTickEnd(function() l[1].fct() end)
-	end
+	self:setupAutopilot(l[1].fct)
+
 	-- if config.settings.cheat then l[#l+1] = {name="webtest", fct=function() util.browserOpenUrl("http://google.com") end} end
 --	if config.settings.cheat then l[#l+1] = {name="webtest", fct=function() util.browserOpenUrl("asset://te4/html/test.html") end} end
 
@@ -136,6 +116,31 @@ function _M:init()
 	end
 
 	self:updateUI()	
+end
+
+--- iOS port: the soak autopilot goes straight into New Game (or resumes an archived save)
+function _M:setupAutopilot(new_game_fct)
+	print("[AUTOPILOT-CHECK] settings.autopilot =", tostring(config.settings.autopilot), "build =", tostring(config.settings.autopilot_build))
+	if config.settings.autopilot and config.settings.autopilot_resume then
+		-- repro mode: load the archived save (tools/soak-resume.sh) instead of a new game
+		local want = tostring(config.settings.autopilot_resume)
+		local found
+		for _, m in ipairs(Module:listSavefiles()) do
+			for _, save in ipairs(m.savefiles or {}) do
+				if m.short_name == "tome" and save.short_name and save.short_name:lower() == want:lower() then found = {mod=m.versions and m.versions[1] or m, save=save} end
+			end
+		end
+		if found then
+			print("[AUTOPILOT] resuming save", want)
+			game:onTickEnd(function() Module:instanciate(found.mod, found.save.short_name, false) end)
+		else
+			print("[AUTOPILOT] resume save not found:", want, "- starting New Game")
+			game:onTickEnd(function() new_game_fct() end)
+		end
+	elseif config.settings.autopilot then
+		print("[AUTOPILOT] auto-starting New Game")
+		game:onTickEnd(function() new_game_fct() end)
+	end
 end
 
 function _M:setupDLCButtons()

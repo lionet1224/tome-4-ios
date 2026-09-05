@@ -367,7 +367,7 @@ function _M:setupMouse(mouse)
 			end,
 			function(i, hk)
 				if button == "right" and hk and hk[1] == "talent" then
-					local d = require("mod.dialogs.UseTalents").new(game.player)
+					local d = (require("engine.TouchInput").active() and require("mod.dialogs.TouchTalents") or require("mod.dialogs.UseTalents")).new(game.player)
 					d:use({talent=hk[2], name=game.player:getTalentFromId(hk[2]).name}, "right")
 					return true
 				elseif button == "right" and hk and hk[1] == "inventory" then

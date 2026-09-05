@@ -149,7 +149,9 @@ function _M:run()
 	end
 
 	-- Setup display
-	self:registerDialog(MainMenu.new())
+	-- iOS port: the touch title screen when fingers drive the game
+	if require("engine.TouchInput").active() then self:registerDialog(require("mod.dialogs.TouchMainMenu").new())
+	else self:registerDialog(MainMenu.new()) end
 
 	-- Run the current music if any
 	self:playMusic("The saga begins.ogg")
@@ -679,7 +681,7 @@ function _M:handleProfileEvent(evt)
 	evt = engine.GameEnergyBased.handleProfileEvent(self, evt)
 	if evt and evt.e == "Auth" then
 		local d = self.dialogs[#self.dialogs]
-		if d and d.__CLASSNAME == "mod.dialogs.MainMenu" then
+		if d and (d.__CLASSNAME == "mod.dialogs.MainMenu" or d.__touch_menu) then
 			d:on_recover_focus()
 		end
 	end
@@ -690,7 +692,7 @@ function _M:handleProfileEvent(evt)
 			self:makeWebtooltip()
 
 			local d = self.dialogs[#self.dialogs]
-			if d and d.__CLASSNAME == "mod.dialogs.MainMenu" then
+			if d and (d.__CLASSNAME == "mod.dialogs.MainMenu" or d.__touch_menu) then
 				d:on_recover_focus()
 			end
 		end

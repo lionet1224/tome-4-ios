@@ -436,7 +436,13 @@ function _M:invoke(id)
 	local hd = {"Chat:invoke", id = id or self.default_id }
 	self:triggerHook(hd)
 
-	local d = require(self.chat_dialog).new(self, hd.id, self.force_dialog_width or 500)
+	-- iOS port: the touch layout (portrait, scrolling speech, answer cards) lives in the module
+	local cls = require(self.chat_dialog)
+	if require("engine.TouchInput").active() then
+		local ok, TouchChat = pcall(require, "mod.dialogs.TouchChat")
+		if ok and type(TouchChat) == "table" and TouchChat.new then cls = TouchChat end
+	end
+	local d = cls.new(self, hd.id, self.force_dialog_width or 500)
 	game:registerDialog(d)
 	return d
 end

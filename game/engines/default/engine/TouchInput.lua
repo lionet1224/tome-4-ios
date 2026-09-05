@@ -312,6 +312,8 @@ function _M.scriptTick()
 	-- the boot menu has a fake level/player: wait for a real game module
 	local ingame = game and game.__mod_info and game.__mod_info.short_name ~= "boot" and game.level and game.player and game.player.x
 	if config.settings.touch.script_early and game and game.__mod_info and game.__mod_info.short_name ~= "boot" then ingame = true end
+	-- `touch.script_boot = true`: run the script on the title screen (boot module) too
+	if config.settings.touch.script_boot and game and game.__mod_info and game.__mod_info.short_name == "boot" and game.dialogs and #game.dialogs > 0 then ingame = true end
 	if ingame and _M.script_ready and not _M.script_ready() then ingame = false end
 	if _M.script and _M.script.game ~= game then _M.script, _M.script_done = nil, nil end
 	if _M.script_done then return end

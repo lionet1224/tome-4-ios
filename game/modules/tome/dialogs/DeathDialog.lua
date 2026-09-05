@@ -25,12 +25,16 @@ local Separator = require "engine.ui.Separator"
 local List = require "engine.ui.List"
 local Savefile = require "engine.Savefile"
 local Map = require "engine.Map"
+local Tiles = require "engine.Tiles"
+local TextzoneList = require "engine.ui.TextzoneList"
 
 module(..., package.seeall, class.inherit(Dialog))
 
-function _M:init(actor)
+function _M:init(actor, opts)
 	self.actor = actor
 	self.ui = "deathbox"
+	-- iOS port: the touch layout (character card + big choice cards) lives in initTouch
+	if require("engine.TouchInput").active() then return self:initTouch(actor, opts) end
 	-- iOS port: the fixed 500x600 box does not fit a phone in landscape (645 high)
 	local W, H = 500, 600
 	if require("engine.TouchInput").active() then W, H = math.floor(game.w * 0.7), math.floor(game.h * 0.92) end
@@ -361,6 +365,7 @@ function _M:generateList()
 end
 
 function _M:innerDisplayBack(x, y, nb_keyframes, tx, ty)
+	if self.touch then return self:touchDisplayBack(x, y, nb_keyframes) end
 	x = x + self.frame.ox1
 	y = y + self.frame.oy1
 
@@ -376,4 +381,164 @@ function _M:innerDisplayBack(x, y, nb_keyframes, tx, ty)
 		local d = self.graphical_options.skeleton[self.cur_item and (self.cur_item.action == "skeleton" or self.cur_item.action == "lichform") and "available" or "unavailable"]
 		d.t:toScreenFull(x, y + self.frame.h - d.h, d.w, d.h, d.tw, d.th, 1, 1, 1, 1)
 	end
+end
+
+------------------------------------------------------------------------
+-- iOS port: touch layout
+------------------------------------------------------------------------
+-- Same choices, same actions, same "no way out" rule as the desktop box:
+-- a character card on the left (sprite, name, killer, run facts, the death
+-- text and achievements), the choices as full-width cards on the right.
+--
+-- Preview (gallery / tests): DeathDialog.new(actor, {preview=true}) builds the
+-- real choice list but every action only prints and closes; nothing on the
+-- actor or the game is touched (no life consumed, no save, no pause).
+
+local K = require "engine.ui.TouchKit"
+
+function _M:initTouch(actor, opts)
+	self.touch = true
+	self.preview = opts and opts.preview or false
+	self.no_close_box = true
+	Dialog.init(self, _t"You have #LIGHT_RED#died#LAST#!", math.floor(game.w * 0.96), math.floor(game.h * 0.96))
+
+	if self.preview then
+		self:previewList()
+	else
+		actor:saveUUID()
+		self:generateList()
+		if self.dont_show then return end
+		if not config.settings.cheat then game:onTickEnd(function() game:saveGame() end) end
+	end
+
+	self:setTitleShadowShader(Shader.default.textoutline and Shader.default.textoutline.shad, 1.5)
+	self.tiles = Tiles.new(64, 64, nil, nil, true, nil)
+
+	local gap = 12
+	self.left_w = math.floor(self.iw * 0.42)
+	self.hero_h = 200
+	local right_w = self.iw - self.left_w - gap
+
+	-- death text + achievements, scrolling under the character card
+	local desc = _t[[Death in #{bold}#Tales of Maj'Eyal#{normal}# is usually permanent, but if you have a means of resurrection it will be proposed in the menu below.
+You can dump your character data to a file to remember her/him forever, or you can exit and try once again to survive in the wilds!
+]]
+	if #game.party.on_death_show_achieved > 0 then
+		desc = desc .. ("\n#LIGHT_GREEN#During your game you#WHITE#:\n* %s"):tformat(table.concat(game.party.on_death_show_achieved, "\n* "))
+	end
+	local desc_h = self.ih - self.hero_h - 8
+	self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.left_w - 8, height=desc_h, dest_area={h=desc_h}}
+	self.c_desc:switchItem("death", desc)
+
+	-- the choices
+	self.c_flow = K.Flow.new{width=right_w, height=self.ih}
+	local items = {}
+	for _, item in ipairs(self.list) do
+		items[#items+1] = {name=tostring(item.name):gsub("#[^#]*#", ""), sub=item.sub or self:touchSub(item), data=item,
+			on_tap=function() self.cur_item = item self:use(item) end}
+	end
+	self.c_flow:setSections{{title=_t"What now?", items=items, cols=1, row_h=64}}
+
+	self:loadUI{
+		{left=4, top=self.hero_h, ui=self.c_desc},
+		{left=self.left_w + gap, top=0, ui=self.c_flow},
+	}
+	self:setFocus(self.c_flow)
+	self:setupUI(false, true)
+end
+
+-- one line under each choice saying what it costs / does
+function _M:touchSub(item)
+	local a = item.action
+	if type(a) == "function" then return _t"A talent brings you back"
+	elseif a == "cheat" then return _t"Debug: come back for free"
+	elseif a == "blood_life" then return _t"Spends the Blood of Life; you keep everything"
+	elseif a == "skeleton" then return _t"Skeleton ability, once per character"
+	elseif type(a) == "string" and a:find("^consume") then return _t"The item is destroyed; you keep everything else"
+	elseif a == "easy_mode" then
+		if self.actor:attr("infinite_lifes") then return _t"Exploration mode: unlimited lives" end
+		local n = self.actor:attr("easy_mode_lifes") or 0
+		return (_t"Uses one of your %d remaining lives; you wake on the Eidolon plane"):format(n)
+	elseif a == "threads" then return _t"Rewind to before the fight"
+	elseif a == "log" then return _t"Read what happened"
+	elseif a == "dump" then return _t"Open the character sheet one last time"
+	elseif a == "exit" then
+		if item.subaction == "restart" then return _t"Same race and class, a fresh game"
+		elseif item.subaction == "restart-new" then return _t"Back to character creation"
+		else return _t"Leave this character behind" end
+	end
+	return ""
+end
+
+-- The choice list exactly as generateList builds it, minus every side effect:
+-- no pause, no achievement, no auto-resurrect, no talent callback. Every
+-- action is replaced by a print + close.
+function _M:previewList()
+	local list = {}
+	self.possible_items = {}
+	local a = self.actor
+	local allow_res = not (game.zone and game.zone.is_eidolon_plane)
+	if config.settings.cheat then list[#list+1] = {name=_t"Resurrect by cheating", action="cheat"} end
+	if not a.no_resurrect and allow_res then
+		if a:attr("blood_life") and not a:attr("undead") then list[#list+1] = {name=_t"Resurrect with the Blood of Life", action="blood_life"} end
+		if a:getTalentLevelRaw(a.T_SKELETON_REASSEMBLE) >= 5 and not a:attr("re-assembled") then list[#list+1] = {name=_t"Re-assemble your bones and resurrect (Skeleton ability)", action="skeleton"} end
+		local consumenb = 1
+		a:inventoryApplyAll(function(inven, item, o)
+			if o.one_shot_life_saving and (not o.slot or inven.worn) then
+				list[#list+1] = {name=("Resurrect by consuming %s"):tformat(o:getName{do_colour=true}), action="consume"..consumenb, is_consume=true}
+				consumenb = consumenb + 1
+			end
+		end)
+		if a:attr("easy_mode_lifes") then list[#list+1] = {name=("Resurrect with Adventurer Mode (%d life(s) left)"):tformat(a.easy_mode_lifes), action="easy_mode"} end
+		if a:attr("infinite_lifes") then list[#list+1] = {name=_t"Resurrect with Exploration Mode", action="easy_mode"} end
+	end
+	list[#list+1] = {name=(not profile.auth and _t"Message Log" or _t"Message/Chat log (allows to talk)"), action="log"}
+	list[#list+1] = {name=_t"Character dump", action="dump"}
+	list[#list+1] = {name=_t"Restart the same character", action="exit", subaction="restart"}
+	list[#list+1] = {name=_t"Restart with a new character", action="exit", subaction="restart-new"}
+	list[#list+1] = {name=_t"Exit to main menu", action="exit", subaction="none"}
+	-- the sub line is computed from the real action; the action itself is neutered afterwards
+	for _, item in ipairs(list) do
+		item.sub = self:touchSub(item)
+		local name = tostring(item.name):gsub("#[^#]*#", "")
+		item.action = function() print("[TOUCH] death preview action", name) game:unregisterDialog(self) end
+		item.subaction = nil
+	end
+	self.list = list
+end
+
+function _M:touchDisplayBack(x, y, nb_keyframes)
+	x, y = x + self.ix, y + self.iy
+	local a = self.actor
+	local T, quad, draw = K.text, K.quad, K.draw
+	-- character card
+	quad(x, y, self.left_w, self.hero_h - 8, K.PANE)
+	local sz = 112
+	quad(x + 12, y + 12, sz + 8, sz + 8, {14, 15, 18})
+	if a.image then pcall(a.toScreen, a, self.tiles, x + 16, y + 16, sz, sz) end
+	local tx = x + 12 + sz + 20
+	local maxw = self.left_w - (tx - x) - 12
+	draw(T(a.name or "?", 22, 240, 212, 138, true, maxw), tx, y + 16)
+	local d = a.descriptor or {}
+	draw(T(("Level %d %s %s"):format(a.level or 1, tostring(d.subrace or ""), tostring(d.subclass or "")), 13, 142, 136, 120, false, maxw), tx, y + 46)
+	local killer = a.killedBy and a.killedBy.name or nil
+	if self.preview and not killer then killer = _t"(preview)" end
+	local kl = killer and (_t"Killed by " .. tostring(killer)) or _t"Killed"
+	for i, l in ipairs(K.wrap(kl, K.font(15), maxw, 2)) do draw(T(l, 15, 224, 122, 106, true, maxw), tx, y + 68 + (i - 1) * 20) end
+	-- run facts
+	local facts = {}
+	if game.zone and game.level then facts[#facts+1] = {_t"Where", ("%s %d"):format(tostring(game.zone.name), game.level.level or 1)} end
+	facts[#facts+1] = {_t"Turn", tostring(math.floor((game.turn or 0) / 10))}
+	if a:attr("easy_mode_lifes") then facts[#facts+1] = {_t"Lives", tostring(a:attr("easy_mode_lifes"))}
+	elseif a:attr("infinite_lifes") then facts[#facts+1] = {_t"Lives", _t"unlimited"} end
+	local cw = math.floor((self.left_w - 24 - 2 * 6) / 3)
+	for i, f in ipairs(facts) do
+		if i > 3 then break end
+		local cx, cy = x + 12 + (i - 1) * (cw + 6), y + self.hero_h - 8 - 48
+		quad(cx, cy, cw, 40, {36, 39, 47})
+		draw(T(f[1]:upper(), 10, 142, 136, 120, true), cx + 8, cy + 4)
+		draw(T(f[2], 15, 234, 227, 209, true, cw - 16), cx + 8, cy + 17)
+	end
+	-- the choices pane
+	quad(x + self.left_w + 12, y, self.iw - self.left_w - 12, self.ih, K.PANE)
 end

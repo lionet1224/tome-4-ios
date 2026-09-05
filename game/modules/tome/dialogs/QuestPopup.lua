@@ -88,7 +88,8 @@ end
 function _M:mouseEvent(button, x, y, xrel, yrel, bx, by, event)
 	if event ~= "button" or button ~= "left" then return end
 	game:unregisterDialog(self)
-	game:registerDialog(require("engine.dialogs.ShowQuests").new(game.party:findMember{main=true}, self.quest.id))
+	if require("engine.TouchInput").active() then game:registerDialog(require("mod.dialogs.TouchJournal").new("quests", self.quest.id))
+	else game:registerDialog(require("engine.dialogs.ShowQuests").new(game.party:findMember{main=true}, self.quest.id)) end
 end
 
 function _M:drawFrame(x, y, r, g, b, a)

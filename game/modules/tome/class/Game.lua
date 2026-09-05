@@ -2351,7 +2351,7 @@ do return end
 		end,
 
 		USE_TALENTS = not_wild(function()
-			self:registerDialog(require("mod.dialogs.UseTalents").new(self.player))
+			self:registerDialog((require("engine.TouchInput").active() and require("mod.dialogs.TouchTalents") or require("mod.dialogs.UseTalents")).new(self.player))
 		end),
 
 		LEVELUP = function()
@@ -2380,7 +2380,8 @@ do return end
 		end,
 
 		SHOW_QUESTS = function()
-			self:registerDialog(require("engine.dialogs.ShowQuests").new(self.party:findMember{main=true}))
+			if require("engine.TouchInput").active() then self:registerDialog(require("mod.dialogs.TouchJournal").new("quests"))
+			else self:registerDialog(require("engine.dialogs.ShowQuests").new(self.party:findMember{main=true})) end
 		end,
 
 		SHOW_CHARACTER_SHEET = function()
@@ -2449,8 +2450,8 @@ do return end
 			local menu
 			local l = {
 				"resume",
-				{ _t"Show Achievements", function() self:unregisterDialog(menu) self:registerDialog(require("mod.dialogs.ShowAchievements").new(_t"Tales of Maj'Eyal Achievements", self.player)) end },
-				{ _t"Show known Lore", function() self:unregisterDialog(menu) self:registerDialog(require("mod.dialogs.ShowLore").new(_t"Tales of Maj'Eyal Lore", self.party)) end },
+				{ _t"Show Achievements", function() self:unregisterDialog(menu) if require("engine.TouchInput").active() then self:registerDialog(require("mod.dialogs.TouchJournal").new("achievements")) else self:registerDialog(require("mod.dialogs.ShowAchievements").new(_t"Tales of Maj'Eyal Achievements", self.player)) end end },
+				{ _t"Show known Lore", function() self:unregisterDialog(menu) if require("engine.TouchInput").active() then self:registerDialog(require("mod.dialogs.TouchJournal").new("lore")) else self:registerDialog(require("mod.dialogs.ShowLore").new(_t"Tales of Maj'Eyal Lore", self.party)) end end },
 				{ _t"Show ingredients", function() self:unregisterDialog(menu) self:registerDialog(require("mod.dialogs.ShowIngredients").new(self.party)) end },
 				require("engine.TouchInput").active() and { _t"Touch UI gallery", function() self:unregisterDialog(menu) self:registerDialog(require("mod.dialogs.TouchGallery").new()) end } or nil,
 				"highscores",
