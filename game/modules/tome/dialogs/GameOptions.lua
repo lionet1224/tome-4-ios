@@ -121,6 +121,7 @@ function _M:generateListTouch()
 	toggle(_t"Auto-act stops when life is below", _t"The AUTO button keeps running your Act routine (and exploring) until something needs you. It stops when your life drops under this.", "auto_life", {30, 50, 70}, {"30%", "50%", "70%"})
 	toggle(_t"Auto-act stops when a resource is below", _t"Mana, stamina and the like. 'never' ignores resources.", "auto_res", {0, 25, 50}, {_t"never", "25%", "50%"})
 	toggle(_t"Auto-act dims the screen", _t"While AUTO runs the screen stays on and is dimmed; brightness comes back when it stops.", "auto_dim", {true, false}, {_t"yes", _t"no"})
+	toggle(_t"Auto-act buzzes when it stops", _t"A short vibration when AUTO hands control back to you.", "auto_buzz", {true, false}, {_t"yes", _t"no"})
 	toggle(_t"Auto-act stops for elites and rares", _t"Stop as soon as a creature above normal rank is in view.", "auto_rare", {true, false}, {_t"yes", _t"no"})
 	toggle(_t"Hold delay", _t"How long the finger must stay still before a wheel opens.", "hold_ms", {120, 160, 220, 300}, {"120 ms", "160 ms", "220 ms", "300 ms"})
 	self.list = list

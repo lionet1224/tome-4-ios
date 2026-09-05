@@ -1682,7 +1682,7 @@ function _M:autoActStop(why)
 	self:autoActRestoreScreen()
 	if why and not quiet_stops[why] then
 		print("[AUTO] buzz")
-		if core.display.haptic then core.display.haptic(2) end
+		if core.display.haptic and require("mod.class.TouchWheel").setting("auto_buzz") ~= false then core.display.haptic(2) end
 	end
 end
 
