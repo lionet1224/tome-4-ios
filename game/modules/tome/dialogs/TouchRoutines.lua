@@ -251,10 +251,10 @@ function _M:showDetail()
 	local st = self:step()
 	self.c_desc:erase()
 	if not st then
-		self.c_desc:switchItem("help", _t"Tap a step to change what it aims at, what happens when it cannot fire, or its order. Tap Add step to append a talent or an action.")
+		self.c_desc:switchItem("help", _t"Tap a step to change what it aims at, what happens when it cannot fire, or its order. Tap Add step to append a talent or an action.", true)
 		return
 	end
-	self.c_desc:switchItem(st, self:stepDesc(st))
+	self.c_desc:switchItem(st, self:stepDesc(st), true) -- force: erase() keeps cur_item, so re-selecting the same step went blank
 end
 
 ---------------------------------------------------------------------------
