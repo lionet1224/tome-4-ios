@@ -266,7 +266,6 @@ function _M:init(title, actor, order, at_end, quickbirth, w, h)
 	self.at_end = at_end
 	self.selected_cosmetic_options = nil
 	self.tiles = Tiles.new(64, 64, nil, nil, true, nil)
-	self.previews = {}
 	self.step = 1
 
 	Dialog.init(self, _t"New character", game.w * 0.98, game.h * 0.98)
@@ -401,8 +400,7 @@ function _M:raceUse(item)
 		self.race_parent = nil
 		for _, r in ipairs(self.all_races) do if r.id == item.pid then self.race_parent = r end end
 		self.sel_race = item
-		self.previews = {}
-		self:setDescriptor("race", item.pid)
+			self:setDescriptor("race", item.pid)
 		self:setDescriptor("subrace", item.id)
 		self:generateClasses()
 		self:focusItem(item)
@@ -513,22 +511,6 @@ function _M:refresh()
 		if self.race_parent and not self.race_parent.locked and #self.race_parent.nodes > 1 then
 			secs[#secs+1] = {title=(_t"%s lineage"):format(self.race_parent.id), items=self:cardsFor(self.race_parent.nodes, self.sel_race, function(it) self:raceUse(it) end)}
 		end
-		if self.sel_race then
-			for _, group in ipairs(self.cosmetic_options or {}) do
-				local items = {}
-				for _, opt in ipairs(group.nodes) do
-					if not opt.nodes then
-						items[#items+1] = {name=opt.name, sel=self:cosmeticSelected(opt), data=opt, icon=function(x, y, size) self:drawPreview(opt, x, y, size) end,
-							on_tap=function() self:toggleCosmetic(opt) end}
-					end
-				end
-				if #items > 0 then
-					-- some groups combine (a beard and a scar), others are one-of: say which
-					local multi = self.cosmetic_options_config[group.kind] == "multiple"
-					secs[#secs+1] = {title=tostring(group.name) .. (multi and _t" · pick any" or _t" · pick one"), items=items, min_w=84, row_h=88, icon_size=64, icon_only=true}
-				end
-			end
-		end
 	elseif s == "class" then
 		secs[#secs+1] = {title=_t"Class", items=self:cardsFor(self.all_classes, self.class_parent, function(it) self:classUse(it) end, true)}
 		if self.class_parent and not self.class_parent.locked then
@@ -632,7 +614,6 @@ function _M:statChips(it)
 end
 
 function _M:innerDisplayBack(x, y, nb_keyframes)
-	self.preview_budget = 0
 	x, y = x + self.ix, y + self.iy
 	local dx = x + self.rail_w + 12 + self.content_w + 12
 	local dy = y
@@ -686,56 +667,4 @@ function _M:innerDisplay(x, y, nb_keyframes)
 		-- Begin: a gold frame so it reads as the one big action
 		frame(x + b.x - 3, y + b.y - 3, self.b_next.w + 6, self.b_next.h + 6, GOLD, 3)
 	end
-end
-
--- cosmetics ----------------------------------------------------------------
-
-function _M:cosmeticSelected(opt)
-	local s = self.selected_cosmetic_options and self.selected_cosmetic_options[opt.kind]
-	if not s then return false end
-	if self.cosmetic_options_config[opt.kind] == "single" then return s == opt end
-	return table.hasInList(s, opt)
-end
-
-function _M:toggleCosmetic(item)
-	self.selected_cosmetic_options = self.selected_cosmetic_options or {}
-	local kind = item.kind
-	if self.cosmetic_options_config[kind] == "single" then
-		if self.selected_cosmetic_options[kind] == item then self.selected_cosmetic_options[kind] = nil
-		else self.selected_cosmetic_options[kind] = item end
-	elseif self.cosmetic_options_config[kind] == "multiple" then
-		self.selected_cosmetic_options[kind] = self.selected_cosmetic_options[kind] or {}
-		if table.hasInList(self.selected_cosmetic_options[kind], item) then table.removeFromList(self.selected_cosmetic_options[kind], item)
-		else table.insert(self.selected_cosmetic_options[kind], item) end
-		if #self.selected_cosmetic_options[kind] == 0 then self.selected_cosmetic_options[kind] = nil end
-	end
-	for _, ii in ipairs(self.cosmetic_options_flat) do ii.selected = self:cosmeticSelected(ii) end
-	self:setTile(nil, nil, nil, false, true)
-	self:focusItem({name=item.name, desc=(_t"%s. Cosmetic only: it changes how your character looks, nothing else."):format(item.name)})
-	self:refresh()
-end
-
--- a small clone of the character wearing just this option, built lazily (a couple per frame)
-function _M:drawPreview(opt, x, y, size)
-	local p = self.previews[opt]
-	if p == nil then
-		self.preview_budget = (self.preview_budget or 0)
-		if self.preview_budget >= 2 then return end
-		self.preview_budget = self.preview_budget + 1
-		local ok, clone = pcall(function()
-			local clone = self.actor:cloneFull()
-			local old_actor, old_sel, old_reset = self.actor, self.selected_cosmetic_options, self.to_reset_cosmetic
-			self.actor, self.to_reset_cosmetic = clone, {}
-			local sel = table.clone(old_sel or {}, false)
-			if self.cosmetic_options_config[opt.kind] == "single" then sel[opt.kind] = opt
-			else sel[opt.kind] = {opt} end
-			self.selected_cosmetic_options = sel
-			pcall(self.setTile, self, nil, nil, nil, false, true)
-			self.actor, self.selected_cosmetic_options, self.to_reset_cosmetic = old_actor, old_sel, old_reset
-			return clone
-		end)
-		p = ok and clone or false
-		self.previews[opt] = p
-	end
-	if p then pcall(p.toScreen, p, self.tiles, x, y, size, size) end
 end
