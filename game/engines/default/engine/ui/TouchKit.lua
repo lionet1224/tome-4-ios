@@ -77,6 +77,13 @@ local function wrap(str, f, maxw, n)
 	if line ~= "" then lines[#lines+1] = line end
 	return lines
 end
+-- true while a finger rests (no drag yet) inside a screen-space rect: press feedback
+local function pressed(x, y, w, h)
+	local TI = require "engine.TouchInput"
+	local t = TI.active() and TI.t
+	if not t or t.moved or not t.x0 then return false end
+	return t.x0 >= x and t.x0 < x + w and t.y0 >= y and t.y0 < y + h
+end
 -- first sentence of a description, for the one-line pitch on a card
 local function pitch(desc)
 	if type(desc) == "table" then
@@ -200,7 +207,8 @@ function Flow:display(x, y, nb_keyframes, screen_x, screen_y)
 			local iy = oy + it.y
 			if iy + it.h > y and iy < y + self.h then
 				local a = it.locked and 0.4 or 1
-				quad(x + it.x, iy, it.w, it.h, it.sel and CARD_SEL or CARD)
+				local down = screen_x and pressed(screen_x + it.x, screen_y + it.y - self.scrollbar.pos, it.w, it.h)
+				quad(x + it.x, iy, it.w, it.h, down and {62, 58, 40} or (it.sel and CARD_SEL or CARD))
 				if it.sel then frame(x + it.x, iy, it.w, it.h, GOLD, 2) end
 				local tx = x + it.x + 10
 				local ty = iy + 8
@@ -247,4 +255,5 @@ end
 
 _M.GOLD, _M.CARD, _M.CARD_SEL, _M.PANE = GOLD, CARD, CARD_SEL, PANE
 _M.font, _M.text, _M.draw, _M.quad, _M.frame, _M.circle, _M.wrap, _M.pitch = font, text, draw, quad, frame, circle, wrap, pitch
+_M.pressed = pressed
 _M.Rail, _M.Flow = Rail, Flow

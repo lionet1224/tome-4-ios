@@ -125,6 +125,12 @@ function _M:generateListTouch()
 	toggle(_t"Auto-act buzzes when it stops", _t"A short vibration when AUTO hands control back to you.", "auto_buzz", {true, false}, {_t"yes", _t"no"})
 	toggle(_t"Auto-act stops for elites and rares", _t"Stop as soon as a creature above normal rank is in view.", "auto_rare", {true, false}, {_t"yes", _t"no"})
 	toggle(_t"Hold delay", _t"How long the finger must stay still before a wheel opens.", "hold_ms", {120, 160, 220, 300}, {"120 ms", "160 ms", "220 ms", "300 ms"})
+	do -- the touch controls guide, on demand
+		local zone = Textzone.new{width=self.c_desc.w, height=self.c_desc.h, text=(_t"Six short pages on Act, AUTO, the skill drawer, drag-to-step, holds and the More menu. It also shows once after you create a character."):toTString()}
+		list[#list+1] = { zone=zone, name=(("#GOLD##{bold}#%s#WHITE##{normal}#"):format(_t"Show the touch controls guide")):toTString(), status=function(item) return _t"open" end, fct=function(item)
+			game:registerDialog(require("mod.dialogs.TouchTutorial").new())
+		end,}
+	end
 	self.list = list
 end
 

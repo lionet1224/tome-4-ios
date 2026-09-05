@@ -89,6 +89,14 @@ function _M:display(x, y, nb_keyframes, ox, oy)
 	ox = ox + 3
 	oy = oy + 3
 	local mx, my, button = core.mouse.get()
+	-- iOS port: a finger resting on the button lights it up (there is no hover)
+	local TI = require "engine.TouchInput"
+	local t = TI.active() and TI.t
+	if t and not t.moved and t.x0 and t.x0 > ox and t.x0 < ox + self.w and t.y0 > oy and t.y0 < oy + self.h then
+		self:drawFrame(self.frame_sel, x, y, 1, 0.85, 0.45, 1)
+		if self.text then self:textureToScreen(self.tex, x + (self.w - self.tex.w) / 2, y + (self.h - self.tex.h) / 2) end
+		return
+	end
 	if self.focused then
 		if button == 1 and mx > ox and mx < ox+self.w and my > oy and my < oy+self.h then
 			self:drawFrame(self.frame, x, y, 0, 1, 0, 1)

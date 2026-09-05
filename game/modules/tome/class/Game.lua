@@ -337,6 +337,11 @@ function _M:newGame()
 					self:setTacticalMode(self.always_target)
 					self:triggerHook{"ToME:birthDone"}
 
+					-- iOS port: the touch controls guide, once, right after the intro text
+					if require("engine.TouchInput").active() and not (config.settings.touch and config.settings.touch.tutorial_seen) and not config.settings.autopilot then
+						self:registerDialog(require("mod.dialogs.TouchTutorial").new())
+					end
+
 					if __module_extra_info.birth_done_script then loadstring(__module_extra_info.birth_done_script)() end
 				end, true)
 				self:registerDialog(d)

@@ -11,6 +11,7 @@
 require "engine.class"
 local Map = require "engine.Map"
 local Dialog = require "engine.ui.Dialog"
+local K = require "engine.ui.TouchKit"
 local TouchInput = require "engine.TouchInput"
 
 module(..., package.seeall, class.make)
@@ -209,8 +210,9 @@ end
 function _M:displaySkills()
 	local r = self.rects.skills
 	local on = self.drawer_open
-	quad(r.x, r.y, r.w, r.h, on and 43 or 20, on and 39 or 22, on and 24 or 28, 225)
-	if on then frame(r.x, r.y, r.w, r.h, 210, 170, 74, 255, 2) else frame(r.x, r.y, r.w, r.h, 58, 61, 70, 255, 2) end
+	local down = K.pressed(r.x, r.y, r.w, r.h)
+	quad(r.x, r.y, r.w, r.h, (on or down) and 43 or 20, (on or down) and 39 or 22, (on or down) and 24 or 28, 225)
+	if on or down then frame(r.x, r.y, r.w, r.h, 210, 170, 74, 255, 2) else frame(r.x, r.y, r.w, r.h, 58, 61, 70, 255, 2) end
 	-- a small talent glyph: the first ready hotkey talent, else a star
 	local list = self:stripTalents()
 	local first = list[1]
@@ -240,14 +242,16 @@ function _M:openMore()
 	list[#list+1] = {name=_t"Zoom in", fct=function() local map = game.level and game.level.map if map and map.setZoom then map:setZoom(0.25, p.x, p.y) end end}
 	list[#list+1] = {name=_t"Zoom out", fct=function() local map = game.level and game.level.map if map and map.setZoom then map:setZoom(-0.25, p.x, p.y) end end}
 	list[#list+1] = {name=_t"Options", fct=function() game:registerDialog((TouchInput.active() and require("mod.dialogs.TouchOptions") or require("mod.dialogs.GameOptions")).new()) end}
+	list[#list+1] = {name=_t"Touch controls guide", fct=function() game:registerDialog(require("mod.dialogs.TouchTutorial").new()) end}
 	key(_t"Game menu", "EXIT")
 	Dialog:listPopup(_t"More", "", list, 360, 60 + #list * 46, function(item) if item and item.fct then item.fct() end end)
 end
 
 function _M:displayMore()
 	local r = self.rects.more
-	quad(r.x, r.y, r.w, r.h, 20, 22, 28, 225)
-	frame(r.x, r.y, r.w, r.h, 58, 61, 70, 255, 2)
+	local down = K.pressed(r.x, r.y, r.w, r.h)
+	quad(r.x, r.y, r.w, r.h, down and 43 or 20, down and 39 or 22, down and 24 or 28, 225)
+	if down then frame(r.x, r.y, r.w, r.h, 210, 170, 74, 255, 2) else frame(r.x, r.y, r.w, r.h, 58, 61, 70, 255, 2) end
 	self:label("...", r.x + r.w / 2, r.y + r.h / 2 - 4, 1.4, 0.9, 0.87, 0.78, 1)
 	self:zone("touch_more", r, function(button) if button == "left" then self:openMore() end end)
 end

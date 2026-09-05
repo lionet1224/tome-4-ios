@@ -2176,8 +2176,9 @@ function _M:displayTouchAttack(x, y, bw)
 	end
 	local on = p.auto_act
 	local pulse = on and (0.6 + 0.4 * math.sin(core.game.getTime() / 200)) or 1
-	core.display.drawQuad(ax, y, bw, bw, on and 60 or 24, on and 40 or 26, on and 16 or 30, 235)
-	local br, bg, bb = on and 240 or 120, on and 200 or 110, on and 60 or 80
+	local kd = require("engine.ui.TouchKit").pressed(ax, y, bw, bw)
+	core.display.drawQuad(ax, y, bw, bw, (on or kd) and 60 or 24, (on or kd) and 40 or 26, (on or kd) and 16 or 30, 235)
+	local br, bg, bb = (on or kd) and 240 or 120, (on or kd) and 200 or 110, (on or kd) and 60 or 80
 	for _, e in ipairs{{ax, y, bw, 3}, {ax, y + bw - 3, bw, 3}, {ax, y, 3, bw}, {ax + bw - 3, y, 3, bw}} do core.display.drawQuad(e[1], e[2], e[3], e[4], br, bg, bb, math.floor(255 * pulse)) end
 	self.touch_wheel:drawLabel(on and "II" or ">>", ax + bw / 2, y + 40, 2, 1, 0.83, 0.79, 1)
 	self.touch_wheel:drawLabel(on and _t"STOP" or _t"AUTO", ax + bw / 2, y + 96, 0.8, 1, 0.83, 0.79, 1)
@@ -2211,7 +2212,8 @@ function _M:displayTouchAttack(x, y, bw)
 	end
 
 	-- the button
-	core.display.drawQuad(x, y, bw, bw, 40, 22, 18, 235)
+	local ad = require("engine.ui.TouchKit").pressed(x, y, bw, bw)
+	core.display.drawQuad(x, y, bw, bw, ad and 90 or 40, ad and 50 or 22, ad and 30 or 18, 235)
 	for _, e in ipairs{{x, y, bw, 3}, {x, y + bw - 3, bw, 3}, {x, y, 3, bw}, {x + bw - 3, y, 3, bw}} do core.display.drawQuad(e[1], e[2], e[3], e[4], 190, 90, 60, 255) end
 	local step = pv and pv.step
 	if pv and pv.explore then
