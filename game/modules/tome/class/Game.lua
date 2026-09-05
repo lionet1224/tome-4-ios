@@ -278,7 +278,8 @@ function _M:newGame()
 	self.creating_player = true
 	self.extra_birth_option_defs = {}
 	self:triggerHook{"ToME:extraBirthOptions", options = self.extra_birth_option_defs}
-	local birth; birth = Birther.new(("Character Creation ( %s unlocked options)"):tformat(table.concat(table.extract_field(unlocks, "desc", ipairs), ", ")), self.player, {"base", "world", "difficulty", "permadeath", "race", "subrace", "sex", "class", "subclass" }, function(loaded)
+	local BirtherClass = require("engine.TouchInput").active() and require("mod.dialogs.TouchBirther") or Birther
+	local birth; birth = BirtherClass.new(("Character Creation ( %s unlocked options)"):tformat(table.concat(table.extract_field(unlocks, "desc", ipairs), ", ")), self.player, {"base", "world", "difficulty", "permadeath", "race", "subrace", "sex", "class", "subclass" }, function(loaded)
 		if not loaded then
 			self.calendar = Calendar.new("/data/calendar_"..(self.player.calendar or "allied")..".lua", "Today is the %s %s of the %s year of the Age of Ascendancy of Maj'Eyal.\nThe time is %02d:%02d.", 122, 167, 11)
 			self.player:check("make_tile")

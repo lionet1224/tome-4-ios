@@ -327,7 +327,7 @@ function _M.scriptTick()
 		function T.waitFor(fct, timeout) local t0 = now() while not fct() and now() - t0 < (timeout or 120000) do T.wait(300) end end
 		local function down(x, y) _M.fingerDown(1, x, y) end
 		local function up(x, y) _M.fingerUp(1, x, y) end
-		function T.tap(x, y) down(x, y) T.wait(60) up(x, y) T.wait(120) end
+		function T.tap(x, y) down(x, y) up(x, y) T.wait(150) end
 		function T.hold(x, y, ms) down(x, y) T.wait(ms or 600) up(x, y) T.wait(120) end
 		function T.swipe(x1, y1, x2, y2, ms, hold_first)
 			down(x1, y1)

@@ -27,10 +27,11 @@ function Doll:init(t)
 	self.w, self.h = t.width, t.height
 	local doll = self.actor.equipdolls and self.actor.equipdolls[type(self.actor.equipdoll) == "string" and self.actor.equipdoll or "default"] or self.actor.equipdolls.default
 	self.doll = doll
-	self.box = 64
 	-- the doll definition is laid out on a ~312x456 grid: scale it into our pane
 	local dw, dh = 312 + 48, 456 + 48
 	self.sc = math.min((self.w - 16) / dw, (self.h - 16) / dh)
+	-- frames are ~60 grid units apart: keep them from overlapping once scaled
+	self.box = math.max(44, math.floor(58 * self.sc))
 	self.ox, self.oy = math.floor((self.w - dw * self.sc) / 2), 8
 	self.slots = {}
 	for id, def in ipairs(self.actor.inven_def) do
@@ -102,7 +103,7 @@ function Doll:display(x, y, nb_keyframes, screen_x, screen_y)
 	self.last_screen_x, self.last_screen_y = screen_x, screen_y
 	local d = self.doll
 	-- the character, drawn from its own tile with its gear
-	local dx, dy = self.ox + d.doll_x * self.sc - 8, self.oy + d.doll_y * self.sc - 8
+	local dx, dy = x + self.ox + d.doll_x * self.sc - 8, y + self.oy + d.doll_y * self.sc - 8
 	local dsz = (d.doll_w or 128) * self.sc * 1.15
 	core.display.drawQuad(dx - 6, dy - 6, dsz + 12, dsz + 12, 20, 22, 28, 200)
 	pcall(self.actor.toScreen, self.actor, nil, dx, dy, dsz, dsz)
@@ -144,13 +145,17 @@ end
 function Chips:generate()
 	self.mouse:reset()
 	self.key:reset()
-	self.font_c = core.display.newFont(FontPackage:getFont("default"), 17)
 	self.tex = {}
-	local x = 0
-	for _, it in ipairs(self.items) do
-		local w = self.font_c:size(it.title) + 26
-		it.x, it.w = x, w
-		x = x + w + 6
+	-- lay the chips out; shrink padding then font until the row fits
+	for _, try in ipairs{{17, 26, 6}, {17, 14, 4}, {15, 12, 4}, {13, 10, 3}} do
+		self.font_c = core.display.newFont(FontPackage:getFont("default"), try[1])
+		local x = 0
+		for _, it in ipairs(self.items) do
+			local w = self.font_c:size(it.title) + try[2]
+			it.x, it.w = x, w
+			x = x + w + try[3]
+		end
+		if x - try[3] <= self.w then break end
 	end
 	self.mouse:registerZone(0, 0, self.w, self.h, function(button, x, y, xrel, yrel, bx, by, event)
 		if event ~= "button" or button ~= "left" then return end
