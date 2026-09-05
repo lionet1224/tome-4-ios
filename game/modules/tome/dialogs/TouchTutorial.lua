@@ -245,19 +245,11 @@ function _M:init(opts)
 	local bigfont = K.font(22)
 	self.b_back = Button.new{text=_t"Back", width=140, font=bigfont, fct=function() self:go(-1) end}
 	self.b_next = Button.new{text=_t"Next", width=220, font=bigfont, fct=function() if self.page >= #_M.PAGES then self:finish() else self:go(1) end end}
-	-- last page only: jump into the practice level (a new practice character)
-	self.b_practice = Button.new{text=_t"Practice it", width=220, font=bigfont, fct=function()
-		self:finish()
-		local ok, TC = pcall(require, "mod.class.TouchCoach")
-		if ok and TC and not TC.start() then game.log("The practice level starts from the title screen.") end
-	end}
 	self:loadUI{
 		{left=self.text_x, bottom=0, ui=self.b_back},
 		{right=0, bottom=0, ui=self.b_next},
-		{right=232, bottom=0, ui=self.b_practice},
 	}
 	self:setupUI()
-	self.practice_pos = {x=self.ui_by_ui[self.b_practice].x, y=self.ui_by_ui[self.b_practice].y}
 	self.key:addBinds{
 		EXIT = function() self:finish(true) end,
 		MOVE_LEFT = function() self:go(-1) end,
@@ -279,9 +271,6 @@ function _M:refresh()
 	self.b_back.fct = function() if self.page == 1 then self:finish(true) else self:go(-1) end end
 	self.b_back:generate()
 	-- the Practice button lives on the last page only (hidden widgets still take taps: park it)
-	local pu = self.ui_by_ui[self.b_practice]
-	if pu then
-		if last then pu.x, pu.y = self.practice_pos.x, self.practice_pos.y else pu.x, pu.y = -9999, -9999 end
 	end
 end
 

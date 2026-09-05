@@ -59,31 +59,6 @@ newBirthDescriptor
 	},
 }
 
--- iOS port: the touch controls practice level (mod.class.TouchCoach)
-newBirthDescriptor
-{
-	type = "subrace",
-	name = "Tutorial Touch",
-	desc = {
-		_t"A Human hailing from the northern town of Derth, here to practice the touch controls.",
-	},
-	talents_types = {
-		["technique/combat-techniques-active"]={true, 0.3},
-	},
-	talents = {
-		[ActorTalents.T_RUSH] = 1,
-		[ActorTalents.T_SHIELD_PUMMEL] = 1,
-	},
-	copy = {
-		default_wilderness = {1, 1, "wilderness"},
-		starting_zone = "touch-tutorial",
-		starting_quest = "touch-tutorial",
-		starting_intro = "touch-tutorial",
-		moddable_tile = "human_#sex#",
-		moddable_tile_base = "base_cornac_01.png",
-	},
-}
-
 newBirthDescriptor
 {
 	type = "subrace",

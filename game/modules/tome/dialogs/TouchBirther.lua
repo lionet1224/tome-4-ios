@@ -118,12 +118,6 @@ end
 -- autopilot soak: once registered, roll the first race/class and play
 function _M:on_register()
 	Birther.on_register(self)
-	-- the touch practice level asked for from the title screen or the guide: no choices to make
-	if __module_extra_info and __module_extra_info.touch_practice and game.creating_player then
-		__module_extra_info.touch_practice = nil
-		game:onTickEnd(function() self:touchPractice() end)
-		return
-	end
 	local ok, AP = pcall(require, "mod.class.AutoPilot")
 	if ok and AP.enabled() and game.creating_player then
 		game:onTickEnd(function()
@@ -139,20 +133,6 @@ function _M:on_register()
 end
 
 -- start the touch controls practice: the stock tutorial descriptors with the practice subrace
-function _M:touchPractice()
-	self:setDescriptor("sex", "Female")
-	self:setDescriptor("world", "Maj'Eyal")
-	self:setDescriptor("difficulty", "Tutorial")
-	self:setDescriptor("permadeath", "Adventure")
-	self:setDescriptor("race", "Tutorial Human")
-	self:setDescriptor("subrace", "Tutorial Touch")
-	self:setDescriptor("class", "Tutorial Adventurer")
-	self:setDescriptor("subclass", "Tutorial Adventurer")
-	self:randomName()
-	self:setDescriptor()
-	self:atEnd("created")
-end
-
 function _M:canReach(i)
 	if i <= 1 then return true end
 	if self.c_name.text:len() < 2 then return false end
@@ -332,7 +312,6 @@ function _M:refresh()
 		for _, r in ipairs(rows) do r.on_tap = function() self:goStep(r.go) end end
 		secs[#secs+1] = {title=_t"Your character", items=rows, cols=1, row_h=52, rows=true}
 		local more = {
-			{name=_t"Touch practice", sub=_t"Learn the controls in a safe clearing", on_tap=function() self:touchPractice() end},
 			{name=_t"Tutorial", sub=_t"The game's basics", on_tap=function() self:tutorial() end},
 			{name=_t"Random", sub=_t"Roll everything", on_tap=function() self:randomBirth() end},
 			{name=_t"Premade", sub=_t"Load a saved character", on_tap=function() self:loadPremadeUI() end},

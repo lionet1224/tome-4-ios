@@ -2376,8 +2376,6 @@ function _M:display(nb_keyframes)
 			else self.touch_manual:display() end
 		end
 		self.touch_wheel:display()
-		-- the practice level's coach banner (mod.class.TouchCoach)
-		if game.touch_coach then pcall(game.touch_coach.display, game.touch_coach) end
 	end
 
 	-- Display border indicators when possible
