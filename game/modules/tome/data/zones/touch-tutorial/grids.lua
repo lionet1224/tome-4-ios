@@ -22,9 +22,11 @@ newEntity{ base = "GRASS", define_as = "PRACTICE_EXIT",
 	change_level = 1, change_zone = "wilderness",
 	practice_id = "exit",
 	change_level_check = function(self, who)
-		-- leaving ends the practice; the coach shows the wrap-up and returns to the title screen
+		-- leaving ends the practice: never a real level change, always back to the title screen
+		print("[COACH] exit used")
 		local ok, TC = pcall(require, "mod.class.TouchCoach")
-		if ok and TC then TC.finish() end
+		local okf, err = pcall(function() if ok and TC then TC.finish() else util.showMainMenu() end end)
+		if not okf then print("[COACH] finish failed", tostring(err)) util.showMainMenu() end
 		return true
 	end,
 }

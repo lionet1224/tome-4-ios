@@ -63,14 +63,14 @@ _M.STEPS = {
 			local tm = game.uiset and game.uiset.touch_manual
 			if tm and tm.drawer_open then c.seen_drawer = true end
 		end,
+		on_start = function(c) c.rats0 = #findByPractice("rat") end,
 		check = function(c)
-			local rats = findByPractice("rat")
-			-- the rat nearest the second room dies first; count any rat dead or hurt
-			local hurt = false
-			for uid, e in pairs(game.level.entities) do
-				if e.practice_id == "rat" and (e.dead or (e.life and e.max_life and e.life < e.max_life)) then hurt = true end
-			end
-			return hurt -- any kill counts, a bump attack included; the text still teaches the drawer
+			-- a dead creature leaves the level's entity list at once, so count the living instead:
+			-- one rat fewer than when the step began (or one hurt) = done, whatever killed it
+			local alive = findByPractice("rat")
+			if #alive < (c.rats0 or 3) then return true end
+			for _, e in ipairs(alive) do if e.life and e.max_life and e.life < e.max_life then return true end end
+			return false
 		end,
 	},
 	{
@@ -251,11 +251,14 @@ end
 
 -- the way out: wrap up and return to the title screen the way the stock tutorial does
 function _M.finish()
+	print("[COACH] finish")
 	game.touch_coach = nil
-	if game.mouse.areas_name and game.mouse.areas_name.touch_coach_skip then game.mouse:unregisterZone("touch_coach_skip") end
-	local d = require("engine.ui.Dialog"):simplePopup(_t"Touch practice", _t"You have the controls. Back to the title screen to make a real character.", function()
-		util.showMainMenu()
+	pcall(function() if game.mouse.areas_name and game.mouse.areas_name.touch_coach_skip then game.mouse:unregisterZone("touch_coach_skip") end end)
+	local Dialog = require "engine.ui.Dialog"
+	local okd = pcall(function()
+		Dialog:simplePopup(_t"Touch practice", _t"You have the controls. Back to the title screen to make a real character.", function() util.showMainMenu() end)
 	end)
+	if not okd then util.showMainMenu() end
 end
 
 -- start a fresh practice character: a reboot into the game module with a flag the birther reads

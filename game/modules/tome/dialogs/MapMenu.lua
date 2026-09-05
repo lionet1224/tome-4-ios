@@ -46,6 +46,13 @@ function _M:init(mx, my, tmx, tmy, extra)
 		self.force_x = mx - w / 2
 		self.force_y = my - self.h + (self.ih + list.fh / 3)
 		if self.force_y + h > game.h then self.force_y = game.h - h end
+		-- iOS port: keep the menu inside the safe area (a hold near the edge put it off-screen)
+		local okt, TI = pcall(require, "engine.TouchInput")
+		if okt and TI.active() then
+			local sa = TI.safeArea()
+			self.force_x = util.bound(self.force_x, sa.l, math.max(sa.l, game.w - sa.r - w))
+			self.force_y = util.bound(self.force_y, sa.t, math.max(sa.t, game.h - sa.b - h))
+		end
 	end)
 
 	self.mouse:reset()
