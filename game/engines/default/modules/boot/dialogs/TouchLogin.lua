@@ -49,7 +49,7 @@ function _M:init()
 		uis[#uis+1] = {left=0, bottom=0, ui=self.b_logout}
 		uis[#uis+1] = {left=half + 8, bottom=0, ui=self.b_close}
 	else
-		local help = Textzone.new{width=self.iw - 16, auto_height=true, text=_t"#GREY#Your te4.org account. Owned DLC downloads after you log in.#WHITE#"}
+		local help = Textzone.new{width=self.iw - 16, auto_height=true, text=_t"#GREY#Your te4.org account: profile, vault and achievements. DLC is not downloadable on the phone; its files go into the app build.#WHITE#"}
 		self.c_user = Textbox.new{title=_t"Username: ", text="", chars=20, max_len=200, fct=function() self:login() end}
 		self.c_pass = Textbox.new{title=_t"Password: ", size_title=self.c_user.title, text="", chars=20, max_len=200, hide=true, fct=function() self:login() end}
 		local half = math.floor((self.iw - 8) / 2)
