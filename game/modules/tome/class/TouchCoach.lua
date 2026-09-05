@@ -93,7 +93,7 @@ _M.STEPS = {
 			if game.player.auto_act then c.seen_auto = true end
 		end,
 		check = function(c)
-			return c.seen_auto and #findByPractice("elite") == 0
+			return #findByPractice("elite") == 0 -- the chief dead is what matters, AUTO or not
 		end,
 	},
 	{
