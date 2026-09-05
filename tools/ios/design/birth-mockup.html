@@ -1,0 +1,183 @@
+<title>ToME New Character</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--paper:#ECEAE3;--ink:#1E1C18;--ink-2:#5A564D;--rule:#D3CFC3;--accent:#9E7A22;--accent-ink:#6E5415;--panel:#F6F5F0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--paper:#141518;--ink:#E9E4D6;--ink-2:#A7A297;--rule:#2C2E34;--accent:#D2AA4A;--accent-ink:#E4C36E;--panel:#1C1E23}}
+:root[data-theme="dark"]{--paper:#141518;--ink:#E9E4D6;--ink-2:#A7A297;--rule:#2C2E34;--accent:#D2AA4A;--accent-ink:#E4C36E;--panel:#1C1E23}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 80px}
+h1{font:700 40px/1.05 Alegreya,Georgia,serif;margin:0 0 8px;letter-spacing:-.01em}
+h2{font:700 24px/1.2 Alegreya,Georgia,serif;margin:44px 0 12px}
+.lede{max-width:64ch;color:var(--ink-2);margin:0 0 22px}.lede b{color:var(--ink);font-weight:600}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink);font-weight:600}
+.phone{position:relative;margin:0 auto;border-radius:40px;background:#0B0B0D;padding:14px;box-shadow:0 30px 60px -30px rgba(0,0,0,.6);width:max-content}
+.screen{position:relative;overflow:hidden;border-radius:28px;background:#0F1013;width:1398px;height:645px;transform-origin:top left;
+ --card:#1D1F26;--card-2:#24272F;--edge:#33363F;--gold:#D2AA4A;--gold-2:#F0D48A;--text:#EAE3D1;--mute:#8E8878;--good:#7BD389;--bad:#E07A6A;--blue:#7FB2E5;
+ font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--text);user-select:none;-webkit-user-select:none;touch-action:none}
+.island{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:34px;height:110px;border-radius:20px;background:#000;z-index:9;pointer-events:none}
+.home{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:210px;height:7px;border-radius:4px;background:rgba(255,255,255,.55);z-index:9;pointer-events:none}
+.bg{position:absolute;inset:0;background:radial-gradient(ellipse at 20% 0%,#25283a 0%,#0F1013 55%),radial-gradient(ellipse at 90% 100%,#2b2416 0%,transparent 50%)}
+/* layout */
+.top{position:absolute;left:88px;right:88px;top:0;height:64px;display:flex;align-items:center;gap:14px;padding:0 6px}
+.top .title{font:700 24px Alegreya,serif;color:var(--gold-2)}
+.top .sub{color:var(--mute);font-size:14px}
+.top .close{margin-left:auto;width:48px;height:48px;border-radius:12px;background:var(--card);border:1px solid var(--edge);display:grid;place-items:center;font-size:22px;cursor:pointer}
+.cols{position:absolute;left:88px;right:88px;top:64px;bottom:36px;display:grid;grid-template-columns:200px 1fr 400px;gap:12px}
+.col{background:var(--card);border-radius:18px;border:1px solid var(--edge);overflow:hidden;display:flex;flex-direction:column;min-height:0}
+/* steps rail */
+.steps{padding:10px}
+.step{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:center;height:56px;padding:0 8px;border-radius:12px;cursor:pointer;color:var(--mute)}
+.step .n{width:30px;height:30px;border-radius:50%;border:2px solid var(--edge);display:grid;place-items:center;font:600 14px "IBM Plex Sans"}
+.step .t{font-size:15px;line-height:1.2}.step .v{font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.step.done{color:var(--text)}.step.done .n{background:var(--good);border-color:var(--good);color:#10201A}
+.step.cur{background:var(--card-2);color:var(--text)}.step.cur .n{border-color:var(--gold);color:var(--gold-2)}
+.step.locked{opacity:.4}
+/* content */
+.content{padding:10px;overflow-y:auto;scrollbar-width:none;flex:1}.content::-webkit-scrollbar{display:none}
+.content h3{margin:6px 6px 10px;font:700 22px Alegreya,serif;color:var(--gold-2)}
+.content p.help{margin:0 6px 12px;color:var(--mute);font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.card{min-height:96px;border-radius:14px;background:var(--card-2);border:2px solid transparent;padding:10px;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.card .ic{font-size:26px;line-height:1}.card .nm{font-size:16px;font-weight:600;line-height:1.15}.card .ds{font-size:12px;color:var(--mute);line-height:1.25}
+.card.sel{border-color:var(--gold);background:#2B2718}.card.locked{opacity:.35}
+.card .lk{font-size:11px;color:var(--bad)}
+.sub{margin:14px 6px 8px;font:600 12px "IBM Plex Sans";letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg .opt{flex:1;min-width:140px;height:56px;border-radius:14px;background:var(--card-2);border:2px solid transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
+.seg .opt .nm{font-size:16px;font-weight:600}.seg .opt .ds{font-size:11px;color:var(--mute)}
+.seg .opt.sel{border-color:var(--gold);background:#2B2718}
+.field{display:flex;gap:8px;align-items:center;margin:0 6px}
+.field input{flex:1;height:56px;border-radius:14px;border:2px solid var(--edge);background:#0E0F12;color:var(--text);font:500 20px "IBM Plex Sans";padding:0 16px;outline:none}
+.field .dice{width:56px;height:56px;border-radius:14px;background:var(--card-2);border:1px solid var(--edge);display:grid;place-items:center;font-size:26px;cursor:pointer}
+.portraits{display:flex;gap:8px;margin:10px 6px 0;flex-wrap:wrap}
+.portrait{width:72px;height:72px;border-radius:14px;background:#0E0F12;border:2px solid transparent;display:grid;place-items:center;font-size:40px;cursor:pointer}
+.portrait.sel{border-color:var(--gold)}
+/* detail */
+.detail{padding:14px;overflow-y:auto;scrollbar-width:none;flex:1;display:flex;flex-direction:column;gap:12px}.detail::-webkit-scrollbar{display:none}
+.hero{display:grid;grid-template-columns:72px 1fr;gap:12px;align-items:center}
+.hero .ic{width:72px;height:72px;border-radius:16px;background:#0E0F12;display:grid;place-items:center;font-size:42px}
+.hero .nm{font:700 22px Alegreya,serif;line-height:1.1}.hero .k{font-size:13px;color:var(--mute)}
+.desc{font-size:14px;line-height:1.5;color:var(--text)}.desc .g{color:var(--good)}.desc .b{color:var(--blue)}.desc .m{color:var(--mute)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stat{background:var(--card-2);border-radius:12px;padding:8px 10px}.stat .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}.stat .v{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.stat .v.up{color:var(--good)}.stat .v.dn{color:var(--bad)}
+.nav{margin-top:auto;display:grid;grid-template-columns:120px 1fr;gap:8px}
+.btn{height:60px;border-radius:16px;display:grid;place-items:center;font:600 19px "IBM Plex Sans";cursor:pointer}
+.btn.back{background:var(--card-2);color:var(--text);border:1px solid var(--edge)}
+.btn.next{background:var(--gold);color:#1B1510}.btn.next.dis{opacity:.4;pointer-events:none}
+.summary{display:grid;gap:8px}
+.summary .ln{display:flex;justify-content:space-between;padding:10px 12px;border-radius:12px;background:var(--card-2)}
+.summary .ln span:first-child{color:var(--mute)}
+.summary .ln .edit{color:var(--gold-2);font-size:13px;cursor:pointer}
+.bigstart{height:72px;border-radius:18px;background:linear-gradient(180deg,#E7C463,#B8902E);color:#1B1510;font:700 24px Alegreya,serif;display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 30px rgba(210,170,74,.3)}
+.toast{position:absolute;left:50%;top:76px;transform:translateX(-50%);background:rgba(0,0,0,.8);border:1px solid var(--edge);border-radius:12px;padding:8px 16px;font-size:15px;z-index:8}
+.toast[hidden]{display:none!important}
+/* page */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0 6px}
+.pchip{border:1px solid var(--rule);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 14px;font:500 14px "IBM Plex Sans";cursor:pointer}
+.note{font-size:14px;color:var(--ink-2)}
+.key{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px 28px;padding:0;margin:0;list-style:none}
+.key li{padding:10px 0;border-top:1px solid var(--rule)}.key b{display:block;font-weight:600}.key span{color:var(--ink-2);font-size:15px}
+.q{list-style:none;padding:0;margin:0;display:grid;gap:10px}.q li{display:grid;grid-template-columns:auto 1fr;gap:12px;padding:12px 14px;background:var(--panel);border-radius:8px}.q li em{font-style:normal;color:var(--accent-ink);font-weight:600}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">ToME on iPhone · new character · 1398 × 645 logical, camera and home bar drawn</div>
+  <h1>ToME New Character</h1>
+  <p class="lede">Character creation as a <b>five-step walk</b> instead of one dense form: who you are, your race, your class, how hard, then a summary and one big Start. Every choice is a card with a one-line pitch; tap it and the right pane explains it in the game's own words with the stat changes. The rail on the left shows where you are and lets you jump back. Example text only.</p>
+
+  <div class="phone" id="phone"><div class="screen" id="screen">
+    <div class="bg"></div><div class="island"></div><div class="home"></div>
+    <div class="top"><div class="title">New character</div><div class="sub" id="topsub">Maj'Eyal campaign</div><div class="close">✕</div></div>
+    <div class="cols">
+      <div class="col"><div class="steps" id="steps"></div></div>
+      <div class="col"><div class="content" id="content"></div></div>
+      <div class="col"><div class="detail" id="detail"></div></div>
+    </div>
+    <div class="toast" id="toast" hidden></div>
+  </div></div>
+
+  <div class="toolbar"><span class="eyebrow" style="margin-right:6px">Jump</span>
+    <button class="pchip" data-step="0">Who</button><button class="pchip" data-step="1">Race</button><button class="pchip" data-step="2">Class</button><button class="pchip" data-step="3">Difficulty</button><button class="pchip" data-step="4">Summary</button>
+    <span style="flex:1"></span><span class="note">Steps unlock as you choose; the rail lets you go back any time.</span>
+  </div>
+
+  <h2>What is on screen</h2>
+  <ol class="key">
+    <li><b>Rail</b><span>The five steps with what you picked under each. Green tick when done, gold ring for the current one, dim until reachable. Tap a done step to change it.</span></li>
+    <li><b>Who</b><span>Name with a dice button for a random one (the keyboard only appears when you tap the field), sex, and a strip of portraits (the game's cosmetic choices, e.g. skin and hair).</span></li>
+    <li><b>Race and class</b><span>Cards: icon, name, one line. Tap a race to see its subraces underneath; same for classes and subclasses. Locked entries show why they're locked instead of being hidden. The right pane shows the full description and the stat modifiers with green and red numbers.</span></li>
+    <li><b>Difficulty</b><span>Two rows of segmented buttons: difficulty and permadeath, each with a one-line consequence. Defaults pre-selected so a new player can just tap Next.</span></li>
+    <li><b>Summary</b><span>Everything you chose with an Edit link per line, then one big Start. The game's stock character creation still exists underneath: this screen only drives it.</span></li>
+  </ol>
+
+  <h2>Questions for you</h2>
+  <ul class="q">
+    <li><em>Order</em><span>Name first (shown) or race first, with the name as the last thing before Start?</span></li>
+    <li><em>Campaign</em><span>Maj'Eyal is assumed. Show the campaign choice (Arena, Infinite Dungeon, Orcs) as a step 0, or bury it under a "more" link in the summary?</span></li>
+    <li><em>Subclass depth</em><span>Class cards then subclass cards on the same page (shown), or make subclass its own step so the class page stays short?</span></li>
+    <li><em>Quick start</em><span>A "Random character" button on the first step for when you just want to play?</span></li>
+  </ul>
+</div>
+
+<script>
+(function(){
+const W=1398,H=645,screen=document.getElementById('screen');
+function fit(){const s=Math.min(1,(document.getElementById('phone').parentElement.clientWidth-28)/W);screen.style.transform=`scale(${s})`;const p=document.getElementById('phone');p.style.width=(W*s+28)+'px';p.style.height=(H*s+28)+'px'}
+window.addEventListener('resize',fit);fit();
+const RACES=[
+ {n:'Human',ic:'🧑',ds:'Adaptable and quick to learn.',subs:[{n:'Higher',ds:'Long-lived nobles of Maj\'Eyal; magic-touched.',stats:{Mag:'+3',Str:'+1',Wil:'+2',Cun:'-2',Life:'+2/lvl'},desc:'The Higher are a special branch of Humans that have acquired, over the long years, the ability to see and use magic. Their long lives and inclination toward arcane arts make them natural mages.'},{n:'Cornac',ds:'Common folk; an extra category point.',stats:{Exp:'+15%',Life:'+2/lvl'},desc:'Cornacs are the most common Humans, with no innate talents but one more category point to spend, which opens options early.'}]},
+ {n:'Halfling',ic:'🧒',ds:'Small, lucky, deadly with a sling.',subs:[{n:'Halfling',ds:'Luck of the Little Folk.',stats:{Dex:'+3',Cun:'+3',Str:'-3',Life:'+1/lvl'},desc:'Halflings are a race of very short stature, often mistaken for children. They are famed for their luck, their skill with the sling and their sturdy stomachs.'}]},
+ {n:'Elf',ic:'🧝',ds:'Long-lived; Shalore magic or Thalore nature.',subs:[{n:'Shalore',ds:'Arcane, silent, immune to fear of time.',stats:{Mag:'+3',Wil:'+2',Cun:'+1',Con:'-3'},desc:'The Shaloren are proud elves who have lived long among the arcane; they gain Grace of the Eternals and time-bending talents.'},{n:'Thalore',ds:'Forest wardens, summon treants.',stats:{Str:'+2',Con:'+2',Wil:'+1',Mag:'-3'},desc:'The Thaloren elves live in the forests of Maj\'Eyal in harmony with nature and can call on its guardians.'}]},
+ {n:'Dwarf',ic:'🧔',ds:'Tough, stone-skinned, gold-loving.',subs:[{n:'Dwarf',ds:'Resilience of the Dwarves.',stats:{Str:'+3',Con:'+4',Mag:'-2',Cun:'-1',Life:'+2/lvl'},desc:'Dwarves are hardy folk of the deep places. They resist physical harm, see in the dark and can call up stone walls to shield themselves.'}]},
+ {n:'Undead',ic:'💀',ds:'Skeletons and ghouls; feared by all.',locked:'Unlocks when you finish the game or find the Blighted Ruins.',subs:[]},
+ {n:'Yeek',ic:'🐾',ds:'Small psionic pacifists from Rel.',locked:'Unlock by helping the Yeeks on the island of Rel.',subs:[]},
+];
+const CLASSES=[
+ {n:'Warrior',ic:'⚔',ds:'Weapons, armour and grit.',subs:[{n:'Berserker',ds:'Two-handed rage.',stats:{Str:'+5',Con:'+3',Dex:'+1',Life:'+3/lvl'},desc:'A Berserker is a warrior who fights with two-handed weapons and raw fury, trading defence for devastating blows and the ability to shrug off wounds.'},{n:'Bulwark',ds:'Sword and shield wall.',stats:{Str:'+4',Con:'+4',Dex:'+1',Life:'+3/lvl'},desc:'Bulwarks fight with a weapon and a shield, blocking, bashing and holding the line while allies do the killing.'},{n:'Archer',ds:'Bows and slings from range.',stats:{Dex:'+5',Str:'+2',Cun:'+2'},desc:'Archers are masters of the bow and sling. They pin, cripple and pierce from a distance and keep enemies away.'},{n:'Arcane Blade',ds:'Sword in one hand, spell in the other.',stats:{Str:'+3',Mag:'+3',Dex:'+3'},desc:'The Arcane Blade weaves spells into weapon strikes: elemental damage on hit, shields and a little teleportation.'}]},
+ {n:'Rogue',ic:'🗡',ds:'Stealth, traps and poisons.',subs:[{n:'Rogue',ds:'Knives, stealth, traps.',stats:{Dex:'+4',Cun:'+4',Str:'+1'},desc:'Rogues strike from the shadows with dual daggers, lay traps and poison their blades.'},{n:'Shadowblade',ds:'Rogue with arcane tricks.',stats:{Dex:'+3',Cun:'+3',Mag:'+3'},desc:'Shadowblades mix stealth and blades with phase doors and illusions.'}]},
+ {n:'Mage',ic:'🔮',ds:'The arcane arts of Angolwen.',locked:'Unlock by finding Angolwen (rescue the apprentice mage).',subs:[]},
+ {n:'Wilder',ic:'🌿',ds:'Summons, drakes and oozes.',subs:[{n:'Summoner',ds:'Call beasts to fight for you.',stats:{Wil:'+5',Cun:'+3',Con:'+1'},desc:'Summoners call ritches, hydras, drakes and more, and command them in battle.'},{n:'Wyrmic',ds:'Fight like a dragon.',stats:{Str:'+4',Wil:'+3',Con:'+2'},desc:'Wyrmics channel the powers of dragons: breath attacks, claws and thick scales.'}]},
+ {n:'Psionic',ic:'🧠',ds:'Mind over matter.',locked:'Unlock by finding the Yeeks or reaching level 20.',subs:[]},
+];
+const DIFF=[{n:'Easier',ds:'Less damage taken'},{n:'Normal',ds:'The way it was meant'},{n:'Nightmare',ds:'Tougher, more foes'},{n:'Insane',ds:'Randbosses everywhere'}];
+const DEATH=[{n:'Exploration',ds:'Unlimited lives'},{n:'Adventure',ds:'A few extra lives'},{n:'Roguelike',ds:'One life. Period.'}];
+const NAMES=['Aeryn','Torvald','Mirrah','Kelrin','Sable','Orindel','Bryn','Ashka'];
+let st={step:0,name:'Aeryn',sex:'Female',portrait:1,race:null,sub:null,cls:null,csub:null,diff:1,death:1,focus:null};
+function doneStep(i){return i===0?!!st.name:i===1?!!st.sub:i===2?!!st.csub:i===3?true:false}
+function canReach(i){for(let k=0;k<i;k++)if(!doneStep(k))return false;return true}
+const STEPS=[['Who',()=>st.name?`${st.name}, ${st.sex.toLowerCase()}`:''],['Race',()=>st.sub?`${st.sub.n} ${st.race.n}`:''],['Class',()=>st.csub?st.csub.n:''],['Difficulty',()=>`${DIFF[st.diff].n} · ${DEATH[st.death].n}`],['Start',()=>'']];
+function renderSteps(){document.getElementById('steps').innerHTML=STEPS.map((s,i)=>`<div class="step ${i===st.step?'cur':doneStep(i)&&i<st.step?'done':''} ${canReach(i)?'':'locked'}" data-i="${i}"><div class="n">${doneStep(i)&&i<st.step?'✓':i+1}</div><div><div class="t">${s[0]}</div><div class="v">${s[1]()}</div></div></div>`).join('');
+ [...document.querySelectorAll('.step')].forEach(el=>el.onclick=()=>{const i=+el.dataset.i;if(canReach(i)){st.step=i;st.focus=null;render()}})}
+function cardGrid(list,sel,onpick,keyName){return `<div class="grid">${list.map((r,i)=>`<div class="card ${sel===r?'sel':''} ${r.locked?'locked':''}" data-i="${i}"><div class="ic">${r.ic||''}</div><div class="nm">${r.n}</div><div class="ds">${r.ds}</div>${r.locked?`<div class="lk">🔒 locked</div>`:''}</div>`).join('')}</div>`}
+function renderContent(){const c=document.getElementById('content');const s=st.step;
+ if(s===0){c.innerHTML=`<h3>Who are you?</h3><p class="help">A name, and how the world sees you.</p><div class="field"><input id="nm" value="${st.name}" placeholder="Name"><div class="dice" id="dice">🎲</div></div><div class="sub">Sex</div><div class="seg" style="margin:0 6px">${['Female','Male'].map(x=>`<div class="opt ${st.sex===x?'sel':''}" data-sex="${x}"><div class="nm">${x}</div></div>`).join('')}</div><div class="sub">Look</div><div class="portraits">${['🧑‍🦰','🧑','🧑‍🦱','👩‍🦳','🧔','👨‍🦲'].map((p,i)=>`<div class="portrait ${st.portrait===i?'sel':''}" data-p="${i}">${p}</div>`).join('')}</div>`;
+  c.querySelector('#nm').oninput=e=>{st.name=e.target.value;renderSteps();renderDetail()};c.querySelector('#dice').onclick=()=>{st.name=NAMES[Math.floor(Math.random()*NAMES.length)];render()};
+  [...c.querySelectorAll('[data-sex]')].forEach(el=>el.onclick=()=>{st.sex=el.dataset.sex;render()});[...c.querySelectorAll('[data-p]')].forEach(el=>el.onclick=()=>{st.portrait=+el.dataset.p;render()});return}
+ if(s===1){c.innerHTML=`<h3>Race</h3><p class="help">Tap a race, then a lineage.</p>${cardGrid(RACES,st.race)}${st.race&&st.race.subs.length?`<div class="sub">${st.race.n} lineage</div><div class="grid" id="subs">${st.race.subs.map((x,i)=>`<div class="card ${st.sub===x?'sel':''}" data-i="${i}"><div class="nm">${x.n}</div><div class="ds">${x.ds}</div></div>`).join('')}</div>`:''}`;
+  [...c.querySelectorAll('.grid:not(#subs) .card')].forEach(el=>el.onclick=()=>{const r=RACES[+el.dataset.i];st.focus=r;if(r.locked){toast(r.locked);renderDetail();return}st.race=r;st.sub=r.subs.length===1?r.subs[0]:null;if(st.sub)st.focus=st.sub;render()});
+  [...c.querySelectorAll('#subs .card')].forEach(el=>el.onclick=()=>{st.sub=st.race.subs[+el.dataset.i];st.focus=st.sub;render()});return}
+ if(s===2){c.innerHTML=`<h3>Class</h3><p class="help">Tap a class, then a path within it.</p>${cardGrid(CLASSES,st.cls)}${st.cls&&st.cls.subs.length?`<div class="sub">${st.cls.n} paths</div><div class="grid" id="subs">${st.cls.subs.map((x,i)=>`<div class="card ${st.csub===x?'sel':''}" data-i="${i}"><div class="nm">${x.n}</div><div class="ds">${x.ds}</div></div>`).join('')}</div>`:''}`;
+  [...c.querySelectorAll('.grid:not(#subs) .card')].forEach(el=>el.onclick=()=>{const r=CLASSES[+el.dataset.i];st.focus=r;if(r.locked){toast(r.locked);renderDetail();return}st.cls=r;st.csub=null;render()});
+  [...c.querySelectorAll('#subs .card')].forEach(el=>el.onclick=()=>{st.csub=st.cls.subs[+el.dataset.i];st.focus=st.csub;render()});return}
+ if(s===3){c.innerHTML=`<h3>How hard?</h3><p class="help">You can't change these later.</p><div class="sub">Difficulty</div><div class="seg" style="margin:0 6px">${DIFF.map((d,i)=>`<div class="opt ${st.diff===i?'sel':''}" data-d="${i}"><div class="nm">${d.n}</div><div class="ds">${d.ds}</div></div>`).join('')}</div><div class="sub">Death</div><div class="seg" style="margin:0 6px">${DEATH.map((d,i)=>`<div class="opt ${st.death===i?'sel':''}" data-x="${i}"><div class="nm">${d.n}</div><div class="ds">${d.ds}</div></div>`).join('')}</div>`;
+  [...c.querySelectorAll('[data-d]')].forEach(el=>el.onclick=()=>{st.diff=+el.dataset.d;render()});[...c.querySelectorAll('[data-x]')].forEach(el=>el.onclick=()=>{st.death=+el.dataset.x;render()});return}
+ c.innerHTML=`<h3>Ready</h3><p class="help">Everything can still be changed from the rail.</p><div class="summary">${[['Name',st.name+' · '+st.sex,0],['Race',st.sub?st.sub.n+' '+st.race.n:'—',1],['Class',st.csub?st.csub.n:'—',2],['Difficulty',DIFF[st.diff].n,3],['Death',DEATH[st.death].n,3]].map(l=>`<div class="ln"><span>${l[0]}</span><span>${l[1]} <span class="edit" data-go="${l[2]}">edit</span></span></div>`).join('')}</div>`;
+ [...c.querySelectorAll('.edit')].forEach(el=>el.onclick=()=>{st.step=+el.dataset.go;render()})}
+function statBox(stats){if(!stats)return '';return `<div class="stats">${Object.entries(stats).map(([k,v])=>`<div class="stat"><div class="l">${k}</div><div class="v ${v.startsWith('+')?'up':v.startsWith('-')?'dn':''}">${v}</div></div>`).join('')}</div>`}
+function renderDetail(){const d=document.getElementById('detail');const s=st.step;let body='';
+ const f=st.focus;
+ if(s===0)body=`<div class="hero"><div class="ic">${['🧑‍🦰','🧑','🧑‍🦱','👩‍🦳','🧔','👨‍🦲'][st.portrait]}</div><div><div class="nm">${st.name||'…'}</div><div class="k">${st.sex} · portrait ${st.portrait+1}</div></div></div><div class="desc m">Your name is what the log calls you and what the highscore remembers. Everything else here is cosmetic.</div>`;
+ else if(s===1||s===2){const x=f||(s===1?(st.sub||st.race):(st.csub||st.cls));if(!x)body=`<div class="desc m">Tap a card to read about it.</div>`;else body=`<div class="hero"><div class="ic">${x.ic||(s===1?st.race.ic:st.cls.ic)}</div><div><div class="nm">${x.n}</div><div class="k">${x.ds}</div></div></div>${x.locked?`<div class="desc"><span style="color:var(--bad)">Locked.</span> ${x.locked}</div>`:`<div class="desc">${x.desc||'Choose a lineage below the cards to see details.'}</div>${statBox(x.stats)}`}`}
+ else if(s===3)body=`<div class="hero"><div class="ic">🎚</div><div><div class="nm">${DIFF[st.diff].n}</div><div class="k">${DEATH[st.death].n}</div></div></div><div class="desc">${st.diff===1?'Normal: creatures and loot as designed. Recommended for a first run.':st.diff===0?'Easier: you take 30% less damage. Good for learning the talents.':st.diff===2?'Nightmare: enemies have more life and levels; no shortcuts.':'Insane: every level has random bosses. Bring a plan.'}<br><br>${st.death===0?'Exploration: you cannot lose your character. No achievements.':st.death===1?'Adventure: you start with a few extra lives and can earn more.':'Roguelike: one death and the character is gone.'}</div>`;
+ else body=`<div class="hero"><div class="ic">${['🧑‍🦰','🧑','🧑‍🦱','👩‍🦳','🧔','👨‍🦲'][st.portrait]}</div><div><div class="nm">${st.name}</div><div class="k">${st.sub?st.sub.n+' '+st.race.n:''} ${st.csub?st.csub.n:''}</div></div></div><div class="desc m">Trollmire awaits. The first level-up screen opens right after birth so you can spend your starting points.</div><div class="bigstart" id="start">Begin</div>`;
+ const last=s===4;const ok=doneStep(s);
+ d.innerHTML=body+(last?'':`<div class="nav"><div class="btn back" id="back" style="${s===0?'visibility:hidden':''}">Back</div><div class="btn next ${ok?'':'dis'}" id="next">${s===3?'Review':'Next'}</div></div>`);
+ const b=d.querySelector('#back'),n=d.querySelector('#next'),g=d.querySelector('#start');if(b)b.onclick=()=>{st.step=Math.max(0,s-1);st.focus=null;render()};if(n)n.onclick=()=>{st.step=Math.min(4,s+1);st.focus=null;render()};if(g)g.onclick=()=>toast(`${st.name} enters the Trollmire.`)}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,1800)}
+function render(){renderSteps();renderContent();renderDetail()}
+document.querySelectorAll('.pchip').forEach(b=>b.onclick=()=>{const i=+b.dataset.step;if(i<=1||canReach(i)){st.step=i}else{st.race=RACES[0];st.sub=RACES[0].subs[0];st.cls=CLASSES[0];st.csub=CLASSES[0].subs[0];st.step=i}st.focus=null;render()});
+render();
+})();
+</script>

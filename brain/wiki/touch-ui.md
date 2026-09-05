@@ -305,3 +305,7 @@ Inventory buttons. Rows come from running the desktop drawDialog(kind) against a
 proxy (drawColorStringBlended returns 7 values; mouseTooltip attaches tips by x,y), sorted by column
 then y; "Label : value" split at the first colon; Equipment tab lists worn slots from inven_def.
 Leftover: talent category lines are not detected as headers; Tab font patch did not visibly apply.
+
+## 20. Character creation mock (proposal, not built)
+
+`tools/ios/design/birth-mockup.html` (artifact https://claude.ai/code/artifact/e4ed0764-89b6-4b83-8155-ef971f1a180a). Five-step wizard replacing the desktop Birther: Who (name + dice, sex, portrait strip) → Race (cards, then lineage cards; locked entries visible with the unlock reason) → Class (cards, then path cards) → Difficulty (segmented difficulty + permadeath rows) → Start (summary with per-line edit, one big Begin). Left rail = progress + jump back; right pane = description + stat modifiers + Back/Next. Open questions put to the user: name first vs last, where the campaign choice goes, subclass on the same page vs its own step, a "random character" shortcut. Build only after confirmation; it should drive the existing `Birther` descriptors (`data/birth/*`), not replace them.
