@@ -522,7 +522,11 @@ function _M:refresh()
 							on_tap=function() self:toggleCosmetic(opt) end}
 					end
 				end
-				if #items > 0 then secs[#secs+1] = {title=group.name, items=items, min_w=84, row_h=88, icon_size=64, icon_only=true} end
+				if #items > 0 then
+					-- some groups combine (a beard and a scar), others are one-of: say which
+					local multi = self.cosmetic_options_config[group.kind] == "multiple"
+					secs[#secs+1] = {title=tostring(group.name) .. (multi and _t" · pick any" or _t" · pick one"), items=items, min_w=84, row_h=88, icon_size=64, icon_only=true}
+				end
 			end
 		end
 	elseif s == "class" then
