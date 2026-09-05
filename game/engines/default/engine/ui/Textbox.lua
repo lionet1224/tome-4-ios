@@ -45,7 +45,11 @@ function _M:init(t)
 end
 
 function _M:on_focus(v)
-	game:onTickEnd(function() self.key:unicodeInput(v) end)
+	game:onTickEnd(function()
+		self.key:unicodeInput(v)
+		-- iOS port: a focused text box shows the on-screen keyboard, losing focus hides it
+		if __IOS__ and core.key and core.key.unicodeInput then core.key.unicodeInput(v and true or false) end
+	end)
 end
 
 function _M:generate()
