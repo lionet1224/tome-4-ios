@@ -669,7 +669,7 @@ local desc_inscriptions = (_t[[You can use a category point to unlock a new insc
 function _M:createDisplay()
 	self.b_prodigies = Button.new{text=_t"Prodigies", fct=function()
 			self.on_finish_prodigies = self.on_finish_prodigies or {}
-			local d = require("mod.dialogs.UberTalent").new(self.actor, self.on_finish_prodigies)
+			local d = (require("engine.TouchInput").active() and require("mod.dialogs.TouchProdigies") or require("mod.dialogs.UberTalent")).new(self.actor, self.on_finish_prodigies)
 			game:registerDialog(d)
 		end, on_select=function()
 		local str = desc_prodigies

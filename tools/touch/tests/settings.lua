@@ -1,0 +1,10 @@
+return function(T)
+	T.wait(1500) T.key("EXIT") T.wait(6000) T.key("EXIT") T.wait(600)
+	T.log("homepath", tostring(engine.homepath), "writepath", tostring(fs.getWritePath()))
+	local ok, err = fs.mkdir("/settings")
+	T.log("mkdir settings (relative)", tostring(ok), tostring(err))
+	game:saveSettings("touchtest", "touchtest = 1\n")
+	fs.setWritePath(engine.homepath)
+	T.log("exists after save", tostring(fs.exists("/settings/touchtest.cfg")), "settings dir exists", tostring(fs.exists("/settings")), "list", table.concat(fs.list("/settings/") or {}, ","))
+	T.log("finished")
+end

@@ -531,7 +531,11 @@ function _M:saveSettings(file, data)
 		f:write(data)
 		f:close()
 	else
-		print("WARNING: could not save settings in ", file, "::", data, "::", msg)
+		-- iOS port: the PhysFS write path is sometimes busy (a save in flight); write the
+		-- file straight to disk so a changed option is never silently lost
+		local ok, f2 = pcall(io.open, engine.homepath.."/settings/"..file..".cfg", "w")
+		if ok and f2 then f2:write(data) f2:close() print("[SETTINGS] wrote", file, "directly (physfs busy:", tostring(msg), ")")
+		else print("WARNING: could not save settings in ", file, "::", data, "::", msg) end
 	end
 	if restore then fs.setWritePath(restore) end
 end

@@ -36,6 +36,8 @@ function _M:init(t)
 	self.scrollbar = t.scrollbar
 	self.focus_check = t.focus_check
 	self.variable_height = t.variable_height
+	-- iOS port: no auto ping-pong scrolling under a finger; the reader drags instead
+	if t.pingpong and require("engine.TouchInput").active() then t.pingpong = nil end
 	self.pingpong = t.pingpong and 0
 	self.scroll_delay = t.pingpong
 	self.dest_area = t.dest_area and t.dest_area or { h = self.h }

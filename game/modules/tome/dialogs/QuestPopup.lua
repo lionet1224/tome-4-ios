@@ -35,6 +35,8 @@ local statuses = {
 }
 
 function _M:init(quest, status)
+	-- iOS port: sheet with a status pill, the quest text and two big buttons
+	if require("engine.TouchInput").active() then return self:initTouch(quest, status) end
 	local use_ui = "quest"
 	if quest.use_ui then use_ui = quest.use_ui end
 	if status == Quest.FAILED then use_ui = "quest-fail" end
@@ -84,8 +86,9 @@ function _M:init(quest, status)
 	}
 end
 
--- Any clicks inside will open the journal
+-- Any clicks inside will open the journal (desktop); the touch sheet has buttons
 function _M:mouseEvent(button, x, y, xrel, yrel, bx, by, event)
+	if self.touch then return Dialog.mouseEvent(self, button, x, y, xrel, yrel, bx, by, event) end
 	if event ~= "button" or button ~= "left" then return end
 	game:unregisterDialog(self)
 	if require("engine.TouchInput").active() then game:registerDialog(require("mod.dialogs.TouchJournal").new("quests", self.quest.id))
@@ -106,4 +109,90 @@ function _M:drawFrame(x, y, r, g, b, a)
 	end
 	
 	Dialog.drawFrame(self, x, y, r, g, b, a)
+end
+
+---------------------------------------------------------------------------
+-- Touch layout
+---------------------------------------------------------------------------
+local TOUCH_STATUS = {
+	[-1] = {_t"New quest", {123, 211, 137}},
+	[Quest.PENDING] = {_t"Quest updated", {127, 255, 212}},
+	[Quest.COMPLETED] = {_t"Quest completed", {123, 211, 137}},
+	[Quest.DONE] = {_t"Quest done", {123, 211, 137}},
+	[Quest.FAILED] = {_t"Quest failed", {224, 122, 106}},
+}
+
+function _M:openJournal()
+	game:unregisterDialog(self)
+	if require("engine.TouchInput").active() then game:registerDialog(require("mod.dialogs.TouchJournal").new("quests", self.quest.id))
+	else game:registerDialog(require("engine.dialogs.ShowQuests").new(game.party:findMember{main=true}, self.quest.id)) end
+end
+
+function _M:initTouch(quest, status)
+	local K = require "engine.ui.TouchKit"
+	local Button = require "engine.ui.Button"
+	local TextzoneList = require "engine.ui.TextzoneList"
+	local TI = require "engine.TouchInput"
+	self.touch = true
+	self.quest = quest
+	self.status = status
+	self.ui = "quest"
+
+	local sa = TI.safeArea()
+	local W = math.min(900, math.floor((game.w - (sa.l or 0) - (sa.r or 0)) * 0.8))
+	local maxh = math.floor((game.h - (sa.t or 0) - (sa.b or 0)) * 0.9)
+	Dialog.init(self, "", W, maxh)
+	self.blight = self:getUITexture("ui/dialogframe_backglow.png")
+	local frame_h = self.h - self.ih
+	local avail = maxh - frame_h
+
+	-- text: the popup line for this status, then the quest's own description
+	local parts = {}
+	if quest.popup_text and quest.popup_text[status] then parts[#parts+1] = quest.popup_text[status] end
+	local ok, desc = pcall(function() return quest.desc and quest:desc(game.player) end)
+	if ok and type(desc) == "string" and desc ~= "" then parts[#parts+1] = desc end
+	if #parts == 0 then parts[1] = _t"See your Journal for the details." end
+	local txt = table.concat(parts, "\n\n")
+
+	self.head_h = 96
+	local bh = 60
+	local bigfont = K.font(22)
+	local probe = require("engine.ui.Textzone").new{width=self.iw - 16, height=1, auto_height=true, text=txt .. "\n"}
+	local desc_h = util.bound(probe.h + 8, 60, avail - self.head_h - bh - 24)
+	self.c_desc = TextzoneList.new{width=self.iw - 16, height=desc_h, scrollbar=true, dest_area={h=desc_h}}
+	self.c_desc:switchItem(txt, txt)
+
+	local bw = math.floor((self.iw - 16 - 12) / 2)
+	self.b_log = Button.new{text=_t"Quest log", width=bw, font=bigfont, fct=function() self:openJournal() end}
+	self.b_ok = Button.new{text=_t"Continue", width=bw, font=bigfont, fct=function() game:unregisterDialog(self) end}
+
+	self:loadUI{
+		{left=8, top=self.head_h, ui=self.c_desc},
+		{left=8, top=self.head_h + desc_h + 12, ui=self.b_log},
+		{left=8 + bw + 12, top=self.head_h + desc_h + 12, ui=self.b_ok},
+	}
+	self:setFocus(self.b_ok)
+	self:setupUI(false, true)
+
+	self.key:addBinds{
+		EXIT = function() game:unregisterDialog(self) end,
+		ACCEPT = function() game:unregisterDialog(self) end,
+	}
+end
+
+function _M:innerDisplayBack(x, y, nb_keyframes)
+	if not self.touch then return end
+	local K = require "engine.ui.TouchKit"
+	x, y = x + self.ix, y + self.iy
+	local st = TOUCH_STATUS[self.status] or {_t"Quest", {200, 195, 180}}
+	-- status pill
+	local label = K.text(st[1]:upper(), 12, 20, 22, 28, true)
+	if label then
+		local pw = label.w + 24
+		K.quad(x + 8, y + 14, pw, 26, st[2])
+		K.draw(label, x + 8 + 12, y + 14 + (26 - label.h) / 2)
+	end
+	-- quest name in gold
+	local name = tostring(self.quest.name or ""):gsub("#[^#]*#", "")
+	K.draw(K.text(name, 24, 240, 212, 138, true, self.iw - 16), x + 8, y + 48)
 end

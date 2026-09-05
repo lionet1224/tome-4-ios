@@ -2401,7 +2401,7 @@ do return end
 		end,
 
 		SHOW_MESSAGE_LOG = function()
-			self:registerDialog(require("mod.dialogs.ShowChatLog").new(_t"Message Log", 0.6, self.uiset.logdisplay, profile.chat))
+			self:registerDialog((require("engine.TouchInput").active() and require("mod.dialogs.TouchLog") or require("mod.dialogs.ShowChatLog")).new(_t"Message Log", 0.6, self.uiset.logdisplay, profile.chat))
 		end,
 
 		-- Show time
@@ -2459,7 +2459,7 @@ do return end
 				{ _t"Character Sheet", function() self:unregisterDialog(menu) self.key:triggerVirtual("SHOW_CHARACTER_SHEET") end },
 				"keybinds",
 				"language",
-				{_t"Game Options", function() self:unregisterDialog(menu) self:registerDialog(require("mod.dialogs.GameOptions").new()) end},
+				{_t"Game Options", function() self:unregisterDialog(menu) self:registerDialog((require("engine.TouchInput").active() and require("mod.dialogs.TouchOptions") or require("mod.dialogs.GameOptions")).new()) end},
 				"video",
 				"sound",
 				"save",
@@ -2515,6 +2515,7 @@ do return end
 		end,
 
 		SHOW_MAP = function()
+			if require("engine.TouchInput").active() then self:registerDialog(require("mod.dialogs.TouchMap").new()) return end
 			if config.settings.tome.uiset_mode == "Minimalist" then
 				self.uiset.mm_mode = util.boundWrap((self.uiset.mm_mode or 2) + 1, 1, 3)
 				if self.uiset.mm_mode == 1 then

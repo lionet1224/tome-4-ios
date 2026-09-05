@@ -150,7 +150,7 @@ function _M:run()
 
 	-- Setup display
 	-- iOS port: the touch title screen when fingers drive the game
-	if require("engine.TouchInput").active() then self:registerDialog(require("mod.dialogs.TouchMainMenu").new())
+	if require("engine.TouchInput").active() then self.touch_menu_hides_news = true self:registerDialog(require("mod.dialogs.TouchMainMenu").new())
 	else self:registerDialog(MainMenu.new()) end
 
 	-- Run the current music if any
@@ -502,7 +502,7 @@ function _M:display(nb_keyframes)
 			end
 			self.background:toScreenFull(x, y, w, h, w * self.background_tw / self.background_w, h * self.background_th / self.background_h)
 		end
-		if self.tooltip then
+		if self.tooltip and not self.touch_menu_hides_news then
 			if #self.dialogs == 0 or not self.dialogs[#self.dialogs].__show_only then
 				self.tooltip:display()
 				self.tooltip:toScreen(5, 5)
@@ -548,7 +548,7 @@ function _M:display(nb_keyframes)
 --		core.display.drawQuad(0, 0, game.w, game.h, 128, 128, 128, 128)
 	end
 
-	if self.tooltip then
+	if self.tooltip and not self.touch_menu_hides_news then
 		if #self.dialogs == 0 or not self.dialogs[#self.dialogs].__show_only then
 			self.tooltip:display()
 			self.tooltip:toScreen(5, 5)

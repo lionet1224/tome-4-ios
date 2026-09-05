@@ -29,6 +29,8 @@ module(..., package.seeall, class.inherit(Dialog))
 
 function _M:init(l, w, force_height, after_learn_cb, display_entity)
 	self.after_learn_cb = after_learn_cb
+	-- iOS port: illustration left, scrolling text right, one big Continue
+	if require("engine.TouchInput").active() then return self:initTouch(l) end
 	self.title_shadow = false
 	self.color = l.text_color or {r=0x3a, g=0x35, b=0x33}
 
@@ -129,4 +131,78 @@ end
 
 function _M:unload()
 	if self.after_learn_cb then self.after_learn_cb("popup") end
+end
+---------------------------------------------------------------------------
+-- Touch layout
+---------------------------------------------------------------------------
+function _M:initTouch(l)
+	local K = require "engine.ui.TouchKit"
+	local Button = require "engine.ui.Button"
+	local TI = require "engine.TouchInput"
+	self.touch = true
+	self.lore = l
+	self.title_shadow = false
+
+	local sa = TI.safeArea()
+	local W = math.floor((game.w - (sa.l or 0) - (sa.r or 0)) * 0.94)
+	local H = math.floor((game.h - (sa.t or 0) - (sa.b or 0)) * 0.92)
+	Dialog.init(self, ("Lore found: #0080FF#%s"):tformat(l.name), W, H)
+
+	local text = util.getval(l.lore, true) .. "\n"
+	local gap = 12
+	local bh = 60
+	self.head_h = 64
+
+	-- the illustration, scaled to at most 40% of the width and the pane height
+	self.image = nil
+	self.image_w = 0
+	if l.image then
+		local ok, img = pcall(Image.new, {file="lore/"..l.image, auto_width=true, auto_height=true})
+		if ok and img and img.w and img.w > 0 then
+			local maxw, maxh = math.floor(self.iw * 0.4), self.ih - 16
+			local sc = math.min(1, maxw / img.w, maxh / img.h)
+			img.w, img.h = math.floor(img.w * sc), math.floor(img.h * sc)
+			self.image = img
+			self.image_w = img.w + gap
+		end
+	end
+
+	local tw = self.iw - self.image_w
+	local th = self.ih - self.head_h - bh - gap
+	self.c_text = TextzoneList.new{width=tw, height=th, scrollbar=true, dest_area={h=th}}
+	self.c_text:switchItem(text, text)
+	self.b_ok = Button.new{text=_t"Continue", width=tw, font=K.font(22), fct=function() self:touchEnd() end}
+
+	local uis = {
+		{left=self.image_w, top=self.head_h, ui=self.c_text},
+		{left=self.image_w, bottom=0, ui=self.b_ok},
+	}
+	if self.image then table.insert(uis, 1, {left=0, top=math.max(0, math.floor((self.ih - self.image.h) / 2)), ui=self.image}) end
+	self:loadUI(uis)
+	self:setFocus(self.b_ok)
+	self:setupUI(false, false)
+
+	self.key:addBind("EXIT", function() self:touchEnd() end)
+	self.key:addBind("ACCEPT", function() self:touchEnd() end)
+
+	game:registerDialog(self)
+	game:playSound("actions/read")
+	game.tooltip.inhibited = true
+end
+
+function _M:touchEnd()
+	game.tooltip.inhibited = false
+	game:unregisterDialog(self)
+end
+
+function _M:innerDisplayBack(x, y, nb_keyframes)
+	if not self.touch then return end
+	local K = require "engine.ui.TouchKit"
+	x, y = x + self.ix, y + self.iy
+	local tx = x + self.image_w
+	local tw = self.iw - self.image_w
+	if self.image then K.quad(x - 4, y + math.max(0, math.floor((self.ih - self.image.h) / 2)) - 4, self.image.w + 8, self.image.h + 8, {14, 15, 18}) end
+	K.draw(K.text(tostring(self.lore.name or ""), 24, 240, 212, 138, true, tw), tx, y + 6)
+	local cat = self.lore.category and tostring(self.lore.category):gsub("[-_]", " ") or ""
+	if cat ~= "" then K.draw(K.text(cat, 13, 142, 136, 120, false, tw), tx, y + 38) end
 end
