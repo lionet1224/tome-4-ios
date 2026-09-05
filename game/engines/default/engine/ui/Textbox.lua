@@ -47,8 +47,18 @@ end
 function _M:on_focus(v)
 	game:onTickEnd(function()
 		self.key:unicodeInput(v)
-		-- iOS port: a focused text box shows the on-screen keyboard, losing focus hides it
-		if __IOS__ and core.key and core.key.unicodeInput then core.key.unicodeInput(v and true or false) end
+		-- iOS port: a text box the player just tapped shows the on-screen keyboard (an
+		-- auto-focused one does not); losing focus hides it. SDL is told where the box
+		-- is so the view scrolls up to keep it above the keyboard.
+		if __IOS__ and core.key and core.key.unicodeInput then
+			local TI = require "engine.TouchInput"
+			local tapped = TI.last_down and (core.game.getTime() - TI.last_down) < 800
+			if v and not tapped then return end
+			if v and core.key.setTextInputRect and self.last_screen_x then
+				core.key.setTextInputRect(self.last_screen_x, self.last_screen_y, self.w, self.h, game.w, game.h)
+			end
+			core.key.unicodeInput(v and true or false)
+		end
 	end)
 end
 
@@ -185,7 +195,8 @@ function _M:updateText()
 	self.old_text = self.text
 end
 
-function _M:display(x, y, nb_keyframes)
+function _M:display(x, y, nb_keyframes, screen_x, screen_y)
+	self.last_screen_x, self.last_screen_y = screen_x, screen_y
 	local text_x, text_y = self.text_x, self.text_y
 	self:displayTitle(x, y, nb_keyframes)
 	if self.focused then

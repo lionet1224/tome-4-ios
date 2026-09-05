@@ -95,6 +95,7 @@ function _M.reset()
 end
 
 function _M.fingerDown(id, x, y)
+	_M.last_down = now()
 	-- a touch that starts with nothing down is a fresh gesture: drop stale state
 	if _M.nb <= 0 or (not _M.t and not _M.multi) then
 		if _M.nb > 0 then print("[TOUCH] stale gesture state reset", _M.nb) end

@@ -443,6 +443,22 @@ static int lua_key_unicode(lua_State *L)
 	return 0;
 }
 
+/* iOS port: tell SDL where the focused text box is (logical coords + logical
+ * screen size) so the view scrolls up to keep it above the on-screen keyboard */
+static int lua_key_set_text_rect(lua_State *L)
+{
+	float x = luaL_checknumber(L, 1), y = luaL_checknumber(L, 2), w = luaL_checknumber(L, 3), h = luaL_checknumber(L, 4);
+	float lw = luaL_checknumber(L, 5), lh = luaL_checknumber(L, 6);
+	int ww = 0, wh = 0;
+	if (window) SDL_GetWindowSize(window, &ww, &wh);
+	if (ww <= 0 || wh <= 0 || lw <= 0 || lh <= 0) return 0;
+	SDL_Rect r;
+	r.x = (int)(x * ww / lw); r.y = (int)(y * wh / lh);
+	r.w = (int)(w * ww / lw); r.h = (int)(h * wh / lh);
+	SDL_SetTextInputRect(&r);
+	return 0;
+}
+
 static int lua_key_set_clipboard(lua_State *L)
 {
 	char *str = luaL_checkstring(L, 1);
@@ -475,6 +491,7 @@ static const struct luaL_Reg keylib[] =
 	{"symName", lua_get_scancode_name},
 	{"flush", lua_flush_key_events},
 	{"unicodeInput", lua_key_unicode},
+	{"setTextInputRect", lua_key_set_text_rect},
 	{"getClipboard", lua_key_get_clipboard},
 	{"setClipboard", lua_key_set_clipboard},
 	{NULL, NULL},
