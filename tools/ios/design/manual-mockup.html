@@ -1,0 +1,184 @@
+<title>ToME Manual Play</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--paper:#ECEAE3;--ink:#1E1C18;--ink-2:#5A564D;--rule:#D3CFC3;--accent:#9E7A22;--accent-ink:#6E5415;--panel:#F6F5F0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--paper:#141518;--ink:#E9E4D6;--ink-2:#A7A297;--rule:#2C2E34;--accent:#D2AA4A;--accent-ink:#E4C36E;--panel:#1C1E23}}
+:root[data-theme="dark"]{--paper:#141518;--ink:#E9E4D6;--ink-2:#A7A297;--rule:#2C2E34;--accent:#D2AA4A;--accent-ink:#E4C36E;--panel:#1C1E23}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 80px}
+h1{font:700 40px/1.05 Alegreya,Georgia,serif;margin:0 0 8px}
+h2{font:700 24px/1.2 Alegreya,Georgia,serif;margin:44px 0 12px}
+.lede{max-width:64ch;color:var(--ink-2);margin:0 0 22px}.lede b{color:var(--ink);font-weight:600}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink);font-weight:600}
+.phone{position:relative;margin:0 auto;border-radius:40px;background:#0B0B0D;padding:14px;box-shadow:0 30px 60px -30px rgba(0,0,0,.6);width:max-content}
+.screen{position:relative;overflow:hidden;border-radius:28px;background:#0F1013;width:1398px;height:645px;transform-origin:top left;
+ --gold:#D2AA4A;--gold-2:#F0D48A;--text:#EAE3D1;--mute:#8E8878;--good:#7BD389;--bad:#E07A6A;--card:rgba(20,22,28,.88);
+ font-family:"IBM Plex Sans",system-ui,sans-serif;color:var(--text);user-select:none;-webkit-user-select:none;touch-action:none}
+.island{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:34px;height:110px;border-radius:20px;background:#000;z-index:9;pointer-events:none}
+.home{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:210px;height:7px;border-radius:4px;background:rgba(255,255,255,.55);z-index:9;pointer-events:none}
+/* map */
+.map{position:absolute;inset:0;background:#1a2a14;overflow:hidden}
+.map canvas{position:absolute;left:0;top:0}
+.tile{position:absolute;width:64px;height:64px;display:grid;place-items:center;font-size:40px;line-height:1;cursor:pointer}
+.tile.you{filter:drop-shadow(0 0 6px rgba(240,212,138,.8))}
+.ring{position:absolute;width:72px;height:72px;border:3px solid var(--gold);border-radius:12px;box-shadow:0 0 0 3px rgba(0,0,0,.5),0 0 18px rgba(210,170,74,.7);pointer-events:none;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.06)}}
+.hp{position:absolute;height:5px;width:56px;background:#3a1010;border-radius:3px;overflow:hidden;pointer-events:none}.hp i{display:block;height:100%;background:var(--bad)}
+.path{position:absolute;width:10px;height:10px;border-radius:50%;background:rgba(240,212,138,.7);pointer-events:none}
+.flick{position:absolute;pointer-events:none;color:var(--gold-2);font-size:28px;opacity:0;transition:opacity .2s}
+/* hud */
+.hud{position:absolute;left:88px;top:12px;display:flex;gap:10px;align-items:center;pointer-events:none}
+.hud .port{width:52px;height:52px;border-radius:12px;background:#0b0b0d;display:grid;place-items:center;font-size:30px}
+.bars{display:grid;gap:5px}.bar{width:200px;height:14px;border-radius:7px;background:#2a1010;overflow:hidden;position:relative}.bar i{display:block;height:100%}.bar span{position:absolute;inset:0;font-size:10px;line-height:14px;text-align:center;color:#fff;text-shadow:0 1px 2px #000}
+.mini{position:absolute;right:96px;top:12px;width:150px;height:110px;border-radius:12px;background:#d8c9a0;opacity:.85;border:2px solid #5a4a20;pointer-events:none}
+.cool{position:absolute;right:96px;top:130px;display:flex;gap:4px;pointer-events:none}
+.cool .c{width:44px;height:44px;border-radius:8px;background:rgba(40,8,8,.85);border:1px solid #6a2020;display:grid;place-items:center;font-weight:600;color:#ffc0b0}
+/* right thumb */
+.dock{position:absolute;right:96px;bottom:22px;display:grid;grid-template-columns:120px 120px;grid-auto-rows:120px;gap:10px}
+.btn{border-radius:18px;background:var(--card);border:2px solid #3a3d46;display:grid;place-content:center;text-align:center;cursor:pointer;font-weight:600;letter-spacing:.06em;font-size:15px}
+.btn small{display:block;font-weight:400;letter-spacing:0;color:var(--mute);font-size:12px;margin-top:4px}
+.btn.act{border-color:#d07a4a;color:#ffd9c2}.btn.auto{color:#ffd9c2}
+.btn:active{transform:scale(.96)}
+.favs{position:absolute;right:96px;bottom:282px;display:grid;gap:8px}
+.fav{width:86px;height:86px;border-radius:16px;background:var(--card);border:2px solid #3a3d46;display:grid;place-items:center;font-size:36px;position:relative;cursor:pointer}
+.fav .k{position:absolute;left:6px;top:4px;font-size:11px;color:var(--gold-2);font-weight:600}
+.fav.cd{opacity:.55}.fav.cd::after{content:attr(data-cd);position:absolute;right:6px;bottom:4px;font-size:14px;font-weight:700;color:#ffb0a0}
+.fav.ready{border-color:var(--gold)}
+.more{position:absolute;right:96px;bottom:396px;width:86px;height:44px;border-radius:12px;background:var(--card);border:2px solid #3a3d46;display:grid;place-items:center;font-size:22px;cursor:pointer}
+.fav.dragging{opacity:.9;transform:scale(1.1)}
+/* left thumb hint */
+.pad{position:absolute;left:96px;bottom:40px;width:170px;height:170px;border-radius:50%;border:2px dashed rgba(240,212,138,.35);display:grid;place-items:center;color:var(--mute);font-size:12px;text-align:center;pointer-events:none}
+.pad b{display:block;color:var(--gold-2);font-size:13px;margin-bottom:4px}
+/* skill strip */
+.strip{position:absolute;left:96px;right:340px;bottom:22px;height:96px;border-radius:20px;background:var(--card);border:2px solid #3a3d46;display:flex;gap:8px;padding:8px;align-items:center;transform:translateY(130px);opacity:0;transition:transform .22s ease,opacity .22s}
+.strip.on{transform:none;opacity:1}
+.strip .t{flex:0 0 auto;width:68px;height:78px;border-radius:14px;background:#24272f;display:grid;grid-template-rows:1fr auto;place-items:center;padding:4px;cursor:pointer;position:relative}
+.strip .t .ic{font-size:32px}.strip .t .nm{font-size:10px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60px}
+.strip .t.cd{opacity:.45}.strip .t.cd::after{content:attr(data-cd);position:absolute;right:6px;top:4px;font-size:13px;font-weight:700;color:#ffb0a0}
+.strip .t.ready{border:2px solid var(--gold)}
+.strip .who{flex:1;min-width:120px;display:grid;gap:2px;padding:0 6px}
+.strip .who b{font-size:16px}.strip .who span{font-size:12px;color:var(--mute)}
+.strip .x{width:44px;height:44px;border-radius:12px;background:#24272f;display:grid;place-items:center;cursor:pointer}
+.toast{position:absolute;left:50%;top:70px;transform:translateX(-50%);background:rgba(0,0,0,.8);border:1px solid #3a3d46;border-radius:12px;padding:8px 16px;font-size:15px;z-index:8;pointer-events:none}
+.toast[hidden]{display:none!important}
+.cast{position:absolute;width:64px;height:64px;border-radius:50%;background:radial-gradient(circle,rgba(240,212,138,.9),rgba(240,212,138,0) 70%);pointer-events:none;animation:boom .5s ease-out forwards}
+@keyframes boom{to{transform:scale(2.2);opacity:0}}
+/* page */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0 6px}
+.pchip{border:1px solid var(--rule);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 14px;font:500 14px "IBM Plex Sans";cursor:pointer}
+.pchip.on{background:var(--accent);color:#1b1510;border-color:var(--accent)}
+.note{font-size:14px;color:var(--ink-2)}
+.key{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px 28px;padding:0;margin:0;list-style:none}
+.key li{padding:10px 0;border-top:1px solid var(--rule)}.key b{display:block;font-weight:600}.key span{color:var(--ink-2);font-size:15px}
+.q{list-style:none;padding:0;margin:0;display:grid;gap:10px}.q li{display:grid;grid-template-columns:auto 1fr;gap:12px;padding:12px 14px;background:var(--panel);border-radius:8px}.q li em{font-style:normal;color:var(--accent-ink);font-weight:600}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">ToME on iPhone · manual play · 1398 × 645 logical</div>
+  <h1>ToME Manual Play</h1>
+  <p class="lede">The wheels are gone. <b>Tap an enemy to target it</b> and a strip of your skills slides in, ready ones first; tap one to cast at that target. <b>Flick on the map to step</b>, tap to walk. Three pinned favourites sit above Act and Auto for the spells you spam. Try it: tap the goblin, then a skill; flick anywhere on the grass; tap the dock.</p>
+
+  <div class="phone" id="phone"><div class="screen" id="screen">
+    <div class="map" id="map"><canvas id="cv" width="1398" height="645"></canvas></div>
+    <div class="island"></div><div class="home"></div>
+    <div class="hud"><div class="port">🧔</div><div class="bars"><div class="bar"><i style="width:70%;background:#c0392b"></i><span>132 / 187</span></div><div class="bar"><i style="width:85%;background:#c9a227"></i><span>96 / 113</span></div></div></div>
+    <div class="mini"></div>
+    <div class="cool" id="cool"></div>
+    <div class="pad"><b>Drag to step</b>the tile lights up first,<br>release to go, drag back to cancel</div>
+    <div class="more" id="more" title="Everything else">⋯</div>
+    <div class="favs" id="favs"></div>
+    <div class="dock"><div class="btn auto" id="auto">&gt;&gt;<small>AUTO</small></div><div class="btn act" id="act">Z<small>Approach · ACT</small></div></div>
+    <div class="strip" id="strip"></div>
+    <div class="toast" id="toast" hidden></div>
+  </div></div>
+
+  <div class="toolbar"><span class="eyebrow" style="margin-right:6px">Show</span>
+    <button class="pchip on" data-v="target">Target then act</button><button class="pchip" data-v="flick">Drag to step</button><button class="pchip" data-v="dock">Favourites dock</button><button class="pchip" data-v="drawer">Skill drawer (fallback)</button>
+    <span style="flex:1"></span><span class="note">Buttons above just replay the gesture in the mock.</span>
+  </div>
+
+  <h2>What is on screen</h2>
+  <ol class="key">
+    <li><b>Target ring and skill strip</b><span>Tap an enemy: a gold ring marks it and the strip appears with your usable skills first, cooldowns greyed with the turns left. Tap a skill to cast at the ring. Tap the ✕ or the floor to dismiss. Long-press the enemy to inspect it.</span></li>
+    <li><b>Drag to step</b><span>Touch anywhere on the map and drag: the destination tile lights up gold with an arrow while your finger is down, so you see the exact tile before you commit. Release to step, drag back to the centre to cancel. Hold at the end to keep walking. A plain tap on a tile still paths there; tap yourself to wait.</span></li>
+    <li><b>Favourites</b><span>Three pinned skills stacked above Act. Tap fires at the current target, or the nearest enemy if none. Hold a favourite to aim by hand, or drag it onto an enemy. Hold and drag between slots to reorder; set them from the Talents screen ("Put on dock").</span></li>
+    <li><b>Act and Auto</b><span>Unchanged. Act shows the next step of the routine; Auto keeps going until a stop rule fires.</span></li>
+    <li><b>More (⋯)</b><span>One button for everything the right wheel used to hold: inventory, character, talents, journal, map, rest, options. It opens the same action sheet the inventory uses.</span></li>
+    <li><b>Cooldown strip</b><span>Stays under the minimap, only showing what is cooling.</span></li>
+  </ol>
+
+  <h2>Questions for you</h2>
+  <ul class="q">
+    <li><em>Strip position</em><span>Bottom, between the thumbs (shown), or along the right edge above the dock so the right thumb never crosses the screen?</span></li>
+    <li><em>Drag vs pad</em><span>Drag-with-preview is shown. The alternative is a fixed eight-wedge pad in the left thumb zone (about 80 px per wedge): more precise still, but it takes permanent screen space. Which feels safer to you?</span></li>
+    <li><em>Favourites count</em><span>Three fits comfortably; four is possible if the dock shrinks to 76 px buttons.</span></li>
+    <li><em>Casting without a target</em><span>Tapping a favourite with no enemy in view: aim by hand, or do nothing with a hint? The mock does the latter.</span></li>
+  </ul>
+</div>
+
+<script>
+(function(){
+const W=1398,H=645,screen=document.getElementById('screen');
+function fit(){const s=Math.min(1,(document.getElementById('phone').parentElement.clientWidth-28)/W);screen.style.transform=`scale(${s})`;const p=document.getElementById('phone');p.style.width=(W*s+28)+'px';p.style.height=(H*s+28)+'px'}
+window.addEventListener('resize',fit);fit();
+// ground
+const cv=document.getElementById('cv'),cx=cv.getContext('2d');
+function ground(){for(let y=0;y<H;y+=64)for(let x=0;x<W;x+=64){const n=(Math.sin(x*.13)+Math.cos(y*.11))*8;cx.fillStyle=`rgb(${38+n|0},${70+n|0},${30+n|0})`;cx.fillRect(x,y,64,64);cx.fillStyle='rgba(0,0,0,.08)';cx.fillRect(x,y,64,1);cx.fillRect(x,y,1,64)}
+ cx.fillStyle='#4a3a22';for(const [x,y] of [[6,2],[7,2],[8,2],[8,3],[9,4],[10,4]])cx.fillRect(x*64,y*64,64,64);cx.fillStyle='#254d1c';for(const [x,y] of [[3,1],[15,1],[16,6],[2,7],[12,8]])cx.fillRect(x*64,y*64,64,64)}
+ground();
+const map=document.getElementById('map');
+const TILE=64;
+let you={x:9,y:5};
+const foes=[{id:'gob',x:13,y:4,name:'Goblin skirmisher',lvl:'Level 3 · Normal',hp:.7,glyph:'👺'},{id:'wolf',x:12,y:7,name:'Grey wolf',lvl:'Level 2 · Normal',hp:1,glyph:'🐺'}];
+let target=null;
+const SKILLS=[{n:'Rush',ic:'💨',cd:0},{n:'Stun',ic:'🔨',cd:0},{n:'Heal',ic:'✚',cd:6},{n:'Wild',ic:'🌿',cd:0},{n:'Shout',ic:'📣',cd:3},{n:'Shield',ic:'🛡',cd:0}];
+const FAVS=[SKILLS[0],SKILLS[1],SKILLS[3]];
+function el(cls,x,y,html){const d=document.createElement('div');d.className=cls;d.style.left=x+'px';d.style.top=y+'px';if(html!=null)d.innerHTML=html;map.appendChild(d);return d}
+function renderMap(){[...map.querySelectorAll('.tile,.ring,.hp,.path')].forEach(e=>e.remove());
+ for(const f of foes){const t=el('tile',f.x*TILE,f.y*TILE,f.glyph);t.onclick=e=>{e.stopPropagation();setTarget(f)};const hp=el('hp',f.x*TILE+4,f.y*TILE+58);hp.innerHTML=`<i style="width:${f.hp*100}%"></i>`}
+ const y=el('tile you',you.x*TILE,you.y*TILE,'🧔');y.onclick=e=>{e.stopPropagation();toast('Waiting a turn')};
+ if(target){el('ring',target.x*TILE-4,target.y*TILE-4)}}
+function renderCool(){const c=document.getElementById('cool');c.innerHTML=SKILLS.filter(s=>s.cd>0).map(s=>`<div class="c" title="${s.n}">${s.cd}</div>`).join('')}
+function renderFavs(){document.getElementById('favs').innerHTML=FAVS.map((s,i)=>`<div class="fav ${s.cd?'cd':'ready'}" data-cd="${s.cd}" data-i="${i}"><span class="k">${i+1}</span>${s.ic}</div>`).join('');
+ [...document.querySelectorAll('.fav')].forEach(f=>f.onclick=()=>cast(FAVS[+f.dataset.i]))}
+function renderStrip(){const st=document.getElementById('strip');if(!target){st.classList.remove('on');return}
+ const list=[...SKILLS].sort((a,b)=>(a.cd>0)-(b.cd>0));
+ st.innerHTML=`<div class="who"><b>${target.name}</b><span>${target.lvl} · ${Math.round(target.hp*100)}% life · tap a skill to cast</span></div>`+list.map(s=>`<div class="t ${s.cd?'cd':'ready'}" data-cd="${s.cd}" data-n="${s.n}"><div class="ic">${s.ic}</div><div class="nm">${s.n}</div></div>`).join('')+`<div class="x" id="sx">✕</div>`;
+ st.classList.add('on');
+ [...st.querySelectorAll('.t')].forEach(t=>t.onclick=()=>cast(SKILLS.find(s=>s.n===t.dataset.n)));st.querySelector('#sx').onclick=()=>setTarget(null)}
+function setTarget(f){target=f;renderMap();renderStrip();if(f)toast(`Target: ${f.name}`)}
+function cast(s){const t=target||nearest();if(!t){toast('No enemy in view. Hold a favourite to aim by hand.');return}
+ if(s.cd>0){toast(`${s.n} is cooling down (${s.cd})`);return}
+ const b=el('cast',t.x*TILE,t.y*TILE);setTimeout(()=>b.remove(),600);t.hp=Math.max(0,t.hp-.3);s.cd=s.n==='Rush'?4:s.n==='Stun'?5:2;tick();toast(`${s.n} → ${t.name}`);
+ if(t.hp<=0){foes.splice(foes.indexOf(t),1);if(target===t)target=null;toast(`${t.name} dies`)}renderMap();renderStrip();renderFavs();renderCool()}
+function nearest(){let best=null,bd=1e9;for(const f of foes){const d=Math.abs(f.x-you.x)+Math.abs(f.y-you.y);if(d<bd){bd=d;best=f}}return best}
+function tick(){for(const s of SKILLS)if(s.cd>0)s.cd--;renderCool();renderFavs()}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,1600)}
+// map gestures: tap = path, flick = step
+// drag shows the destination tile; release commits; drag back to the centre cancels
+let down=null,preview=null,pdir=null;
+function showPreview(sx,sy){const nx=you.x+sx,ny=you.y+sy;if(preview)preview.remove();preview=el('ring',nx*TILE-4,ny*TILE-4);preview.style.borderStyle='dashed';preview.style.animation='none';
+ const a=Math.atan2(sy,sx);const f=el('flick',nx*TILE+18,ny*TILE+14,'➜');f.style.transform=`rotate(${a}rad)`;f.style.opacity=1;preview.arrow=f;pdir=[sx,sy]}
+function clearPreview(){if(preview){preview.arrow&&preview.arrow.remove();preview.remove();preview=null}pdir=null}
+map.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:Date.now()}});
+map.addEventListener('pointermove',e=>{if(!down)return;const dx=e.clientX-down.x,dy=e.clientY-down.y;const d=Math.hypot(dx,dy);
+ if(d>24){const a=Math.atan2(dy,dx);const sx=Math.round(Math.cos(a)),sy=Math.round(Math.sin(a));if(!pdir||pdir[0]!==sx||pdir[1]!==sy)showPreview(sx,sy)}
+ else clearPreview()});
+map.addEventListener('pointerup',e=>{if(!down)return;const dx=e.clientX-down.x,dy=e.clientY-down.y;const d=Math.hypot(dx,dy);const r=screen.getBoundingClientRect();const sc=r.width/W;
+ if(d>24&&pdir){const [sx,sy]=pdir;clearPreview();step(sx,sy)}
+ else{clearPreview();const tx=Math.floor((e.clientX-r.left)/sc/TILE),ty=Math.floor((e.clientY-r.top)/sc/TILE);if(target&&!foes.some(f=>f.x===tx&&f.y===ty)){setTarget(null)}pathTo(tx,ty)}
+ down=null});
+map.addEventListener('pointercancel',()=>{clearPreview();down=null});
+function step(sx,sy){you.x=Math.max(0,Math.min(21,you.x+sx));you.y=Math.max(0,Math.min(9,you.y+sy));tick();renderMap()}
+function pathTo(tx,ty){if(foes.some(f=>f.x===tx&&f.y===ty))return;const dots=[];let x=you.x,y=you.y;let n=0;while((x!==tx||y!==ty)&&n<30){x+=Math.sign(tx-x);y+=Math.sign(ty-y);dots.push([x,y]);n++}
+ dots.forEach(([x,y],i)=>{const d=el('path',x*TILE+27,y*TILE+27);setTimeout(()=>d.remove(),400+i*60)});
+ let i=0;const walk=setInterval(()=>{if(i>=dots.length){clearInterval(walk);return}you.x=dots[i][0];you.y=dots[i][1];i++;tick();renderMap()},90)}
+document.getElementById('act').onclick=()=>{const t=nearest();if(!t){toast('No enemies: exploring');return}const d=Math.abs(t.x-you.x)+Math.abs(t.y-you.y);if(d>1){you.x+=Math.sign(t.x-you.x);you.y+=Math.sign(t.y-you.y);tick();renderMap();toast('Act: approach')}else{cast({n:'Bump attack',ic:'⚔',cd:0})}};
+document.getElementById('auto').onclick=()=>toast('AUTO runs the routine until a stop rule fires');
+document.getElementById('more').onclick=()=>toast('Action sheet: Inventory · Character · Talents · Journal · Map · Rest · Options');
+document.querySelectorAll('.pchip').forEach(b=>b.onclick=()=>{document.querySelectorAll('.pchip').forEach(x=>x.classList.remove('on'));b.classList.add('on');const v=b.dataset.v;
+ if(v==='target'){setTarget(foes[0]||null)}else if(v==='flick'){setTarget(null);showPreview(1,0);toast('Drag right: the tile lights up; release to step');setTimeout(()=>{clearPreview();step(1,0)},900)}else if(v==='dock'){setTarget(null);cast(FAVS[0])}else{toast('Swipe up from the bottom: a grid of every hotkey; drag one onto an enemy')}});
+renderMap();renderFavs();renderCool();
+})();
+</script>
