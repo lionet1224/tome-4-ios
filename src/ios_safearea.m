@@ -73,3 +73,14 @@ float te4_ios_brightness(float set)
 	if (set >= 0) s.brightness = set;
 	return (float)s.brightness;
 }
+
+/* iOS port: the app's Documents directory (for the on-device log file) */
+const char *te4_ios_documents_path(void)
+{
+	static char buf[1024];
+	NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+	NSString *dir = [paths firstObject];
+	if (!dir) return NULL;
+	snprintf(buf, sizeof(buf), "%s", [dir UTF8String]);
+	return buf;
+}

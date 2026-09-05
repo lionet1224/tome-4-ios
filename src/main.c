@@ -20,6 +20,9 @@
 */
 #include "display.h"
 #include <stdio.h>
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
@@ -1605,6 +1608,20 @@ int main(int argc, char *argv[])
 		logfile = freopen("te4_log.txt", "w", stdout);
 		if (os_autoflush) setvbuf(logfile, NULL, _IONBF, 2);
 	}
+#if defined(TE4_IOS) && !TARGET_OS_SIMULATOR
+	/* iOS port: on a real device stdout goes nowhere, so keep a line-buffered log in
+	 * Documents (pull it with tools/ios/pull-log.sh) */
+	if (!is_zygote) {
+		extern const char *te4_ios_documents_path(void);
+		const char *docs = te4_ios_documents_path();
+		if (docs) {
+			static char logname[1200];
+			snprintf(logname, sizeof(logname), "%s/te4_log.txt", docs);
+			logfile = freopen(logname, "w", stdout);
+			if (logfile) setlinebuf(logfile);
+		}
+	}
+#endif
 #ifdef SELFEXE_MACOSX
 	if (!is_zygote) {
 		const char *logname = "/tmp/te4_log.txt";
