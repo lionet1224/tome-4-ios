@@ -125,10 +125,8 @@ function _M:stripTalents()
 			end
 		end
 	end
-	table.sort(list, function(a, b)
-		if (a.cd ~= nil) ~= (b.cd ~= nil) then return a.cd == nil end
-		return a.slot < b.slot
-	end)
+	-- stable order = the hotkey slots (set from Talents); a used skill stays where it is, only dimmed
+	table.sort(list, function(a, b) return a.slot < b.slot end)
 	return list
 end
 

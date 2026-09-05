@@ -45,7 +45,7 @@ function _M:init(actor)
 	self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.detail_w - 16, height=desc_h, dest_area={h=desc_h}}
 	local half = math.floor((self.detail_w - 8) / 2)
 	self.b_use = Button.new{text=_t"Use", width=self.detail_w, font=self.bigfont, fct=function() self:useCurrent() end}
-	self.b_wheel = Button.new{text=_t"Put on wheel", width=half, font=self.bigfont, fct=function() self:openSlots() end}
+	self.b_wheel = Button.new{text=_t"Put on bar", width=half, font=self.bigfont, fct=function() self:openSlots() end}
 	self.b_auto = Button.new{text=_t"Auto-use", width=half, font=self.bigfont, fct=function() self:autoMenu() end}
 	self.b_back = Button.new{text=_t"Back", width=self.detail_w, font=self.bigfont, fct=function() self:closeSlots() end}
 
@@ -208,7 +208,7 @@ function _M:showDetail()
 	local label = _t"Use"
 	if t.mode == "sustained" then label = self.actor:isTalentActive(t.id) and _t"Deactivate" or _t"Activate" end
 	if self.b_use.text ~= label then self.b_use.text = label self.b_use:generate() end
-	local wl = self:slotOf(t.id) and _t"Move on wheel" or _t"Put on wheel"
+	local wl = self:slotOf(t.id) and _t"Move on bar" or _t"Put on bar"
 	if self.b_wheel.text ~= wl then self.b_wheel.text = wl self.b_wheel:generate() end
 	local al = self.actor:isTalentAuto(t.id) and _t"Auto: on" or _t"Auto-use"
 	if self.b_auto.text ~= al then self.b_auto.text = al self.b_auto:generate() end
@@ -287,7 +287,7 @@ function _M:openSlots()
 		secs[#secs+1] = {title=("Wheel page %d"):tformat(p), items=items, cols=4, row_h=66, icon_size=44}
 	end
 	local more = {}
-	if mine then more[#more+1] = {name=_t"Remove from wheel", sub=("now in slot %d"):tformat(mine), on_tap=function() self:unassign() end} end
+	if mine then more[#more+1] = {name=_t"Remove from bar", sub=("now in slot %d"):tformat(mine), on_tap=function() self:unassign() end} end
 	more[#more+1] = {name=_t"Back", sub=_t"keep it where it is", on_tap=function() self:closeSlots() end}
 	secs[#secs+1] = {title=tostring(e.cname), items=more, min_w=200, row_h=66}
 	self.c_flow:setSections(secs)
@@ -350,9 +350,9 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	local sc = e.ok and {123, 211, 137} or {224, 122, 106}
 	draw(text(e.status, 13, sc[1], sc[2], sc[3], false, maxw), tx, y + 48)
 	if self.mode == "slots" then
-		draw(text(_t"Tap a slot to put it there", 13, 142, 136, 120, false, maxw), tx, y + 68)
+		draw(text(_t"Tap a slot: this is the order of the skill drawer", 13, 142, 136, 120, false, maxw), tx, y + 68)
 	else
 		local slot = self:slotOf(e.talent)
-		draw(text(slot and ("On the wheel: slot %d, page %d"):tformat(slot, math.floor((slot - 1) / _M.SLOTS_PER_PAGE) + 1) or _t"Not on the wheel", 13, 142, 136, 120, false, maxw), tx, y + 68)
+		draw(text(slot and ("On the wheel: slot %d, page %d"):tformat(slot, math.floor((slot - 1) / _M.SLOTS_PER_PAGE) + 1) or _t"Not on the bar", 13, 142, 136, 120, false, maxw), tx, y + 68)
 	end
 end
