@@ -113,6 +113,7 @@ function _M:generateListTouch()
 	end
 	local relayout = function() if self:isTome() and game.uiset and game.uiset.resizeIconsHotkeysToolbar then game.uiset:resizeIconsHotkeysToolbar() end end
 	toggle(_t"Touch wheels", _t"Hold in the left third of the screen for a wheel of your hotkeys, in the right third for actions. Off = the hotbar and the touch row instead.", "wheel", {true, false}, {_t"on", _t"off"}, relayout)
+	toggle(_t"Drag to step", _t"Drag on the map: the destination tile lights up, release to step (hold still to keep walking). Off = dragging pans the camera instead.", "drag_step", {true, false}, {_t"yes", _t"no"})
 	toggle(_t"Wheel opens on", _t"Hold: keep the finger still for a moment. First movement: the wheel opens as soon as the finger moves (dragging the map then only works in the middle third).", "trigger", {"hold", "drag"}, {_t"hold", _t"first movement"})
 	toggle(_t"Wheel sits", _t"Under the finger: the wheel opens where you touched (kept on screen). Corner: always the same spot in the bottom corner.", "pos", {"finger", "corner"}, {_t"under the finger", _t"in the corner"})
 	toggle(_t"Wheel zones", _t"Where a hold opens a wheel: the whole left and right thirds, or only their bottom halves (leaves the top for tile menus).", "zone", {"thirds", "bottom"}, {_t"left and right thirds", _t"bottom halves"})

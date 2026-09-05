@@ -24,7 +24,7 @@ xcrun simctl terminate "$UD" org.te4.tome.dev 2>/dev/null
 LOG="$OUT/console.log"
 xcrun simctl launch --console-pty "$UD" org.te4.tome.dev --flush-stdout > "$LOG" 2>&1 &
 t=0
-until grep -qE "SCRIPT\] finished|SCRIPT\] done|script load failed|script must return|Lua Error|script error" "$LOG" 2>/dev/null || [ "$(grep -c 'script started' "$LOG" 2>/dev/null)" -ge 2 ] || [ $t -ge 200 ]; do sleep 2; t=$((t+2)); done
+until grep -qE "SCRIPT\] finished|SCRIPT\] done|script load failed|script must return|Lua Error" "$LOG" 2>/dev/null || [ "$(grep -c 'script started' "$LOG" 2>/dev/null)" -ge 2 ] || [ $t -ge 200 ]; do sleep 2; t=$((t+2)); done
 sleep 4
 xcrun simctl terminate "$UD" org.te4.tome.dev 2>/dev/null
 for f in "$D"/Documents/t-engine/4.0/tome/shot-*.png "$D"/Documents/t-engine/4.0/boot/shot-*.png "$D"/Documents/t-engine/4.0/shot-*.png; do [ -f "$f" ] && mv "$f" "$OUT/"; done

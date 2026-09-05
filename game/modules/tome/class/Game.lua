@@ -2735,6 +2735,25 @@ function _M:setupMouse(reset)
 			end
 		end
 
+		-- iOS port: tap an enemy = make it the touch target (skill strip); tap the floor
+		-- while enemies are in view = no walking (drag to step instead)
+		if require("engine.TouchInput").active() and button == "left" and not xrel and not yrel and event == "button" and self.key == self.normal_key and self.player and self.uiset.touch_manual and self.zone and not self.zone.wilderness then
+			local a = self.level.map(tmx, tmy, Map.ACTOR)
+			if a and a ~= self.player and self.player:canSee(a) and self.player:reactionToward(a) < 0 then
+				self.uiset.touch_manual:setTarget(a)
+				return
+			end
+			if not (tmx == self.player.x and tmy == self.player.y) and #self.player:actEnemies() > 0 then
+				self.uiset.touch_manual:setTarget(nil)
+				local t = core.game.getTime()
+				if not self.touch_walk_hint or t - self.touch_walk_hint > 5000 then
+					self.touch_walk_hint = t
+					self.logPlayer(self.player, "#GOLD#Enemies in view:#LAST# drag to step.")
+				end
+				print("[TOUCH] floor tap blocked (enemies in view)")
+				return
+			end
+		end
 		-- iOS port: tap yourself = wait a turn, or take the stairs when standing on them
 		if require("engine.TouchInput").active() and button == "left" and not xrel and not yrel and event == "button" and self.key == self.normal_key and self.player and tmx == self.player.x and tmy == self.player.y and self.zone then
 			local g = self.level.map(tmx, tmy, Map.TERRAIN)

@@ -301,12 +301,20 @@ function _M:init()
 	UISet.init(self)
 
 	self.touch_wheel = TouchWheel.new(self)
+	self.touch_manual = require("mod.class.TouchManual").new(self)
 	local TouchInput = require "engine.TouchInput"
 	TouchInput.wheel = self.touch_wheel
 	TouchInput.on_hold = function(x, y)
 		local r = self.touch_attack_rect
-		return r and x >= r.x and x < r.x + r.w and y >= r.y and y < r.y + r.h and true or false
+		if r and x >= r.x and x < r.x + r.w and y >= r.y and y < r.y + r.h then return true end
+		-- favourites and strip cards: a hold aims the talent by hand, at once
+		local m = self.touch_manual
+		if m and m.rects then
+			for _, c in pairs(m.strip_rects or {}) do if x >= c.x and x < c.x + c.w and y >= c.y and y < c.y + c.h then return true end end
+		end
+		return false
 	end
+	TouchInput.on_map_drag = function(phase, t, x, y) return self.touch_manual:drag(phase, t, x, y) end
 	TouchInput.on_any_touch = function(x, y)
 		local p = game.player
 		if not (p and p.auto_act) then return end
@@ -553,7 +561,7 @@ function _M:resizeIconsHotkeysToolbar()
 	local h = 52
 	if config.settings.tome.hotkey_icons then h = (8 + config.settings.tome.hotkey_icons_size) * config.settings.tome.hotkey_icons_rows end
 
-	if TouchWheel.enabled() then h = 0 end -- iOS port: no hotbar, the map takes the whole screen
+	if require("engine.TouchInput").active() then h = 0 end -- iOS port: no hotbar, the map takes the whole screen
 	local oldstop = self.map_h_stop_up or (game.h - h)
 	self.map_h_stop = game.h
 	self.map_h_stop_up = game.h - h
@@ -2332,7 +2340,7 @@ function _M:display(nb_keyframes)
 	d.glScale()
 	d.glTranslate(-self.places.party.x, -self.places.party.y, -0)
 
-	local touch_wheel = TouchWheel.enabled()
+	local touch_wheel = require("engine.TouchInput").active()
 	if not touch_wheel then
 	-- Hotkeys
 	d.glTranslate(self.places.hotkeys.x, self.places.hotkeys.y, 0)
@@ -2355,9 +2363,13 @@ function _M:display(nb_keyframes)
 			if game.mouse.areas_name and game.mouse.areas_name.touch_auto then game.mouse:unregisterZone("touch_auto") end
 			self.touch_attack_rect = nil
 			self.touch_auto_rect = nil
+			self.touch_manual:hide()
+			self.touch_manual:displayQuiet()
 		else
 			self:displayTouchPips()
 			self:displayTouchTargeting()
+			if game.key == game.targetmode_key then self.touch_manual:hide() self.touch_manual:displayQuiet()
+			else self.touch_manual:display() end
 		end
 		self.touch_wheel:display()
 	end

@@ -18,7 +18,7 @@ module(..., package.seeall, class.make)
 
 _M.LONG_PRESS_MS = 450
 _M.MOVE_TOLERANCE = 18
-_M.DEFAULTS = {wheel=true, trigger="hold", pos="finger", zone="thirds", wedges=8, hold_ms=160, unlock_all=true, emulate=false, auto_life=50, auto_res=25, auto_rare=true, auto_dim=true, auto_buzz=true}
+_M.DEFAULTS = {wheel=false, drag_step=true, trigger="hold", pos="finger", zone="thirds", wedges=8, hold_ms=160, unlock_all=true, emulate=false, auto_life=50, auto_res=25, auto_rare=true, auto_dim=true, auto_buzz=true}
 
 function _M.setting(k)
 	local t = config.settings.touch
@@ -47,6 +47,8 @@ _M.on_pinch = nil   -- function(delta)
 _M.on_hold = nil    -- function(x, y) -> true when a hold there should act at once (buttons), not on release
 _M.on_any_touch = nil -- function(x, y): every finger-down (auto-act stops on it)
 _M.on_hover_end = nil -- function(x, y): a hold-then-drag was released there (drag and drop)
+_M.on_map_drag = nil -- function(phase, t, x, y): a plain drag; "start" returns true to claim it as a
+                     -- movement gesture (then "move"/"tick"/"end"/"cancel" follow and no mouse drag is emitted)
 _M.script_ready = nil -- function() -> true once the game module is really playable
 
 -- gesture state
@@ -104,7 +106,8 @@ function _M.fingerDown(id, x, y)
 		local t = _M.t
 		if t then
 			if t.wheel and _M.wheel then _M.wheel:cancel() end
-			if t.moved and not t.held and not t.wheel then emit(function(m) m:receiveMouse("left", t.x, t.y, true) end) end
+			if t.step then t.step = nil if _M.on_map_drag then pcall(_M.on_map_drag, "cancel", t) end end
+			if t.moved and not t.held and not t.wheel and not t.step_was then emit(function(m) m:receiveMouse("left", t.x, t.y, true) end) end
 			t.moved = true
 			t.multi = true
 		end
@@ -134,9 +137,22 @@ function _M.fingerMove(id, x, y)
 		if t.hover then motion("none", x, y, x - px, y - py) end
 		return
 	end
+	if t.step then
+		if _M.on_map_drag then pcall(_M.on_map_drag, "move", t, x, y) end
+		return
+	end
 	if not t.moved then
 		if not far then return end
 		t.moved = true
+		-- a drag on the map may be a movement gesture (drag-to-step): the game claims it
+		if _M.on_map_drag and _M.setting("drag_step") ~= false then
+			local ok, claimed = pcall(_M.on_map_drag, "start", t, x, y)
+			if ok and claimed then
+				t.step, t.step_was = true, true
+				pcall(_M.on_map_drag, "move", t, x, y)
+				return
+			end
+		end
 		print("[TOUCH] drag")
 		emit(function(m)
 			m:receiveMouseMotion("none", t.x0, t.y0, 0, 0)
@@ -171,6 +187,13 @@ function _M.fingerUp(id, x, y)
 		return
 	end
 	if t.multi then done() return end
+	if t.step then
+		t.step = nil
+		done()
+		if _M.on_map_drag then pcall(_M.on_map_drag, "end", t, x, y) end
+		park()
+		return
+	end
 	if t.held then
 		done()
 		if t.hold_fired then park() return end
@@ -227,6 +250,7 @@ function _M.tick()
 			end
 		end
 	end
+	if t and t.step and _M.on_map_drag then pcall(_M.on_map_drag, "tick", t, t.x, t.y) end
 	if _M.park_cursor then
 		_M.park_cursor = _M.park_cursor - 1
 		if _M.park_cursor <= 0 then
@@ -337,7 +361,9 @@ function _M.scriptTick()
 			local steps = 12
 			for i = 1, steps do
 				_M.fingerMove(1, x1 + (x2 - x1) * i / steps, y1 + (y2 - y1) * i / steps)
-				T.wait((ms or 300) / steps)
+				-- a real finger moves within a frame; the slow sim frames must not turn the start into a hold
+				local moved = math.sqrt(((x2 - x1) * i / steps)^2 + ((y2 - y1) * i / steps)^2)
+				if hold_first or moved >= 20 then T.wait((ms or 300) / steps) end
 			end
 			up(x2, y2) T.wait(120)
 		end
@@ -354,6 +380,12 @@ function _M.scriptTick()
 		print("[TOUCH] script started", path)
 	end
 	local s = _M.script
+	-- synthetic fingers are not SDL events, so the idle throttle stops the engine ticking;
+	-- keep the world moving while a script runs (same budget the soak autopilot uses)
+	if game and game.tick and game.level and game.player and not game.paused then
+		local t0 = now()
+		for _ = 1, 12 do if now() - t0 > 20 or game.paused then break end game:tick() end
+	end
 	if now() < s.wake_fct() then return end
 	local ok, err = coroutine.resume(s.co)
 	if not ok then print("[TOUCH] script error", err) end
