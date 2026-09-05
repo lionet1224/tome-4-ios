@@ -383,14 +383,21 @@ function _M.scriptTick()
 		end
 		function T.two_finger() _M.fingerDown(1, 500, 300) _M.fingerDown(2, 560, 300) T.wait(60) _M.fingerUp(2, 560, 300) _M.fingerUp(1, 500, 300) T.wait(120) end
 		function T.key(name) local k = engine.KeyBind.current if k then k:triggerVirtual(name) end T.wait(120) end
-		function T.log(...) print("[SCRIPT]", ...) end
+		-- stdout can lose its tail after a reboot; mirror the script log into a file the runner reads
+		local function filelog(...)
+			local parts = {} for i = 1, select("#", ...) do parts[#parts+1] = tostring(select(i, ...)) end
+			local f = fs.open("/touch-test.log", "a")
+			if f then f:write(table.concat(parts, "\t") .. "\n") f:close() end
+		end
+		function T.log(...) print("[SCRIPT]", ...) filelog("[SCRIPT]", ...) end
+		T.filelog = filelog
 		function T.close() local d = game.dialogs and game.dialogs[#game.dialogs] if d then game:unregisterDialog(d) end T.wait(120) end
 		function T.shot(name)
 			-- taken at the end of the next frame, once dialogs are drawn (frameEnd)
 			_M.pending_shot = name
 			T.wait(120)
 		end
-		_M.script = {co=coroutine.create(function() body(T) end), wake_fct=function() return wake end, game=game}
+		_M.script = {co=coroutine.create(function() body(T) end), wake_fct=function() return wake end, game=game, filelog=filelog}
 		print("[TOUCH] script started", path)
 	end
 	local s = _M.script
@@ -403,5 +410,6 @@ function _M.scriptTick()
 	if now() < s.wake_fct() then return end
 	local ok, err = coroutine.resume(s.co)
 	if not ok then print("[TOUCH] script error", err) end
-	if coroutine.status(s.co) == "dead" then _M.script_done = true print("[SCRIPT] done") end
+	if not ok and s.filelog then s.filelog("[TOUCH] script error", tostring(err)) end
+	if coroutine.status(s.co) == "dead" then _M.script_done = true print("[SCRIPT] done") if s.filelog then s.filelog("[SCRIPT] done") end end
 end

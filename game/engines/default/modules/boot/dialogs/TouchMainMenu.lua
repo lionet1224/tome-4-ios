@@ -17,6 +17,20 @@ module(..., package.seeall, class.inherit(MainMenu))
 local font, text, draw, quad, frame = K.font, K.text, K.draw, K.quad, K.frame
 local GOLD = K.GOLD
 
+-- iOS port: boot straight into the touch practice level with a throwaway character
+function _M:startPractice()
+	local found = Module:listModules().tome
+	if not found then
+		for _, m in ipairs(Module:listModules(true)) do
+			for _, v in ipairs(m.versions or {}) do
+				if not v.is_boot and v.short_name == "tome" and not found then found = v end
+			end
+		end
+	end
+	if not found then game.log("Tales of Maj'Eyal module not found.") return end
+	Module:instanciate(found, "player", true, false, "touch_practice=true")
+end
+
 function _M:init()
 	local w = math.min(600, math.floor(game.w * 0.6))
 	local h = math.min(560, math.floor(game.h * 0.94))
@@ -85,6 +99,7 @@ function _M:buildCards()
 	end
 	local main = {
 		{name=_t"New character", sub=_t"Start a new adventure", on_tap=function() self.list[1].fct() end},
+		{name=_t"Practice the controls", sub=_t"A safe clearing with a coach", on_tap=function() self:startPractice() end},
 		{name=_t"Load game", sub=_t"All saved characters", on_tap=function() self.list[2].fct() end},
 		{name=_t"Options", sub=_t"Touch, video, sound, keys", on_tap=function() self.list[3].fct() end},
 		{name=_t"More", sub=_t"Addons, credits, profile", on_tap=function() self.list[4].fct() end},

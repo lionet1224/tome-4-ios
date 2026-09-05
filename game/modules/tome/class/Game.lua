@@ -338,7 +338,7 @@ function _M:newGame()
 					self:triggerHook{"ToME:birthDone"}
 
 					-- iOS port: the touch controls guide, once, right after the intro text
-					if require("engine.TouchInput").active() and not (config.settings.touch and config.settings.touch.tutorial_seen) and not config.settings.autopilot then
+					if require("engine.TouchInput").active() and not (config.settings.touch and config.settings.touch.tutorial_seen) and not config.settings.autopilot and self.player.starting_zone ~= "touch-tutorial" then
 						self:registerDialog(require("mod.dialogs.TouchTutorial").new())
 					end
 
