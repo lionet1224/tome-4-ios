@@ -1,5 +1,6 @@
--- portrait inventory: one column (chips / list or doll / bottom sheet), every ui inside the
--- dialog, the Worn chip swaps the doll in, and touch_reopen rebuilds with the same state.
+-- portrait inventory: one column (chips / worn grid / list / bottom sheet), every ui inside
+-- the dialog, the grid highlights the slot a pack item would take, and touch_reopen
+-- rebuilds with the same state.
 -- Run with TOUCH_EXTRA=', orientation="portrait", hand="left"'
 return function(T)
 	T.wait(1500) T.key("EXIT") T.wait(6000) T.key("EXIT") T.wait(600)
@@ -16,7 +17,7 @@ return function(T)
 		T.log(("%s x=%d y=%d w=%d h=%d hidden=%s"):format(name, e.x, e.y, ui.w, ui.h, tostring(e.hidden)))
 		return e
 	end
-	rect("chips", d.c_chips) rect("list", d.c_list) rect("doll", d.c_doll) rect("card", d.c_card) rect("desc", d.c_desc) rect("primary", d.b_primary) rect("drop", d.b_drop) rect("more", d.b_more)
+	rect("chips", d.c_chips) rect("grid", d.c_grid) rect("list", d.c_list) rect("doll", d.c_doll) rect("card", d.c_card) rect("desc", d.c_desc) rect("primary", d.b_primary) rect("drop", d.b_drop) rect("more", d.b_more)
 	-- entry x/y include the dialog's inner offset (ix, iy)
 	local function inside(e, ui) return e and e.x >= d.ix and e.y >= d.iy and e.x + ui.w <= d.ix + d.iw + 1 and e.y + ui.h <= d.iy + d.ih + 1 end
 	for _, u in ipairs(d.uis_def) do
@@ -40,24 +41,38 @@ return function(T)
 		if d.c_card.o ~= d.c_list.items[row].object then T.log("BAD card does not show the tapped item") end
 	else T.log("no armour row") end
 	T.shot("inv-portrait")
-	-- the Worn chip: doll in, list out
-	local ce = entry(d.c_chips)
-	local worn for _, it in ipairs(d.c_chips.items) do if it.kind == "worn" then worn = it end end
-	if worn and ce then
-		T.tap(d.display_x + ce.x + worn.x + worn.w / 2, d.display_y + ce.y + 25) T.wait(500)
-		T.log("tab", d.tab, "doll hidden", tostring(entry(d.c_doll).hidden), "list hidden", tostring(entry(d.c_list).hidden), "doll at", entry(d.c_doll).x, entry(d.c_doll).y)
-		if d.tab ~= "worn" then T.log("BAD Worn chip did not switch the tab") end
-		if entry(d.c_doll).hidden or not inside(entry(d.c_doll), d.c_doll) then T.log("BAD doll not on screen on the Worn tab") end
-		if not entry(d.c_list).hidden or entry(d.c_list).x < d.iw then T.log("BAD list not parked on the Worn tab") end
-		-- tap a worn slot: the card shows the worn item
-		local slot for _, s in ipairs(d.c_doll.slots) do local inv = p.inven[s.id] if inv and inv[s.item] then slot = s break end end
-		if slot then
-			T.tap(d.c_doll.last_screen_x + slot.x + d.c_doll.box / 2, d.c_doll.last_screen_y + slot.y + d.c_doll.box / 2) T.wait(500)
-			T.log("worn tap", tostring(d.cur and d.cur.worn), tostring(d.c_card.o and d.c_card.o.name), "primary", tostring(d.b_primary.text))
-			if not (d.cur and d.cur.worn) then T.log("BAD worn slot tap did not select") end
+	-- the worn grid: between the chips and the list, cells inside the dialog
+	local g = d.c_grid
+	local ge = entry(g)
+	if not g or not ge then T.log("BAD no worn grid") else
+		T.log(("grid x=%d y=%d w=%d h=%d slots=%d rows=%d"):format(ge.x, ge.y, g.w, g.h, #g.slots, g.rows))
+		if not inside(ge, g) then T.log("BAD worn grid outside the dialog") end
+		if ge.y + g.h > entry(d.c_list).y then T.log("BAD worn grid overlaps the list") end
+		if ge.y < entry(d.c_chips).y + d.c_chips.h then T.log("BAD worn grid overlaps the chips") end
+		for _, s in ipairs(g.slots) do if s.x + g.cw > g.w + 1 or s.y + g.ch > g.h + 1 then T.log("BAD grid cell outside the grid", s.def.short_name) end end
+		if entry(d.c_doll) and not entry(d.c_doll).hidden then T.log("BAD doll shown in portrait") end
+		for _, it in ipairs(d.c_chips.items) do if it.kind == "worn" then T.log("BAD the Worn chip is still there") end end
+		-- the armour selected above: its slot cell is highlighted
+		if row then
+			local o = d.c_list.items[row].object
+			T.log("hilite after list select", g:hilited(), "slot", tostring(o:wornInven()))
+			if o:wornInven() and p:getInven(o:wornInven()) and g:hilited() == 0 then T.log("BAD target slot not highlighted for the selected armour") end
+			local hl = false for s in pairs(g.hilite) do if s.id == o:wornInven() then hl = true end end
+			if o:wornInven() and p:getInven(o:wornInven()) and not hl then T.log("BAD highlighted cell is not the armour's slot") end
 		end
-	else T.log("BAD no Worn chip") end
-	T.shot("inv-worn")
+		-- tap the main hand cell (or the first filled one): the card shows the worn item, primary = Take off
+		local slot
+		for _, s in ipairs(g.slots) do if s.def.short_name == "MAINHAND" and p.inven[s.id] and p.inven[s.id][s.item] then slot = s break end end
+		if not slot then for _, s in ipairs(g.slots) do local inv = p.inven[s.id] if inv and inv[s.item] then slot = s break end end end
+		if slot then
+			T.tap(g.last_screen_x + slot.x + g.cw / 2, g.last_screen_y + slot.y + g.ch / 2) T.wait(500)
+			T.log("worn tap", tostring(d.cur and d.cur.worn), tostring(d.c_card.o and d.c_card.o.name), "primary", tostring(d.b_primary.text), "sel", tostring(g.sel == slot), "hilite", g:hilited())
+			if not (d.cur and d.cur.worn and d.cur.object == p.inven[slot.id][slot.item]) then T.log("BAD worn cell tap did not select the worn item") end
+			if d.b_primary.text ~= "Take off" then T.log("BAD primary is not Take off for a worn item") end
+			if g.sel ~= slot then T.log("BAD grid cell not marked selected") end
+		else T.log("no filled worn slot") end
+	end
+	T.shot("inv-worn-grid")
 	-- rotation hook: a fresh dialog with the same tab and selection
 	local tab, obj = d.tab, d.cur and d.cur.object
 	local nd = d:touch_reopen()

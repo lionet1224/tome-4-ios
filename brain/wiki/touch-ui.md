@@ -417,3 +417,19 @@ Rotation while creating a character: `TouchBirther.on_register` skips the autopi
 Live rotation from Lua: `core.display.setOrientation("portrait")` → iOS rotates → `[IOS] rotated` → resize →
 `Game:checkResolutionChange` → HUD relayout + dialog rebuilds (`tests/rotate.lua`, orientation="auto").
 The Simulator cannot be rotated from a script (osascript keystrokes need Accessibility permission).
+
+## 28. Follow-ups from the phone (2026-09-06 afternoon)
+
+- **Level-up point buttons** (Stats/Class/Generic/Category) showed their hover tooltip on tap and it never went
+  away (nothing moves the pointer off). `createDisplayTouch` sets `no_tooltip = true`: the explanation goes into
+  the description pane, the dialog's own small-screen mode.
+- **Store descriptions** started with a literal "fontbold" and never showed the Buy/Sell price line: stock
+  `mod.class.Store:descObject` called `tstring(a, b, ...)` and `tstring`'s `__call` takes one table, so only
+  `{"font","bold"}` survived. Fixed with `tstring{...}`. Visible in landscape too since the port began.
+- **Resting popup during AUTO** ("it should just run the game smoothly"): `PlayerRest:restInit` creates no
+  popup when `self.auto_act` and touch is active; `restStop` tolerates a nil dialog. Manual rests keep it (it
+  is their stop control). AUTO stops itself below 50 % life, so `tests/autorest.lua` starts at 70 %.
+- **Portrait inventory: no Worn tab** ("hard to see what you already have on when considering a new item"):
+  a `WornGrid` (8 columns × 76×60 cells, two rows for 14–16 slots) sits between the chips and the list, drawn
+  from `actor.inven` live; tapping a cell selects the worn item; selecting a pack item gold-frames the cell(s)
+  it would replace (both fingers for rings). The Doll stays for landscape.

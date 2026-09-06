@@ -28,17 +28,21 @@ module(..., package.seeall, class.make)
 function _M:restInit(turns, what, past, on_end, on_very_end)
 	what = what or _t"resting"
 	past = past or _t"rested"
+	-- iOS port: while AUTO plays, resting is one of its steps and must not pop a
+	-- dialog (Jordan: "it should just run the game smoothly"); the AUTO button
+	-- itself stops it. Manual rests keep the popup, which is how they are stopped.
+	local silent = self.auto_act and require("engine.TouchInput").active()
 	self.resting = {
 		rest_turns = turns,
 		past = past,
 		on_end = on_end,
 		on_very_end = on_very_end,
 		cnt = 0,
-		dialog = Dialog:simplePopup(("%s..."):tformat(what:capitalize()), ("You are %s, press Enter to stop."):tformat(what), function()
+		dialog = not silent and Dialog:simplePopup(("%s..."):tformat(what:capitalize()), ("You are %s, press Enter to stop."):tformat(what), function()
 			self:restStop()
-		end),
+		end) or nil,
 	}
-	self.resting.dialog.__showup = nil
+	if self.resting.dialog then self.resting.dialog.__showup = nil end
 
 	game.log("%s starts...", what:capitalize())
 
@@ -96,7 +100,7 @@ end
 function _M:restStop(msg)
 	if not self.resting then return false end
 
-	game:unregisterDialog(self.resting.dialog)
+	if self.resting.dialog then game:unregisterDialog(self.resting.dialog) end
 
 	if msg then
 		game.log("%s for %d turns (stop reason: %s).", self.resting.past:capitalize(), self.resting.cnt, msg)

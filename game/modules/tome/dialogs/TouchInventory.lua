@@ -133,6 +133,88 @@ function Doll:display(x, y, nb_keyframes, screen_x, screen_y)
 end
 
 ------------------------------------------------------------------------
+-- portrait: the worn slots as a compact grid (always visible above the list,
+-- so a new item can be judged against what is on). Icons only: the slot name
+-- and the item go in the card when a cell is tapped.
+------------------------------------------------------------------------
+local WornGrid = class.inherit(Base, Focusable){}
+function WornGrid:init(t)
+	self.actor = t.actor
+	self.on_select = t.on_select
+	self.cols, self.cw, self.ch = 8, 76, 60
+	self.w = t.width
+	local doll = self.actor.equipdolls and self.actor.equipdolls[type(self.actor.equipdoll) == "string" and self.actor.equipdoll or "default"] or self.actor.equipdolls.default
+	self.doll = doll
+	self.slots = {}
+	-- the same slots, in the same order, as the paper doll
+	for id, def in ipairs(self.actor.inven_def) do
+		local inv = self.actor.inven[id]
+		local pos = doll.list[def.short_name]
+		if def.is_worn and inv and pos then
+			for k = 1, #pos do
+				local i = #self.slots
+				self.slots[i + 1] = {id=id, def=def, item=k, x=(i % self.cols) * self.cw, y=math.floor(i / self.cols) * self.ch}
+			end
+		end
+	end
+	self.rows = math.max(1, math.ceil(#self.slots / self.cols))
+	self.h = self.rows * self.ch
+	self.hilite = {}
+	Base.init(self, t)
+end
+function WornGrid:generate()
+	self.mouse:reset()
+	self.key:reset()
+	self.frame = self:getUITexture(self.doll.itemframe)
+	self.frame_sel = self:getUITexture(self.doll.itemframe_sel)
+	self.mouse:registerZone(0, 0, self.w, self.h, function(button, x, y, xrel, yrel, bx, by, event)
+		if event ~= "button" or button ~= "left" then return end
+		local s = self:slotAtLocal(x, y)
+		if not s then return end
+		local inv = self.actor.inven[s.id]
+		local o = inv and inv[s.item]
+		self.sel = s
+		self.on_select(o and {object=o, inven=s.id, item=s.item, worn=true} or nil, s)
+	end)
+end
+function WornGrid:slotAtLocal(x, y)
+	for _, s in ipairs(self.slots) do
+		if x >= s.x and x < s.x + self.cw and y >= s.y and y < s.y + self.ch then return s end
+	end
+	return nil
+end
+--- Mark the cells an object would go into (both fingers for a ring); nil clears
+function WornGrid:setHilite(inven_id)
+	self.hilite = {}
+	if not inven_id then return end
+	for _, s in ipairs(self.slots) do if s.id == inven_id then self.hilite[s] = true end end
+end
+function WornGrid:hilited()
+	local n = 0
+	for _ in pairs(self.hilite) do n = n + 1 end
+	return n
+end
+function WornGrid:display(x, y, nb_keyframes, screen_x, screen_y)
+	self.last_screen_x, self.last_screen_y = screen_x, screen_y
+	local fs = 48 -- the frame, centred in the cell; the icon sits inside it
+	for _, s in ipairs(self.slots) do
+		local inv = self.actor.inven[s.id]
+		local o = inv and inv[s.item]
+		local cx, cy = x + s.x, y + s.y
+		core.display.drawQuad(cx + 1, cy + 1, self.cw - 2, self.ch - 2, 24, 26, 32, 200)
+		local fx, fy = cx + math.floor((self.cw - fs) / 2), cy + math.floor((self.ch - fs) / 2)
+		local f = (self.sel == s) and self.frame_sel or self.frame
+		f.t:toScreenFull(fx, fy, fs, fs, f.tw, f.th, 1, 1, 1, o and 1 or 0.45)
+		if o then pcall(o.toScreen, o, nil, fx + 4, fy + 4, fs - 8, fs - 8)
+		else
+			local back = s.def.infos and s.def.infos.equipdoll_back
+			if back then local okb, bt = pcall(self.getUITexture, self, back) if okb and bt then bt.t:toScreenFull(fx + 7, fy + 7, fs - 14, fs - 14, bt.tw, bt.th, 1, 1, 1, 0.3) end end
+		end
+		if self.hilite[s] or self.sel == s then K.frame(cx + 1, cy + 1, self.cw - 2, self.ch - 2, K.GOLD, 2) end
+	end
+end
+
+------------------------------------------------------------------------
 -- filter chips
 ------------------------------------------------------------------------
 local Chips = class.inherit(Base, Focusable){}
@@ -360,10 +442,10 @@ function _M:build()
 	}
 end
 
---- Portrait (645x1398): one column. Chips across the top with an extra "Worn"
--- chip that swaps the paper doll in for the list; the list (or doll) in the
--- middle; a fixed bottom sheet with the compare card, the description and the
--- buttons. The pane not in use is parked off-screen (hidden uis still take taps).
+--- Portrait (645x1398): one column. Chips across the top, the worn slots as a
+-- grid under them, the list in the middle, a fixed bottom sheet with the compare
+-- card, the description and the buttons. The paper doll (landscape) is parked
+-- off-screen (hidden uis still take taps).
 function _M:buildPortrait()
 	local gap = 8
 	local bh = 56
@@ -371,13 +453,17 @@ function _M:buildPortrait()
 	self.list_w = self.iw
 	self.card_w = self.iw
 	self.sheet_h = 520
-	local chips = {{title=_t"Worn", kind="worn"}}
+	local chips = {}
 	for _, t in ipairs(TABS) do if t.kind ~= "transmo" or self.actor:attr("has_transmo") then chips[#chips+1] = {title=t.short or t.title, kind=t.kind} end end
 	self.c_chips = Chips.new{width=self.iw, items=chips, default="all", on_change=function(kind) self:switchTab(kind) end}
 	self.banner_h = self.actor:attr("has_transmo") and 40 or 0
-	self.pane_top = self.c_chips.h + 6 + self.banner_h
+	-- what is worn, always in view between the chips and the list
+	self.c_grid = WornGrid.new{width=self.iw, actor=self.actor, on_select=function(e, slot) self:selectWorn(e, slot) end}
+	self.grid_top = self.c_chips.h + 6 + self.banner_h
+	self.pane_top = self.grid_top + self.c_grid.h + 6
 	self.sheet_y = self.ih - self.sheet_h
 	self.pane_h = self.sheet_y - gap - self.pane_top
+	-- the paper doll stays for landscape; in portrait it is parked off-screen for good
 	self.c_doll = Doll.new{width=self.doll_w, height=self.pane_h, actor=self.actor, on_select=function(e, slot) self:selectWorn(e, slot) end, on_drag=function(e) self:startDrag(e) end}
 	self.c_list = TouchItemList.new{width=self.iw, height=self.pane_h, actor=self.actor, scrollbar=true, items={},
 		on_select=function(e) self:selectEntry(e) end, on_use=function(e) self:primary() end, on_drag=function(e) self:startDrag(e) end}
@@ -392,6 +478,7 @@ function _M:buildPortrait()
 	self.b_more = Button.new{text=_t"More...", width=cw, font=self.bigfont, fct=function() self:more() end}
 	self.uis_def = {
 		{left=0, top=0, ui=self.c_chips},
+		{left=0, top=self.grid_top, ui=self.c_grid},
 		{left=math.floor((self.iw - self.doll_w) / 2), top=self.pane_top, ui=self.c_doll},
 		{left=0, top=self.pane_top, ui=self.c_list},
 		{left=0, top=self.sheet_y, ui=self.c_card},
@@ -418,12 +505,11 @@ function _M:park(ui, off)
 	if ui.positioned then ui:positioned(e.x, e.y, (self.display_x or 0) + e.x, (self.display_y or 0) + e.y) end
 end
 
---- Portrait: the doll shows under the Worn chip, the list under every other one
+--- Portrait: the worn grid is always in view, the doll never (the list stays)
 function _M:showPane()
 	if not self.portrait then return end
-	local worn = self.tab == "worn"
-	self:park(self.c_doll, not worn)
-	self:park(self.c_list, worn)
+	self:park(self.c_doll, true)
+	self:park(self.c_list, false)
 end
 
 function _M:switchTab(kind)
@@ -477,6 +563,12 @@ function _M:showCurrent()
 	local o = e and e.object
 	local worn = (o and not e.worn) and self:wornFor(o) or nil
 	self.c_card:set(o, worn, o and self:kindOf(o) or nil)
+	if self.c_grid then
+		-- the cells a pack item would go into, or the worn item's own cell
+		if o and e.worn then self.c_grid:setHilite(e.inven)
+		elseif o and o:wornInven() and self.actor:getInven(o:wornInven()) then self.c_grid:setHilite(o:wornInven())
+		else self.c_grid:setHilite(nil) end
+	end
 	self:fitDesc()
 	self.c_desc:erase()
 	if o then
@@ -514,6 +606,7 @@ end
 function _M:selectEntry(e)
 	self.cur = e
 	self.c_doll.sel = nil
+	if self.c_grid then self.c_grid.sel = nil end
 	if self.on_select_cb then pcall(self.on_select_cb, e) end
 	self:showCurrent()
 end
@@ -521,6 +614,8 @@ end
 function _M:selectWorn(e, slot)
 	self.c_list.sel = nil
 	self.cur = e
+	-- the grid or the doll called us; keep the other one's marker in step
+	if self.c_grid and slot then self.c_grid.sel = nil for _, s in ipairs(self.c_grid.slots) do if s.id == slot.id and s.item == slot.item then self.c_grid.sel = s end end end
 	self:showCurrent()
 end
 
@@ -644,13 +739,14 @@ function _M:touch_reopen()
 	local nd = _M.new(a.title, a.actor, a.filter, a.action, a.on_select)
 	nd.chest_mode = self.chest_mode
 	local tab = self.tab
-	if tab == "worn" and not nd.portrait then tab = "all" end
+	if tab == "worn" then tab = "all" end
 	if tab and tab ~= nd.tab then nd:switchTab(tab) end
 	local cur = self.cur
 	if cur and cur.object then
 		if cur.worn then
 			nd.cur = {object=cur.object, inven=cur.inven, item=cur.item, worn=true}
 			for _, sl in ipairs(nd.c_doll.slots) do if sl.id == cur.inven and sl.item == cur.item then nd.c_doll.sel = sl end end
+			if nd.c_grid then for _, sl in ipairs(nd.c_grid.slots) do if sl.id == cur.inven and sl.item == cur.item then nd.c_grid.sel = sl end end end
 		else
 			for i, e in ipairs(nd.c_list.items) do if e.object == cur.object then nd.c_list:select(i, true) nd.cur = e end end
 		end
