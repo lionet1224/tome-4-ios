@@ -1952,6 +1952,8 @@ function _M:checkResolutionChange(w, h, ow, oh)
 		for _, d in ipairs(self.dialogs) do open[#open+1] = d end
 		for _, d in ipairs(open) do
 			if d.touch_reopen then
+				-- the old one releases its hooks first (the new one installs its own in init)
+				if d.unload then pcall(d.unload, d) end
 				local ok, nd = pcall(d.touch_reopen, d)
 				if ok and nd then self:replaceDialog(d, nd) print("[IOS] dialog rebuilt for the new orientation:", tostring(d.title))
 				elseif not ok then print("[IOS] dialog rebuild failed:", tostring(nd)) end

@@ -290,16 +290,17 @@ end
 ------------------------------------------------------------------------
 local TABS = {
 	{title=_t"All", kind="all", filter=function(o) return not o.__transmo end},
-	{title=_t"Weapons", kind="weapons", filter=function(o) return not o.__transmo and (o.type == "weapon" or o.type == "ammo") end},
-	{title=_t"Armour", kind="armors", filter=function(o) return not o.__transmo and o.type == "armor" end},
-	{title=_t"Jewelry", kind="jewelry", filter=function(o) return not o.__transmo and o.type == "jewelry" end},
-	{title=_t"Inscr.", kind="inscriptions", filter=function(o) return not o.__transmo and o.type == "scroll" end},
+	{title=_t"Weapons", short=_t"Weap.", kind="weapons", filter=function(o) return not o.__transmo and (o.type == "weapon" or o.type == "ammo") end},
+	{title=_t"Armour", short=_t"Arm.", kind="armors", filter=function(o) return not o.__transmo and o.type == "armor" end},
+	{title=_t"Jewelry", short=_t"Jewel.", kind="jewelry", filter=function(o) return not o.__transmo and o.type == "jewelry" end},
+	{title=_t"Inscr.", short=_t"Insc.", kind="inscriptions", filter=function(o) return not o.__transmo and o.type == "scroll" end},
 	{title=_t"Tools", kind="tools", filter=function(o) return not o.__transmo and (o.type == "charm" or o.type == "tool" or o.type == "lite" or o.type == "gem" or o.type == "alchemist-gem") end},
 	{title=_t"Other", kind="misc", filter=function(o) return not o.__transmo and not (o.type == "weapon" or o.type == "ammo" or o.type == "armor" or o.type == "jewelry" or o.type == "scroll" or o.type == "charm" or o.type == "tool" or o.type == "lite" or o.type == "gem" or o.type == "alchemist-gem") end},
 	{title=_t"Chest", kind="transmo", filter=function(o) return o.__transmo end},
 }
 
 function _M:init(title, actor, filter, action, on_select)
+	self.touch_args = {title=title, actor=actor, filter=filter, action=action, on_select=on_select}
 	self.actor = actor
 	self.filter = filter
 	self.action = action
@@ -313,12 +314,16 @@ function _M:init(title, actor, filter, action, on_select)
 	self:build()
 	self:loadUI(self.uis_def)
 	self:setupUI()
+	self:showPane()
 	self:refresh()
 	self.key:addBinds{ EXIT = function() game:unregisterDialog(self) end }
 	require("engine.TouchInput").on_hover_end = function(x, y) self:dropAt(x, y) end
 end
 
 function _M:build()
+	self.portrait = require("engine.TouchInput").portrait()
+	self.sheet_y = 0
+	if self.portrait then return self:buildPortrait() end
 	local gap = 12
 	self.doll_w = 330
 	self.card_w = 390
@@ -355,11 +360,78 @@ function _M:build()
 	}
 end
 
+--- Portrait (645x1398): one column. Chips across the top with an extra "Worn"
+-- chip that swaps the paper doll in for the list; the list (or doll) in the
+-- middle; a fixed bottom sheet with the compare card, the description and the
+-- buttons. The pane not in use is parked off-screen (hidden uis still take taps).
+function _M:buildPortrait()
+	local gap = 8
+	local bh = 56
+	self.doll_w = 330
+	self.list_w = self.iw
+	self.card_w = self.iw
+	self.sheet_h = 520
+	local chips = {{title=_t"Worn", kind="worn"}}
+	for _, t in ipairs(TABS) do if t.kind ~= "transmo" or self.actor:attr("has_transmo") then chips[#chips+1] = {title=t.short or t.title, kind=t.kind} end end
+	self.c_chips = Chips.new{width=self.iw, items=chips, default="all", on_change=function(kind) self:switchTab(kind) end}
+	self.banner_h = self.actor:attr("has_transmo") and 40 or 0
+	self.pane_top = self.c_chips.h + 6 + self.banner_h
+	self.sheet_y = self.ih - self.sheet_h
+	self.pane_h = self.sheet_y - gap - self.pane_top
+	self.c_doll = Doll.new{width=self.doll_w, height=self.pane_h, actor=self.actor, on_select=function(e, slot) self:selectWorn(e, slot) end, on_drag=function(e) self:startDrag(e) end}
+	self.c_list = TouchItemList.new{width=self.iw, height=self.pane_h, actor=self.actor, scrollbar=true, items={},
+		on_select=function(e) self:selectEntry(e) end, on_use=function(e) self:primary() end, on_drag=function(e) self:startDrag(e) end}
+	self.c_card = Card.new{width=self.iw, height=200, actor=self.actor}
+	self.desc_h = self.sheet_h - 200 - bh * 2 - 30
+	self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.iw, height=self.desc_h, dest_area={h=self.desc_h}}
+	-- Button adds 16 px of frame to the requested width
+	self.b_primary = Button.new{text=_t"Select an item", width=self.iw - 16, font=self.bigfont, fct=function() self:primary() end}
+	local cw = math.floor((self.iw - 16 - 12) / 3)
+	self.b_drop = Button.new{text=_t"Drop", width=cw, font=self.bigfont, fct=function() self:act("drop") end}
+	self.b_transmo = Button.new{text=_t"Transmog.", width=cw, font=self.bigfont, fct=function() self:act("transmo") end}
+	self.b_more = Button.new{text=_t"More...", width=cw, font=self.bigfont, fct=function() self:more() end}
+	self.uis_def = {
+		{left=0, top=0, ui=self.c_chips},
+		{left=math.floor((self.iw - self.doll_w) / 2), top=self.pane_top, ui=self.c_doll},
+		{left=0, top=self.pane_top, ui=self.c_list},
+		{left=0, top=self.sheet_y, ui=self.c_card},
+		{left=0, top=self.sheet_y + 206, ui=self.c_desc},
+		{left=0, bottom=bh + 6, ui=self.b_primary},
+		{left=0, bottom=0, ui=self.b_drop},
+		{left=cw + 6, bottom=0, ui=self.b_transmo},
+		{left=2 * (cw + 6), bottom=0, ui=self.b_more},
+	}
+end
+
+--- Park a ui off-screen (or bring it back to where setupUI put it)
+function _M:park(ui, off)
+	local e = self.ui_by_ui[ui]
+	if not e then return end
+	if off then
+		if not e.home_x then e.home_x, e.home_y = e.x, e.y end
+		e.x, e.y = 100000, 100000
+	elseif e.home_x then
+		e.x, e.y = e.home_x, e.home_y
+	end
+	e.hidden = off and true or false
+	ui.mouse.delegate_offset_x, ui.mouse.delegate_offset_y = e.x, e.y
+	if ui.positioned then ui:positioned(e.x, e.y, (self.display_x or 0) + e.x, (self.display_y or 0) + e.y) end
+end
+
+--- Portrait: the doll shows under the Worn chip, the list under every other one
+function _M:showPane()
+	if not self.portrait then return end
+	local worn = self.tab == "worn"
+	self:park(self.c_doll, not worn)
+	self:park(self.c_list, worn)
+end
+
 function _M:switchTab(kind)
 	if not kind then return end
 	self.tab = kind
 	self.c_chips.cur = kind
 	if kind == "transmo" then self.chest_mode = true end
+	self:showPane()
 	self:refresh()
 end
 
@@ -424,8 +496,8 @@ function _M:fitDesc()
 	if self.c_card.h == h and self.c_desc_h_fit == h then return end
 	self.c_card.h = h
 	local bh = 56
-	local top = h + 6
-	local dh = math.max(80, self.ih - top - bh * 2 - 30)
+	local top = (self.sheet_y or 0) + h + 6
+	local dh = math.max(60, self.ih - top - bh * 2 - 30)
 	local old = self.c_desc
 	self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.card_w, height=dh, dest_area={h=dh}}
 	local entry = self.ui_by_ui[old]
@@ -501,6 +573,7 @@ end
 -- drag and drop --------------------------------------------------------
 function _M:startDrag(e)
 	if self.drag then return end
+	if self.portrait then self.c_list.dragging = nil self.c_doll.dragging = nil return end
 	self.drag = e
 	self.cur = e
 	self:showCurrent()
@@ -522,12 +595,12 @@ end
 
 function _M:dropAt(x, y)
 	local e = self.drag
-	if not e then return end
-	local s, ok = self:dropTarget(x, y) -- needs self.drag: resolve before clearing it
-	self.drag = nil
 	self.c_list.dragging = nil
 	self.c_doll.dragging = nil
 	self.c_doll.drop_hint = nil
+	if not e then return end
+	local s, ok = self:dropTarget(x, y) -- needs self.drag: resolve before clearing it
+	self.drag = nil
 	if s and not e.worn then
 		if not ok then game.logPlayer(self.actor, "%s does not go there.", e.object:getName{do_color=true}) print("[TOUCH] drop refused") return end
 		print("[TOUCH] drop -> wear", tostring(e.object.name), s.def.name)
@@ -549,7 +622,7 @@ end
 function _M:innerDisplay(x, y, nb_keyframes)
 	-- chest hint strip under the chips
 	if self.banner_h > 0 and self.tab == "transmo" then
-		local bx, by = x + self.ix + self.doll_w + 12, y + self.iy + self.c_chips.h + 4
+		local bx, by = x + self.ix + (self.portrait and 0 or self.doll_w + 12), y + self.iy + self.c_chips.h + 4
 		local strong = self.chest_mode
 		K.quad(bx, by, self.list_w, self.banner_h - 4, strong and {60, 46, 16} or {29, 31, 38})
 		local msg = strong and _t"Leaving the level: whatever stays in the chest is transmogrified into gold. Keep or wear what you want first." or _t"Items in the chest are transmogrified into gold when you leave the level."
@@ -563,6 +636,27 @@ function _M:innerDisplay(x, y, nb_keyframes)
 	self.c_doll.drop_hint, self.c_doll.drop_ok = (s and not e.worn) and s or nil, ok
 	-- innerDisplay draws in the dialog's translated space: convert the finger position
 	pcall(e.object.toScreen, e.object, nil, x + (t.x - (self.display_x or 0)) - 32, y + (t.y - (self.display_y or 0)) - 80, 64, 64)
+end
+
+--- Rotation: build a fresh dialog for the new orientation carrying the tab and the selection
+function _M:touch_reopen()
+	local a = self.touch_args
+	local nd = _M.new(a.title, a.actor, a.filter, a.action, a.on_select)
+	nd.chest_mode = self.chest_mode
+	local tab = self.tab
+	if tab == "worn" and not nd.portrait then tab = "all" end
+	if tab and tab ~= nd.tab then nd:switchTab(tab) end
+	local cur = self.cur
+	if cur and cur.object then
+		if cur.worn then
+			nd.cur = {object=cur.object, inven=cur.inven, item=cur.item, worn=true}
+			for _, sl in ipairs(nd.c_doll.slots) do if sl.id == cur.inven and sl.item == cur.item then nd.c_doll.sel = sl end end
+		else
+			for i, e in ipairs(nd.c_list.items) do if e.object == cur.object then nd.c_list:select(i, true) nd.cur = e end end
+		end
+		nd:showCurrent()
+	end
+	return nd
 end
 
 function _M:generateList() self:refresh() end

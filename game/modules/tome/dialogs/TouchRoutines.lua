@@ -35,9 +35,66 @@ function _M:init(actor)
 	Dialog.init(self, _t"Act routines", game.w * 0.98, game.h * 0.98)
 
 	local gap = 12
+	local bh = 52
+	-- portrait (phone held upright): routine chips and their buttons on top,
+	-- the steps full width, the step controls in a bottom sheet
+	self.portrait = require("engine.TouchInput").portrait()
+	if self.portrait then
+		self.rail_w, self.detail_w, self.content_w = self.iw, self.iw, self.iw
+		self.rail_h = 140                       -- chips (rows of three, scrolls past two rows)
+		self.top_h = self.rail_h + 8 + bh + 8 + bh + 8
+		self.sheet_h = 80 + 150 + 3 * (bh + 8) + 8
+		self.sheet_y = self.ih - self.sheet_h
+		self.c_rail = Flow.new{width=self.iw, height=self.rail_h}
+		-- Button adds 16 px of frame to the requested width
+		local half = math.floor((self.iw - 6) / 2) - 16
+		local third = math.floor((half + 16 - 12) / 3) - 16
+		self.b_cool = Button.new{text=_t"Cooldowns: skip", width=half, font=font(17), fct=function() local r = self:routine() if r then r.skip_cooldown = (r.skip_cooldown == false) and true or false self.actor.changed = true self:refresh(true) end end}
+		self.b_use = Button.new{text=_t"Use this routine", width=self.iw - 16, font=self.bigfont, fct=function() self:useRoutine() end}
+		self.b_rename = Button.new{text=_t"Rename", width=third, font=font(17), fct=function() self:renameRoutine() end}
+		self.b_copy = Button.new{text=_t"Copy", width=third, font=font(17), fct=function() self:copyRoutine() end}
+		self.b_delete = Button.new{text=_t"Delete", width=third, font=font(17), fct=function() self:deleteRoutine() end}
+		local flow_h = self.sheet_y - self.top_h - bh - 16
+		self.c_flow = Flow.new{width=self.iw, height=flow_h}
+		self.b_add = Button.new{text=_t"Add step", width=self.iw - 16, font=self.bigfont, fct=function() self:openPicker() end}
+		self.b_cancel = Button.new{text=_t"Cancel", width=self.iw - 16, font=self.bigfont, fct=function() self:closePicker() end}
+		self.desc_y = self.sheet_y + 80
+		local desc_h = 150
+		self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.iw - 16, height=desc_h, dest_area={h=desc_h}}
+		self.b_target = Button.new{text=_t"Target", width=self.iw - 16, font=font(19), fct=function() self:pickTarget() end}
+		local seg = math.floor((self.iw - 12) / 3) - 16
+		self.b_unusable = {}
+		for i, u in ipairs(UNUSABLE) do
+			local key = u[1]
+			self.b_unusable[i] = Button.new{text=u[2], width=seg, font=font(17), fct=function() self:setUnusable(key) end}
+		end
+		self.b_up = Button.new{text=_t"Up", width=seg, font=font(17), fct=function() self:moveStep(-1) end}
+		self.b_down = Button.new{text=_t"Down", width=seg, font=font(17), fct=function() self:moveStep(1) end}
+		self.b_remove = Button.new{text=_t"Remove", width=seg, font=font(17), fct=function() self:removeStep() end}
+		local row2 = self.rail_h + 8 + bh + 8
+		self:loadUI{
+			{left=0, top=0, ui=self.c_rail},
+			{left=0, top=self.rail_h + 8, ui=self.b_use},
+			{left=0, top=row2, ui=self.b_cool},
+			{left=half + 6, top=row2, ui=self.b_rename},
+			{left=half + 6 + third + 6, top=row2, ui=self.b_copy},
+			{left=half + 6 + 2 * (third + 6), top=row2, ui=self.b_delete},
+			{left=0, top=self.top_h, ui=self.c_flow},
+			{left=0, top=self.top_h + flow_h + 8, ui=self.b_add},
+			{left=0, top=self.top_h + flow_h + 8, ui=self.b_cancel},
+			{left=8, top=self.desc_y, ui=self.c_desc},
+			{left=0, bottom=(bh + 8) * 2, ui=self.b_target},
+			{left=0, bottom=bh + 8, ui=self.b_unusable[1]},
+			{left=seg + 6, bottom=bh + 8, ui=self.b_unusable[2]},
+			{left=2 * (seg + 6), bottom=bh + 8, ui=self.b_unusable[3]},
+			{left=0, bottom=0, ui=self.b_up},
+			{left=seg + 6, bottom=0, ui=self.b_down},
+			{left=2 * (seg + 6), bottom=0, ui=self.b_remove},
+		}
+		self:setupUI()
+	else
 	self.rail_w, self.detail_w = 250, 380
 	self.content_w = self.iw - self.rail_w - self.detail_w - 2 * gap
-	local bh = 52
 	-- rail: routine cards over four buttons
 	self.c_rail = Flow.new{width=self.rail_w, height=self.ih - bh * 3 - 24}
 	self.b_cool = Button.new{text=_t"Cooldowns: skip", width=self.rail_w, font=font(17), fct=function() local r = self:routine() if r then r.skip_cooldown = (r.skip_cooldown == false) and true or false self.actor.changed = true self:refresh(true) end end}
@@ -88,6 +145,7 @@ function _M:init(actor)
 		{left=dx + 2 * (seg + 6), bottom=0, ui=self.b_remove},
 	}
 	self:setupUI()
+	end
 	self.parkable = {self.b_add, self.b_cancel, self.b_target, self.b_unusable[1], self.b_unusable[2], self.b_unusable[3], self.b_up, self.b_down, self.b_remove}
 	for _, b in ipairs(self.parkable) do
 		local u = self.ui_by_ui[b]
@@ -218,7 +276,12 @@ function _M:refresh(keep_scroll)
 			on_tap=function() self.edit_idx = i self.sel_step = nil self.mode = "steps" self:refresh() end}
 	end
 	items[#items+1] = {name=_t"New routine", sub=_t"Start empty", on_tap=function() self:newRoutine() end}
-	self.c_rail:setSections{{title=_t"Routines", items=items, cols=1, row_h=64}}
+	if self.portrait then
+		-- chips in rows of three across the top (the Flow scrolls past two rows)
+		self.c_rail:setSections{{items=items, cols=math.min(3, #items), row_h=56, center=true}}
+	else
+		self.c_rail:setSections{{title=_t"Routines", items=items, cols=1, row_h=64}}
+	end
 
 	-- centre
 	if self.mode == "picker" then
@@ -449,6 +512,7 @@ end
 
 function _M:innerDisplayBack(x, y, nb_keyframes)
 	x, y = x + self.ix, y + self.iy
+	if self.portrait then return self:innerDisplayBackPortrait(x, y) end
 	quad(x, y, self.rail_w, self.ih, PANE)
 	local cx = x + self.rail_w + 12
 	quad(cx, y, self.content_w, self.ih, {18, 19, 23})
@@ -473,6 +537,48 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	draw(text(("%d.  %s"):format(self.sel_step, self.actor:actStepName(st)), 20, 240, 212, 138, true, maxw), tx, y + 16)
 	local kind = st.kind == "talent" and _t"talent" or st.kind == "item" and _t"item" or _t"action"
 	draw(text(kind, 13, 142, 136, 120, false, maxw), tx, y + 46)
+end
+
+-- portrait: top strip (chips + routine buttons), steps in the middle, the
+-- step header + controls in a bottom sheet
+function _M:innerDisplayBackPortrait(x, y)
+	quad(x, y, self.iw, self.top_h - 4, PANE)
+	quad(x, y + self.top_h - 4, self.iw, self.sheet_y - self.top_h, {18, 19, 23})
+	local sy = y + self.sheet_y
+	quad(x, sy, self.iw, self.sheet_h, PANE)
+	quad(x, sy, self.iw, 2, {60, 63, 72})
+	local st = self:step()
+	if self.mode == "picker" then
+		draw(text(_t"Add a step", 22, 240, 212, 138, true), x + 12, sy + 16)
+		draw(text(_t"Tap a card to add it", 13, 142, 136, 120), x + 12, sy + 50)
+		return
+	end
+	if not st then
+		draw(text(self:routine().name, 22, 240, 212, 138, true, self.iw - 24), x + 12, sy + 16)
+		draw(text(_t"Tap a step to edit it", 13, 142, 136, 120), x + 12, sy + 50)
+		return
+	end
+	local sz = 56
+	quad(x + 12, sy + 12, sz + 8, sz + 8, {14, 15, 18})
+	self:drawStepIcon(st, x + 16, sy + 16, sz)
+	local tx = x + 12 + sz + 20
+	local maxw = self.iw - (tx - x) - 12
+	draw(text(("%d.  %s"):format(self.sel_step, self.actor:actStepName(st)), 20, 240, 212, 138, true, maxw), tx, sy + 16)
+	local kind = st.kind == "talent" and _t"talent" or st.kind == "item" and _t"item" or _t"action"
+	draw(text(kind, 13, 142, 136, 120, false, maxw), tx, sy + 46)
+end
+
+-- a rotation: the parent game hook swaps the dialog for a fresh one laid out
+-- for the new orientation, keeping the routine and step being edited
+function _M:touch_reopen()
+	local d = _M.new(self.actor)
+	d.edit_idx = util.bound(self.edit_idx or 1, 1, math.max(1, #self.actor.act_routines))
+	local r = d:routine()
+	d.sel_step = (self.sel_step and r and r.steps[self.sel_step]) and self.sel_step or nil
+	d.mode = "steps"
+	d:showDetail()
+	d:refresh()
+	return d
 end
 
 function _M:innerDisplay(x, y, nb_keyframes)

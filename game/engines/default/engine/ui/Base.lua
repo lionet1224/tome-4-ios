@@ -87,8 +87,8 @@ end
 function _M:init(t, no_gen)
 	-- iOS port: a dialog laid out for landscape can ask for a negative width in
 	-- portrait; the C side crashes on it, so clamp and complain instead
-	if type(t.width) == "number" and t.width < 8 then print("[UI] width clamped", t.width, tostring(self.__CLASSNAME)) t.width = 8 end
-	if type(t.height) == "number" and t.height < 8 then print("[UI] height clamped", t.height, tostring(self.__CLASSNAME)) t.height = 8 end
+	if type(t.width) == "number" and t.width < 1 then print("[UI] width clamped", t.width, tostring(self.__CLASSNAME)) t.width = 1 end
+	if type(t.height) == "number" and t.height < 1 then print("[UI] height clamped", t.height, tostring(self.__CLASSNAME)) t.height = 1 end
 	self.mouse = Mouse.new()
 	self.key = KeyBind.new()
 
