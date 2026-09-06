@@ -2103,7 +2103,25 @@ function _M:autoExplore()
 		local mindist = 999999999999999
 		-- If we already have a suitable target that we haven't reached yet, then use that as our target.  This will be more useful
 		-- if or when we save info between between instances of running auto-explore.  For now it's useful when dodging traps on the fly.
-		if self.running_prev and (self.running_prev.explore == "exit" or self.running_prev.explore == "portal") and (self.x ~= self.running_prev.target.x or self.y ~= self.running_prev.target.y) then
+		-- iOS port: a "previous level" exit picked while the way down was unknown must not
+		-- stay sticky once unexplored ground or a way down is known (AUTO kept walking
+		-- back to the entrance and stopping there)
+		local sticky_ok = true
+		if self.running_prev and self.running_prev.explore == "exit" and self.running_prev.target then
+			local pt = game.level.map(self.running_prev.target.x, self.running_prev.target.y, Map.TERRAIN)
+			if pt and pt.change_level and pt.change_level < 0 and not pt.change_zone then
+				local better = #unseen_tiles > 0 or #unseen_items > 0 or #unseen_doors > 0 or #unseen_special > 0
+				if not better then
+					for _, c in ipairs(exits) do
+						local x, y = toDouble(c)
+						local terrain = game.level.map(x, y, Map.TERRAIN)
+						if terrain and ((terrain.change_level or 0) > 0 or terrain.change_zone) then better = true break end
+					end
+				end
+				if better then sticky_ok = false print("[EXPLORE] dropping the sticky entrance target") end
+			end
+		end
+		if sticky_ok and self.running_prev and (self.running_prev.explore == "exit" or self.running_prev.explore == "portal") and (self.x ~= self.running_prev.target.x or self.y ~= self.running_prev.target.y) then
 			-- verify that the target is currently reachable
 			for _, c in ipairs(exits) do
 				local x, y = toDouble(c)

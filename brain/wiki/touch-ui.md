@@ -448,3 +448,15 @@ click on release, no step; the strip scrolls by reading `TouchInput.t` as before
 lift → selects a card" and "scroll past the bar → the map pans". **Tooltips**: `TouchInput.clearTooltip`
 (`game.tooltip_x = nil`) on every finger-down and after a hover-scrub release — a terrain tooltip had stuck.
 Tests: `portrait.lua` (band numbers), `stripscroll.lua`, `band.lua`.
+
+## 30. Target override, Disengage, sticky entrance (2026-09-06 night)
+
+- **Selected target wins**: `Player:actResolveTarget` returns `touch_target` (alive, seen, hostile) before any
+  enemy rule; the routine had kept hitting a summoned shadow. Test `acttarget.lua`.
+- **Disengage from the strip**: `useTalent(..., force_target)` answers every `getTarget` inside the talent, and
+  Disengage aims twice (enemy, then escape square) → "You must disengage directly away". `TouchManual:cast`
+  now installs a one-shot `getTarget` override instead; the second aim goes through the normal aiming (Cast /
+  Cancel). Test `disengage.lua`.
+- **AUTO ending at the entrance**: `PlayerExplore` keeps a previously chosen exit target sticky until reached;
+  an up-stair chosen while the way down was unknown stayed the target after the down stairs was seen. The
+  stickiness is dropped for a previous-level exit once unexplored ground or a way down/next zone is known.

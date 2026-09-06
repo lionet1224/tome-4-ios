@@ -115,7 +115,18 @@ function _M:cast(tid, target, allow_manual)
 		return true
 	end
 	print("[TOUCH] cast", t.name, "->", target.name)
-	p:useTalent(t.id, nil, nil, nil, target)
+	-- useTalent's force_target answers EVERY aim request inside the talent; talents
+	-- that aim twice (Disengage: the enemy, then the escape square) would get the
+	-- enemy's square both times. Answer only the first request, then hand the
+	-- rest to the normal aiming (Cast / Cancel on touch).
+	local orig = rawget(p, "getTarget")
+	p.getTarget = function(a, typ)
+		p.getTarget = orig
+		return target.x, target.y, target
+	end
+	local ok, err = pcall(p.useTalent, p, t.id)
+	if rawget(p, "getTarget") ~= orig then p.getTarget = orig end
+	if not ok then print("[TOUCH] cast failed", tostring(err)) end
 	return true
 end
 
