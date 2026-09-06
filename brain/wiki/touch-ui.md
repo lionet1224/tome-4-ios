@@ -318,7 +318,7 @@ Gotchas: the stock generators re-validate the selection only through the tree wi
 
 ## 21. Six more touch screens (2026-09-04, built by parallel builders, verified in the sim)
 
-Shared kit `engine.ui.TouchKit` (in the engine so the boot module can use it): text cache with bold-aware ellipsis, quad/frame/circle, wrap, pitch, `Rail`, `Flow`. Test runner: `tools/touch/sim-run.sh tools/touch/tests/<name>.lua <outdir> [boot]` (boot mode sets `touch.script_boot` and turns the autopilot off). Tests live in `tools/touch/tests/`.
+Shared kit `engine.ui.TouchKit` (in the engine so the boot module can use it): text cache with bold-aware ellipsis, quad/frame/circle, wrap, pitch, `Rail`, `Flow`. Test runner: `tools/touch/sim-run.sh tools/touch/tests/<name>.lua <outdir> [boot]` (boot mode sets `touch.script_boot` and turns the autopilot off). Tests live in `tools/touch/tests/`. **The runner only copies the test script: Lua edits under `game/` reach the simulator only after `PLATFORM=sim bash tools/ios/build-engine.sh` (rsync into the bundle) and `xcrun simctl install` — a run without that silently tests the old code.**
 
 - **TouchChat** (`mod/dialogs/TouchChat.lua`, routed in `engine/Chat.lua:invoke`): portrait + name left, scrolling speech right, answers as full-width lettered cards; `regen` rebuilds as a TouchChat so later nodes keep the layout.
 - **TouchTalents** (`mod/dialogs/TouchTalents.lua`, routed at Game.lua USE_TALENTS, Minimalist and Classic hotkey bars): sections Activable/Sustain/Cooling/Passive, detail pane with Use / Put on wheel / Auto-use; slot picker = 3 wheel pages × 12 slots, assigns `actor.hotkey[i]`.
@@ -373,3 +373,23 @@ Skills / More / Level up stacked at the other side. Right hand mirrors. Screen i
 `unregisterDialog` skips their exit callbacks, `creating_player` stays true and `Minimalist:display` draws no
 HUD at all (looked like a rendering bug for an hour). A player near a level edge is drawn off-centre because
 the view clamps at the edge — not a portrait bug.
+
+## 26. World-map travel, tap wobble, rotation rebuild (2026-09-06)
+
+- **Places on the world map lists every entrance from the start** ("annoying to navigate in world map"):
+  `TouchPlaces:scan` takes any `change_zone` grid on `zone.wilderness`, seen or not ("· not yet visited").
+  Elsewhere still only what was seen.
+- **World-map trips go all the way.** `Player:mouseMove` on the wilderness (touch only) paths with
+  `Astar:calc(..., use_has_seen=false)` — the stock call treats unseen tiles as walkable and then walks into a
+  forest ("didn't move" after two steps). The run gets `running.touch_dest=true` and `runCheck` skips the
+  "interesting terrain" notices for it (hostiles still stop it). No route → "No overland route" message,
+  no walk. Note the wilderness FOREST grid blocks movement; only roads/plains are walkable.
+- **Taps that walked in a random direction**: a thumb rolling > 28 px during a tap became a drag-to-step
+  flick. `TouchManual:drag("end")` now returns `"tap"` when the gesture moved < `STEP_MIN_PX` (44) and lasted
+  < `STEP_MIN_MS` (250) or never left the dead zone; `TouchInput.fingerUp` then delivers the tap at the
+  touch-down point. Harness: `T.flick(x1,y1,x2,y2)` = down/moves/up in one frame (a real wobble; `T.swipe`
+  takes ~600 ms in the sim because every step yields a frame).
+- **Rotation rebuilds dialogs**: `Game:checkResolutionChange` calls `d:touch_reopen()` on every open dialog
+  that has it and `replaceDialog`s the result in place. Dialogs opt in by implementing it (TouchInventory,
+  TouchRoutines first). `engine.ui.Base:init` clamps width/height < 8 (a landscape three-column layout gave
+  Routines a negative middle column in portrait → native crash on the phone).

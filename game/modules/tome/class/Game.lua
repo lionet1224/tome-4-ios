@@ -1943,7 +1943,22 @@ end
 function _M:checkResolutionChange(w, h, ow, oh)
 	self:createFBOs()
 
-	return self.uiset:handleResolutionChange(w, h, ow, oh)
+	local r = self.uiset:handleResolutionChange(w, h, ow, oh)
+	-- iOS port: a rotation. Touch dialogs lay themselves out for the orientation
+	-- they were opened in; the ones that know how to (touch_reopen) are rebuilt
+	-- in place, keeping their spot in the stack
+	if require("engine.TouchInput").active() then
+		local open = {}
+		for _, d in ipairs(self.dialogs) do open[#open+1] = d end
+		for _, d in ipairs(open) do
+			if d.touch_reopen then
+				local ok, nd = pcall(d.touch_reopen, d)
+				if ok and nd then self:replaceDialog(d, nd) print("[IOS] dialog rebuilt for the new orientation:", tostring(d.title))
+				elseif not ok then print("[IOS] dialog rebuild failed:", tostring(nd)) end
+			end
+		end
+	end
+	return r
 end
 
 function _M:display(nb_keyframes)

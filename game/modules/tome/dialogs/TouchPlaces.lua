@@ -51,21 +51,24 @@ function _M:scan()
 	local is_town = zn:find("^town") ~= nil or ({["last-hope"]=1, ["zigur"]=1, ["angolwen"]=1, ["irkkk"]=1, ["shatur"]=1, ["elvala"]=1, ["gates-of-morning"]=1, ["sunwall"]=1, ["iron-council"]=1, ["kruk-pride"]=1})[zn] ~= nil
 	local towns, dungeons, exits, shops, people = {}, {}, {}, {}, {}
 	for x = 0, map.w - 1 do for y = 0, map.h - 1 do
-		if map.remembers(x, y) or map.seens(x, y) then
+		-- the world map is a known geography: list every entrance from the start
+		-- (Jordan: "annoying to navigate in world map"); elsewhere only what was seen
+		local known = map.remembers(x, y) or map.seens(x, y)
+		if wild or known then
 			local g = map(x, y, Map.TERRAIN)
-			if g and (g.change_level or g.change_zone) then
-				local e = {x=x, y=y, ent=g, name=tostring(g.name or g.change_zone or _t"exit"), d=dist(x, y)}
+			if g and (g.change_level or g.change_zone) and (known or g.change_zone) then
+				local e = {x=x, y=y, ent=g, name=tostring(g.name or g.change_zone or _t"exit"), d=dist(x, y), unseen=not known}
 				if wild then
 					if isTownZone(g.change_zone, g.name) then towns[#towns+1] = e else dungeons[#dungeons+1] = e end
 				else
 					exits[#exits+1] = e
 				end
 			end
-			local t = map(x, y, Map.TRAP)
+			local t = known and map(x, y, Map.TRAP)
 			if t and t.is_store then
 				shops[#shops+1] = {x=x, y=y, ent=t, name=tostring(t.name or _t"shop"), d=dist(x, y)}
 			end
-			if map.seens(x, y) or is_town then
+			if known and (map.seens(x, y) or is_town) then
 				local a = map(x, y, Map.ACTOR)
 				if a and a ~= p and not (game.party and game.party:hasMember(a)) and p:reactionToward(a) >= 0 and (a.can_talk or a.store or a.quest_giver) then
 					people[#people+1] = {x=x, y=y, ent=a, name=tostring(a.name or _t"someone"), d=dist(x, y), actor=true}
@@ -85,7 +88,7 @@ function _M:subFor(e)
 	if e.ent and e.ent.change_level and not e.ent.change_zone then
 		what = (e.ent.change_level or 0) < 0 and _t"stairs up · " or _t"stairs down · "
 	end
-	return ("%s%d %s"):format(what, d, d == 1 and _t"tile away" or _t"tiles away")
+	return ("%s%d %s%s"):format(what, d, d == 1 and _t"tile away" or _t"tiles away", e.unseen and _t" · not yet visited" or "")
 end
 
 function _M:iconFor(e)

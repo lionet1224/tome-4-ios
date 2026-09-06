@@ -30,6 +30,7 @@ require "mod.class.interface.PlayerExplore"
 require "mod.class.interface.PartyDeath"
 require "mod.class.interface.PlayerQuestPopup"
 local Map = require "engine.Map"
+local Astar = require "engine.Astar"
 local Dialog = require "engine.ui.Dialog"
 local ActorTalents = require "engine.interface.ActorTalents"
 
@@ -1221,6 +1222,9 @@ function _M:runCheck(ignore_memory)
 	-- Notice any noticeable terrain
 	local noticed = _tfalse
 	self:runScan(function(x, y, what)
+		-- iOS port: a world-map trip to a tapped / Places destination is not
+		-- interrupted by the entrances it passes (hostiles above still stop it)
+		if self.running and self.running.touch_dest then return end
 		-- Objects are always interesting, only on curent spot
 		local obj_seen = game.level.map.attrs(x, y, "obj_seen")
 		if what == "self" and obj_seen ~= self and obj_self ~= true then
@@ -1297,6 +1301,25 @@ function _M:mouseMove(tmx, tmy, force_move)
 			end
 		end
 		return true
+	end
+	-- iOS port: on the world map the geography is known (Places lists every entrance
+	-- from the start): path through the real terrain instead of treating unseen tiles
+	-- as walkable, and walk all the way there (runCheck skips the entrances passed)
+	if game.zone and game.zone.wilderness and require("engine.TouchInput").active() and tmx and tmy and self.x and self.y then
+		local bx, by = util.bound(tmx, 0, game.level.map.w - 1), util.bound(tmy, 0, game.level.map.h - 1)
+		if (bx ~= self.x or by ~= self.y) and core.fov.distance(self.x, self.y, bx, by) > 1 and #spotHostiles(self) == 0 and not game.level.map(bx, by, Map.ACTOR) then
+			local a = Astar.new(game.level.map, self)
+			local path = a:calc(self.x, self.y, bx, by, false, nil, astar_check) or a:calc(self.x, self.y, bx, by, false)
+			if path then
+				table.insert(path, 1, {x=self.x, y=self.y})
+				self:runFollow(path)
+				if self.running then self.running.touch_dest = true end
+			else
+				-- the stock fallback would walk optimistically into forests and sea; say so instead
+				game.logPlayer(self, "#YELLOW#No overland route from here to that spot.")
+			end
+			return
+		end
 	end
 	return engine.interface.PlayerMouse.mouseMove(self, tmx, tmy, function() local spotted = spotHostiles(self) ; return #spotted > 0 end, {recheck=true, astar_check=astar_check}, force_move)
 end

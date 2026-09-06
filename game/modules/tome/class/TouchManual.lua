@@ -17,6 +17,11 @@ local TouchInput = require "engine.TouchInput"
 module(..., package.seeall, class.make)
 
 _M.DRAG_DEADZONE = 28
+-- a release steps only after a deliberate flick: at least a tile of travel, or
+-- a drag held long enough to have read the preview; a shorter, quicker wobble
+-- was a tap (thumbs roll a few mm while tapping)
+_M.STEP_MIN_PX = 44
+_M.STEP_MIN_MS = 250
 _M.REPEAT_AFTER_MS = 600
 _M.REPEAT_EVERY_MS = 220
 _M.BTN = 86
@@ -467,12 +472,14 @@ end
 function _M:drag(phase, t, x, y)
 	local p = game.player
 	if phase == "start" then
-		if not game.level or not p or game.key ~= game.normal_key then return false end
-		if game.dialogs and #game.dialogs > 0 then return false end
-		if self.uiset.touch_wheel and self.uiset.touch_wheel.open then return false end
-		if self:hudHit(t.x0, t.y0) then return false end
+		local function no(why) print("[TOUCH] drag is not a step:", why) return false end
+		if not game.level or not p then return no("no level") end
+		if game.key ~= game.normal_key then return no("not in normal key mode") end
+		if game.dialogs and #game.dialogs > 0 then return no("dialog open") end
+		if self.uiset.touch_wheel and self.uiset.touch_wheel.open then return no("wheel open") end
+		if self:hudHit(t.x0, t.y0) then return no("on the HUD") end
 		local map = game.level.map
-		if t.x0 < map.display_x or t.x0 >= map.display_x + map.viewport.width or t.y0 < map.display_y or t.y0 >= map.display_y + map.viewport.height then return false end
+		if t.x0 < map.display_x or t.x0 >= map.display_x + map.viewport.width or t.y0 < map.display_y or t.y0 >= map.display_y + map.viewport.height then return no("outside the map") end
 		self.step = {t=t, dir=nil, moved_at=now(), last=0, steps=0}
 		print("[TOUCH] drag -> step gesture")
 		return true
@@ -500,8 +507,17 @@ function _M:drag(phase, t, x, y)
 		end
 		return true
 	elseif phase == "end" then
-		if s.dir and s.steps == 0 then self:stepOnce(s) end
 		self.step = nil
+		if s.steps == 0 then
+			local dx, dy = t.x - t.x0, t.y - t.y0
+			local d = math.sqrt(dx * dx + dy * dy)
+			local held = now() - (t.t0 or now())
+			if not s.dir or (d < _M.STEP_MIN_PX and held < _M.STEP_MIN_MS) then
+				print(("[TOUCH] drag too short for a step (%d px, %d ms)"):format(d, held))
+				return "tap"
+			end
+			self:stepOnce(s)
+		end
 		return true
 	end
 	self.step = nil

@@ -198,7 +198,10 @@ function _M.fingerUp(id, x, y)
 	if t.step then
 		t.step = nil
 		done()
-		if _M.on_map_drag then pcall(_M.on_map_drag, "end", t, x, y) end
+		local ok, res = true, nil
+		if _M.on_map_drag then ok, res = pcall(_M.on_map_drag, "end", t, x, y) end
+		-- a thumb that rolled a little during a tap is not a flick: deliver the tap
+		if ok and res == "tap" then print("[TOUCH] short drag -> tap", t.x0, t.y0) click("left", t.x0, t.y0) end
 		park()
 		return
 	end
@@ -407,6 +410,8 @@ function _M.scriptTick()
 		local function down(x, y) _M.fingerDown(1, x, y) end
 		local function up(x, y) _M.fingerUp(1, x, y) end
 		function T.tap(x, y) down(x, y) up(x, y) T.wait(150) end
+		-- a quick thumb roll: down, a few moves and up within the same frame
+		function T.flick(x1, y1, x2, y2) down(x1, y1) for i = 1, 4 do _M.fingerMove(1, x1 + (x2 - x1) * i / 4, y1 + (y2 - y1) * i / 4) end up(x2, y2) T.wait(150) end
 		function T.hold(x, y, ms) down(x, y) T.wait(ms or 600) up(x, y) T.wait(120) end
 		function T.swipe(x1, y1, x2, y2, ms, hold_first)
 			down(x1, y1)

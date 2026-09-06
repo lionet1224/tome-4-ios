@@ -53,6 +53,6 @@ return function(T)
 	-- open the drawer so the second screenshot shows it
 	if m and m.rects.skills then T.tap(m.rects.skills.x + 20, m.rects.skills.y + 20) T.wait(400) end
 	T.shot("layout")
-	T.log("done")
+	T.log("finished")
 
 end
