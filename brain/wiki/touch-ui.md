@@ -433,3 +433,18 @@ The Simulator cannot be rotated from a script (osascript keystrokes need Accessi
   a `WornGrid` (8 columns × 76×60 cells, two rows for 14–16 slots) sits between the chips and the list, drawn
   from `actor.inven` live; tapping a cell selects the worn item; selecting a pack item gold-frames the cell(s)
   it would replace (both fingers for rings). The Doll stays for landscape.
+
+## 29. Portrait HUD band (2026-09-06 evening)
+
+Jordan: the HUD covered the map at the level's bottom edge; "if the playable area is above the button we
+don't need a drawer. We can just have a scrollable skill bar there." Portrait now has a **band**: the map
+viewport ends at `band_y` (`Minimalist.map_h_stop = TouchManual:bandTop()`), and the band holds, bottom up,
+the dock (Act/AUTO under the thumb, More + Level up stacked on the other side), the routine strip, and the
+**always-visible skill strip** (no Skills button, no drawer, no X; a small x in the target header clears the
+target). Sim numbers: dock_y 1211, strip y 1031, band_y 1023 → map 645×1023. Landscape keeps the drawer.
+
+**HUD-owned drags**: `on_map_drag("start")` can return `"hud"` — TouchInput then emits no motion (no pan), no
+click on release, no step; the strip scrolls by reading `TouchInput.t` as before. Fixes "scroll the bar and
+lift → selects a card" and "scroll past the bar → the map pans". **Tooltips**: `TouchInput.clearTooltip`
+(`game.tooltip_x = nil`) on every finger-down and after a hover-scrub release — a terrain tooltip had stuck.
+Tests: `portrait.lua` (band numbers), `stripscroll.lua`, `band.lua`.

@@ -454,14 +454,13 @@ function _M:applyPortraitPlaces()
 	self.places.resources = {x=sa.l, y=sa.t + 111, scale=1, a=1}
 	self.places.minimap = {x=w - sa.r - math.floor(239 * ms), y=sa.t, scale=ms, a=1}
 	self.places.buffs = {x=w - sa.r - 40, y=sa.t + math.floor(160 * ms) + 60, scale=1, a=1}
-	-- everything the touch HUD stacks at the bottom: dock, routine strip / Level up pill, drawer
-	-- (mirrors TouchManual:layout: Skills bottom-aligned with the dock, More and Level up stacked above)
+	-- the HUD band at the bottom (mirrors TouchManual:layout: dock, routine strip, skill strip,
+	-- band top 8 px above the strip); the log sits just above the band
 	local dock_y = h - sa.b - 24 - 112
-	local levelup_y = dock_y + 112 - TM.BTN - 52 - 52
-	local drawer_y = math.min(levelup_y, dock_y - TM.ACT_STRIP_H) - 8 - TM.STRIP_H
+	local band_y = dock_y - TM.ACT_STRIP_H - 8 - TM.STRIP_H - 8
 	local lw = w - sa.l - sa.r
-	self.places.gamelog = {x=sa.l, y=drawer_y - 8 - 200, w=lw, h=200, scale=1, a=1}
-	self.places.chatlog = {x=sa.l, y=drawer_y - 8 - 200, w=lw, h=200, scale=1, a=1}
+	self.places.gamelog = {x=sa.l, y=band_y - 8 - 200, w=lw, h=200, scale=1, a=1}
+	self.places.chatlog = {x=sa.l, y=band_y - 8 - 200, w=lw, h=200, scale=1, a=1}
 end
 
 function _M:boundPlaces(w, h)
@@ -586,10 +585,15 @@ function _M:resizeIconsHotkeysToolbar()
 	local h = 52
 	if config.settings.tome.hotkey_icons then h = (8 + config.settings.tome.hotkey_icons_size) * config.settings.tome.hotkey_icons_rows end
 
-	if require("engine.TouchInput").active() then h = 0 end -- iOS port: no hotbar, the map takes the whole screen
+	local TI = require "engine.TouchInput"
+	if TI.active() then h = 0 end -- iOS port: no hotbar
 	local oldstop = self.map_h_stop_up or (game.h - h)
 	self.map_h_stop = game.h
-	self.map_h_stop_up = game.h - h
+	-- iOS port, portrait: the map ends above the HUD band (skill strip, routine strip, dock)
+	if TI.active() and TI.portrait() and self.touch_manual and self.touch_manual.bandTop then
+		self.map_h_stop = math.floor(self.touch_manual:bandTop())
+	end
+	self.map_h_stop_up = self.map_h_stop - h
 	self.map_h_stop_tooltip = self.map_h_stop_up
 
 	if not self.hotkeys_display_icons then
@@ -2420,6 +2424,7 @@ function _M:display(nb_keyframes)
 			self.touch_manual:hide()
 			self.touch_manual:displayQuiet()
 		else
+			self.touch_manual:displayBand() -- portrait: the band under the map, before anything drawn on it
 			self:displayTouchPips()
 			self:displayTouchTargeting()
 			if game.key == game.targetmode_key then self.touch_manual:hide() self.touch_manual:displayQuiet()

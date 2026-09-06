@@ -191,15 +191,19 @@ function _M:layout()
 	r.act = {x=act_x, y=dock_y, w=bw, h=bw}
 	r.auto = {x=auto_x, y=dock_y, w=bw, h=bw}
 	if portrait then
-		-- Skills / More / Level up stacked on the other edge, bottom-aligned with the dock
+		-- the HUD band: the map ends above it (Jordan: "size the game area to be above
+		-- the main buttons"), so there is no drawer and no Skills button; the skill
+		-- strip is always there, full width, above the routine strip and the dock.
+		-- More / Level up stacked on the other edge, bottom-aligned with the dock.
 		local sk_x = left and (w - sa.r - 24 - fs) or (sa.l + 24)
-		r.skills = {x=sk_x, y=dock_bottom - fs, w=fs, h=fs}
-		r.more = {x=sk_x, y=r.skills.y - 8 - 44, w=fs, h=44}
+		r.skills = nil
+		r.more = {x=sk_x, y=dock_bottom - 44, w=fs, h=44}
 		r.levelup = {x=sk_x, y=r.more.y - 8 - 44, w=fs, h=44}
-		-- the drawer: full width, above the routine strip and the Level up pill
-		local above = math.min(r.levelup.y, dock_y - _M.ACT_STRIP_H)
-		r.strip = {x=sa.l + 12, y=above - 8 - _M.STRIP_H, w=w - sa.l - sa.r - 24, h=_M.STRIP_H}
+		local strip_y = dock_y - _M.ACT_STRIP_H - 8 - _M.STRIP_H
+		r.strip = {x=sa.l + 12, y=strip_y, w=w - sa.l - sa.r - 24, h=_M.STRIP_H}
+		r.band_y = strip_y - 8
 	else
+		r.band_y = nil
 		-- Skills just past AUTO, More above it, the drawer filling the rest of the bottom edge
 		local sk_x = left and (auto_x + bw + gap) or (auto_x - gap - fs)
 		r.skills = {x=sk_x, y=dock_bottom - fs, w=fs, h=fs}
@@ -217,9 +221,33 @@ function _M:layout()
 	return r
 end
 
+--- Where the map viewport ends: the top of the HUD band in portrait, the screen
+-- bottom in landscape (the uiset sets map_h_stop from this)
+function _M:bandTop()
+	if not TouchInput.portrait() then return game.h end
+	self:layout() -- never a stale rectangle (rotation)
+	return self.rects.band_y or game.h
+end
+
+--- The band background (portrait), painted before Act/AUTO so the map never
+-- shows through below its viewport
+function _M:displayBand()
+	self:layout()
+	local r = self.rects
+	if not r.portrait or not r.band_y then return end
+	quad(0, r.band_y, game.w, game.h - r.band_y, 14, 15, 19, 255)
+	quad(0, r.band_y, game.w, 2, 58, 61, 70, 255)
+end
+
+--- Is the skill strip on screen (always in portrait, the drawer elsewhere)
+function _M:stripShown()
+	return self.rects.portrait or self.drawer_open
+end
+
 function _M:hudHit(x, y)
 	local r = self.rects
-	if inRect(r.strip, x, y) and self.drawer_open then return true end
+	if r.portrait and r.band_y and y >= r.band_y then return true end -- the whole band
+	if inRect(r.strip, x, y) and self:stripShown() then return true end
 	if inRect(r.more, x, y) or inRect(r.skills, x, y) or inRect(r.act, x, y) or inRect(r.auto, x, y) then return true end
 	if self:levelUpPending() and inRect(r.levelup, x, y) then return true end
 	-- the routine strip above Act (it grows away from the screen edge)
@@ -267,6 +295,7 @@ end
 
 function _M:displaySkills()
 	local r = self.rects.skills
+	if not r then self:dropZone("touch_skills") return end -- portrait: the strip is always there
 	local on = self.drawer_open
 	local down = K.pressed(r.x, r.y, r.w, r.h)
 	quad(r.x, r.y, r.w, r.h, (on or down) and 43 or 20, (on or down) and 39 or 22, (on or down) and 24 or 28, 225)
@@ -354,7 +383,8 @@ end
 function _M:displayStrip()
 	local t = self:target()
 	local r = self.rects.strip
-	if not self.drawer_open or r.w < 200 then
+	local portrait = self.rects.portrait
+	if not self:stripShown() or not r or r.w < 200 then
 		self:dropZone("touch_strip")
 		self.strip_rects = nil
 		return
@@ -370,6 +400,15 @@ function _M:displayStrip()
 		local nm = t.name or "?"
 		if #nm > 18 then nm = nm:sub(1, 17).."." end
 		self:label(nm, cx, r.y + 24, 0.8, 0.94, 0.83, 0.54, 1)
+		if portrait then
+			-- a small x in the header corner clears the target (the strip itself stays)
+			local cr = {x=r.x + 12 + who_w - 30, y=r.y + 4, w=26, h=26}
+			quad(cr.x, cr.y, cr.w, cr.h, 36, 39, 47, 255)
+			self:label("x", cr.x + 13, cr.y + 12, 0.7, 0.9, 0.87, 0.78, 1)
+			self.strip_clear_rect = cr
+		else
+			self.strip_clear_rect = nil
+		end
 		local rank = (type(t.TextRank) == "function" and select(1, t:TextRank())) or (t.rank and tostring(t.rank)) or ""
 		local life = t.max_life and t.max_life > 0 and math.floor(100 * t.life / t.max_life) or 0
 		local sub = ("L%d %s · %d%%"):format(t.level or 1, tostring(rank):gsub("#[^#]*#", ""), life)
@@ -377,6 +416,7 @@ function _M:displayStrip()
 		self:label(sub, cx, r.y + 52, 0.55, 0.56, 0.53, 0.47, 1)
 		self:label(_t"tap name for details", cx, r.y + 74, 0.5, 0.94, 0.83, 0.54, 1)
 	else
+		self.strip_clear_rect = nil
 		self:label(_t"No target", cx, r.y + 30, 0.8, 0.9, 0.87, 0.78, 1)
 		local n = #self:enemies()
 		self:label(n > 0 and _t"casts at the nearest enemy" or _t"tap a skill to aim it", cx, r.y + 60, 0.5, 0.56, 0.53, 0.47, 1)
@@ -385,7 +425,7 @@ function _M:displayStrip()
 	local list = self:stripTalents()
 	local cw, ch, gap = _M.CARD_W, _M.CARD_H, 8
 	local x0 = r.x + 12 + who_w
-	local avail = r.w - 12 - who_w - 44 - 20
+	local avail = r.w - 12 - who_w - (portrait and 20 or 44 + 20)
 	local total = #list * (cw + gap)
 	local maxs = math.max(0, total - avail)
 	local ti = TouchInput.t
@@ -427,16 +467,24 @@ function _M:displayStrip()
 		end
 	end
 	core.display.glScissor(false)
-	-- close
-	local cx = r.x + r.w - 44 - 10
-	quad(cx, r.y + (r.h - 44) / 2, 44, 44, 36, 39, 47, 255)
-	self:label("X", cx + 22, r.y + r.h / 2, 0.9, 0.9, 0.87, 0.78, 1)
-	self.strip_close_rect = {x=cx, y=r.y + (r.h - 44) / 2, w=44, h=44}
+	-- close (landscape drawer only: in portrait the strip is part of the band)
+	if portrait then
+		self.strip_close_rect = nil
+	else
+		local cx = r.x + r.w - 44 - 10
+		quad(cx, r.y + (r.h - 44) / 2, 44, 44, 36, 39, 47, 255)
+		self:label("X", cx + 22, r.y + r.h / 2, 0.9, 0.9, 0.87, 0.78, 1)
+		self.strip_close_rect = {x=cx, y=r.y + (r.h - 44) / 2, w=44, h=44}
+	end
 	self:zone("touch_strip", r, function(button, mx, my) self:stripTap(button, mx, my) end)
 end
 
 function _M:stripTap(button, mx, my)
-	if inRect(self.strip_close_rect, mx, my) then self:setTarget(nil) self.drawer_open = false print("[TOUCH] skills drawer closed") return end
+	-- the release of a scroll is not a tap on whatever ended up under the thumb
+	local ti = TouchInput.t
+	if ti and ti.moved then print("[TOUCH] strip: drag release ignored") return end
+	if self.strip_close_rect and inRect(self.strip_close_rect, mx, my) then self:setTarget(nil) self.drawer_open = false print("[TOUCH] skills drawer closed") return end
+	if self.strip_clear_rect and inRect(self.strip_clear_rect, mx, my) then self:setTarget(nil) return end
 	-- the target's name: open its sheet (the desktop hover tooltip has no finger equivalent)
 	if self.strip_who_rect and inRect(self.strip_who_rect, mx, my) then
 		local t = self:target()
@@ -477,6 +525,11 @@ function _M:drag(phase, t, x, y)
 		if game.key ~= game.normal_key then return no("not in normal key mode") end
 		if game.dialogs and #game.dialogs > 0 then return no("dialog open") end
 		if self.uiset.touch_wheel and self.uiset.touch_wheel.open then return no("wheel open") end
+		-- a drag starting on the skill strip scrolls the strip (displayStrip reads the finger)
+		-- and nothing else: no map pan, no card on release
+		if self:stripShown() and inRect(self.rects.strip, t.x0, t.y0) then print("[TOUCH] hud drag (strip)") return "hud" end
+		-- portrait: the whole band is the HUD's; a drag there never pans the map
+		if self.rects.portrait and self.rects.band_y and t.y0 >= self.rects.band_y then print("[TOUCH] hud drag (band)") return "hud" end
 		if self:hudHit(t.x0, t.y0) then return no("on the HUD") end
 		local map = game.level.map
 		if t.x0 < map.display_x or t.x0 >= map.display_x + map.viewport.width or t.y0 < map.display_y or t.y0 >= map.display_y + map.viewport.height then return no("outside the map") end
@@ -642,7 +695,8 @@ function _M:display()
 	self.uiset.touch_more_rect = self.rects.more
 	self.uiset.touch_strip_rects = self.strip_rects
 	self.uiset.touch_strip_rect = self.rects.strip
-	self.uiset.touch_drawer_open = self.drawer_open
+	self.uiset.touch_drawer_open = self:stripShown()
+	self.uiset.touch_band_y = self.rects.band_y
 end
 
 --- Called every frame while targeting or a dialog is open: only the ring stays

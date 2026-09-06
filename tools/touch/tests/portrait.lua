@@ -19,11 +19,20 @@ return function(T)
 		-- sanity: everything on screen, dock under the chosen thumb
 		local function on(q) return q.x >= 0 and q.y >= 0 and q.x + q.w <= w and q.y + q.h <= h end
 		for _, k in ipairs{"act", "auto", "skills", "more", "strip"} do
-			if not on(r[k]) then T.log("OFFSCREEN "..k) end
+			if r[k] and not on(r[k]) then T.log("OFFSCREEN "..k) end
 		end
 		if r.hand == "left" and r.act.x > r.auto.x then T.log("BAD left hand but Act right of AUTO") end
 		if r.hand == "right" and r.act.x < r.auto.x then T.log("BAD right hand but Act left of AUTO") end
-		if r.portrait and r.strip.w < w - sa.l - sa.r - 30 then T.log("BAD portrait drawer not full width") end
+		if r.portrait then
+			-- the band: no Skills button, the strip always there, the map viewport above it
+			if r.skills then T.log("BAD portrait has a Skills button") end
+			if not r.strip then T.log("BAD portrait has no skill strip") end
+			if r.strip and r.strip.w < w - sa.l - sa.r - 30 then T.log("BAD portrait strip not full width") end
+			local vh = require("engine.Map").viewport.height
+			T.log(("band_y=%s strip_y=%s dock_y=%s viewport_h=%s"):format(tostring(r.band_y), tostring(r.strip and r.strip.y), r.act.y, tostring(vh)))
+			if not r.band_y or r.band_y <= game.h - 400 then T.log("BAD band_y too low or missing", tostring(r.band_y)) end
+			if r.band_y and vh > r.band_y then T.log("BAD map viewport reaches under the band", vh, r.band_y) end
+		end
 	end
 	for _, k in ipairs{"player", "minimap", "buffs", "gamelog"} do
 		local d = game.uiset.places[k]
@@ -50,8 +59,9 @@ return function(T)
 	T.wait(2500)
 	where("hud2")
 	T.shot("hud2")
-	-- open the drawer so the second screenshot shows it
+	-- landscape: open the drawer so the second screenshot shows it (portrait: the strip is always there)
 	if m and m.rects.skills then T.tap(m.rects.skills.x + 20, m.rects.skills.y + 20) T.wait(400) end
+	if m and m.rects.portrait and not game.uiset.touch_strip_rects then T.log("BAD portrait strip cards missing without opening anything") end
 	T.shot("layout")
 	T.log("finished")
 

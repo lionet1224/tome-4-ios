@@ -49,6 +49,8 @@ _M.on_any_touch = nil -- function(x, y): every finger-down (auto-act stops on it
 _M.on_hover_end = nil -- function(x, y): a hold-then-drag was released there (drag and drop)
 _M.on_map_drag = nil -- function(phase, t, x, y): a plain drag; "start" returns true to claim it as a
                      -- movement gesture (then "move"/"tick"/"end"/"cancel" follow and no mouse drag is emitted)
+                     -- or "hud" to own it for a HUD element (no map pan, no click on release; the
+                     -- element reads _M.t itself; "end" is still delivered)
 _M.script_ready = nil -- function() -> true once the game module is really playable
 
 -- gesture state
@@ -95,6 +97,15 @@ function _M.reset()
 	_M.t, _M.fingers, _M.nb, _M.multi = nil, {}, 0, nil
 end
 
+--- The map tooltip (game.tooltip_x) is shown while a finger scrubs after a hold;
+-- nothing moves a pointer away afterwards, so it is cleared on release and on
+-- the next touch (the phone showed one stuck on a terrain tile)
+function _M.clearTooltip(why)
+	if type(game) ~= "table" or game.tooltip_x == nil then return end
+	game.tooltip_x, game.tooltip_y = nil, nil
+	print("[TOUCH] tooltip cleared:", why)
+end
+
 function _M.fingerDown(id, x, y)
 	_M.last_down = now()
 	local o = _M.osk
@@ -115,6 +126,7 @@ function _M.fingerDown(id, x, y)
 		if t then
 			if t.wheel and _M.wheel then _M.wheel:cancel() end
 			if t.step then t.step = nil if _M.on_map_drag then pcall(_M.on_map_drag, "cancel", t) end end
+			if t.hud then t.hud = nil if _M.on_map_drag then pcall(_M.on_map_drag, "cancel", t) end end
 			if t.moved and not t.held and not t.wheel and not t.step_was then emit(function(m) m:receiveMouse("left", t.x, t.y, true) end) end
 			t.moved = true
 			t.multi = true
@@ -123,6 +135,7 @@ function _M.fingerDown(id, x, y)
 		return
 	end
 	_M.t = {id=id, x0=x, y0=y, x=x, y=y, t0=now(), moved=false, held=false}
+	_M.clearTooltip("new touch")
 	if _M.on_any_touch then pcall(_M.on_any_touch, x, y) end
 	if _M.wheel then _M.t.wheel_zone = _M.wheel:zoneOf(x, y) end
 end
@@ -149,13 +162,19 @@ function _M.fingerMove(id, x, y)
 		if _M.on_map_drag then pcall(_M.on_map_drag, "move", t, x, y) end
 		return
 	end
+	if t.hud then return end -- a HUD element owns this drag (it reads _M.t): no map pan
 	if not t.moved then
 		if not far then return end
 		t.moved = true
-		-- a drag on the map may be a movement gesture (drag-to-step): the game claims it
+		-- a drag on the map may be a movement gesture (drag-to-step): the game claims it;
+		-- a drag that starts on a HUD element (the skill strip) is that element's own scroll
 		if _M.on_map_drag and _M.setting("drag_step") ~= false then
 			local ok, claimed = pcall(_M.on_map_drag, "start", t, x, y)
-			if ok and claimed then
+			if ok and claimed == "hud" then
+				t.hud, t.step_was = true, true
+				print("[TOUCH] hud drag")
+				return
+			elseif ok and claimed then
 				t.step, t.step_was = true, true
 				pcall(_M.on_map_drag, "move", t, x, y)
 				return
@@ -195,6 +214,13 @@ function _M.fingerUp(id, x, y)
 		return
 	end
 	if t.multi then done() return end
+	if t.hud then
+		t.hud = nil
+		done()
+		if _M.on_map_drag then pcall(_M.on_map_drag, "end", t, x, y) end
+		park()
+		return
+	end
 	if t.step then
 		t.step = nil
 		done()
@@ -211,10 +237,13 @@ function _M.fingerUp(id, x, y)
 		if not t.hover and not t.moved then
 			print("[TOUCH] long-press -> right click at", t.x0, t.y0)
 			click("right", t.x0, t.y0)
-		elseif _M.on_hover_end then
-			pcall(_M.on_hover_end, x, y)
+			return
 		end
-		return -- after a hover-scrub the cursor (and its tooltip) stays put
+		if _M.on_hover_end then pcall(_M.on_hover_end, x, y) end
+		-- the scrub's tooltip has no pointer to follow away: drop it with the finger
+		_M.clearTooltip("hover released")
+		park()
+		return
 	end
 	if t.moved then
 		emit(function(mm) mm:receiveMouse("left", x, y, true) end)
