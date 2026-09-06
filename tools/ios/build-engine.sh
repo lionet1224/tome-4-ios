@@ -113,6 +113,7 @@ cat > "$APP/Info.plist" <<'EOF'
 	<array>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key><true/>
 </dict>

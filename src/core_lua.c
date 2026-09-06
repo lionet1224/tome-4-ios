@@ -719,6 +719,28 @@ static int sdl_safe_area(lua_State *L)
 }
 
 #ifdef TE4_IOS
+int te4_ios_orientation_changed(void);
+#endif
+/* iOS port: which orientations the app allows: "auto" (both), "landscape" or
+ * "portrait". Returns true when the change applies at once (iOS 16+), false
+ * when the app must be restarted for it to take effect. */
+static int sdl_set_orientation(lua_State *L)
+{
+	int live = 0;
+#ifdef TE4_IOS
+	const char *mode = luaL_checkstring(L, 1);
+	const char *hint = "LandscapeLeft LandscapeRight Portrait";
+	if (!strcmp(mode, "landscape")) hint = "LandscapeLeft LandscapeRight";
+	else if (!strcmp(mode, "portrait")) hint = "Portrait";
+	SDL_SetHint(SDL_HINT_ORIENTATIONS, hint);
+	live = te4_ios_orientation_changed();
+	printf("[IOS] orientations: %s (%s)\n", hint, live ? "live" : "restart needed");
+#endif
+	lua_pushboolean(L, live);
+	return 1;
+}
+
+#ifdef TE4_IOS
 void te4_ios_keep_awake(int on);
 void te4_ios_haptic(int kind);
 void te4_ios_notify(const char *title, const char *body);
@@ -3641,6 +3663,7 @@ static const struct luaL_Reg displaylib[] =
 	{"redrawingForSavefileScreenshot", redrawing_for_savefile_screenshot},
 	{"size", sdl_screen_size},
 	{"safeArea", sdl_safe_area},
+	{"setOrientation", sdl_set_orientation},
 	{"keepAwake", sdl_keep_awake},
 	{"haptic", sdl_haptic},
 	{"notify", sdl_notify},

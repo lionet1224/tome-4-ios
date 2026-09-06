@@ -18,7 +18,7 @@ module(..., package.seeall, class.make)
 
 _M.LONG_PRESS_MS = 450
 _M.MOVE_TOLERANCE = 18
-_M.DEFAULTS = {wheel=false, drag_step=true, trigger="hold", pos="finger", zone="thirds", wedges=8, hold_ms=160, unlock_all=true, emulate=false, auto_life=50, auto_res=25, auto_rare=true, auto_dim=true, auto_buzz=true}
+_M.DEFAULTS = {wheel=false, drag_step=true, trigger="hold", pos="finger", zone="thirds", wedges=8, hold_ms=160, unlock_all=true, emulate=false, auto_life=50, auto_res=25, auto_rare=true, auto_dim=true, auto_buzz=true, orientation="auto", hand="left"}
 
 function _M.setting(k)
 	local t = config.settings.touch
@@ -256,6 +256,7 @@ end
 
 function _M.tick()
 	_M.checkKeyboard()
+	if not _M._orientation_applied and _M.active() then _M.applyOrientation() end
 	local t = _M.t
 	if t and not t.moved and not t.held and not t.wheel then
 		local hold_ms = tonumber(_M.setting("hold_ms")) or 160
@@ -287,25 +288,52 @@ function _M.tick()
 end
 
 --- Safe-area insets {l, t, r, b} in logical units (Dynamic Island / notch and
--- home indicator on iOS; `touch.safe = {l=,t=,r=,b=}` overrides, e.g. on the Mac)
+-- home indicator on iOS; `touch.safe = {l=,t=,r=,b=}` overrides, e.g. on the Mac).
+-- Cached per screen size, so a rotation re-reads them.
 function _M.safeArea()
 	local ts = config.settings.touch
 	if ts and ts.safe then return ts.safe end
-	local w = (type(game) == "table" and game.w) or (core.display.size())
-	if not _M._safe or _M._safe_w ~= w then
+	local w, h
+	if type(game) == "table" and game.w and game.h then w, h = game.w, game.h else w, h = core.display.size() end
+	if not _M._safe or _M._safe_w ~= w or _M._safe_h ~= h then
 		local l, t, r, b, pw, ph = 0, 0, 0, 0, 0, 0
 		if core.display.safeArea then l, t, r, b, pw, ph = core.display.safeArea() end
 		_M._safe = {l=l or 0, t=t or 0, r=r or 0, b=b or 0, pw=pw or 0, ph=ph or 0}
-		_M._safe_w = w
+		_M._safe_w, _M._safe_h = w, h
 	end
 	return _M._safe
+end
+
+--- Portrait: the screen is taller than wide (the phone rotated; iOS 16+ rotates live)
+function _M.portrait()
+	local w, h
+	if type(game) == "table" and game.w and game.h then w, h = game.w, game.h else w, h = core.display.size() end
+	return (h or 0) > (w or 0)
+end
+
+--- Which thumb presses Act: "left" or "right" (touch.hand; the layout mirrors)
+function _M.hand()
+	if _M.setting("hand") == "right" then return "right" end
+	return "left"
+end
+
+--- Tell iOS which orientations are allowed (touch.orientation = auto | landscape |
+-- portrait). Returns true when it took effect at once, false when a restart is needed.
+function _M.applyOrientation()
+	local mode = _M.setting("orientation")
+	if mode ~= "landscape" and mode ~= "portrait" then mode = "auto" end
+	_M._orientation_applied = mode
+	if not core.display.setOrientation then return false end
+	local ok, live = pcall(core.display.setOrientation, mode)
+	print("[TOUCH] orientation", mode, (ok and live) and "live" or "restart needed")
+	return (ok and live) and true or false
 end
 
 --- Draw a synthetic Dynamic Island where the real one sits (simulator
 -- screenshots do not include it): `touch.show_island = true`
 local function drawIsland()
 	local sa = _M.safeArea()
-	if not (sa.l and sa.l > 0) then return end
+	if not (sa.l and sa.l > 0) or _M.portrait() then return end
 	local w, h = core.display.size()
 	local f = (sa.pw and sa.pw > 0) and (w / sa.pw) or 1.5
 	local iw, ih, ix = 37 * f, 126 * f, 11 * f   -- points: 37x126 pill, 11 from the edge

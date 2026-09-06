@@ -436,7 +436,32 @@ function _M:resetPlaces()
 		mainicons = {x=w - tb_bg[6] * 0.5, y=h - tb_bg[7] * 6 * 0.5 - 5, scale=1, a=1},
 		hotkeys = {x=10, y=h - th, w=w-60, h=th, scale=1, a=1},
 	}
+	self:applyPortraitPlaces()
 	self:applySafeArea()
+end
+
+--- iOS port, portrait: the character panel top-left under the safe top, a
+-- smaller minimap top-right, the buff column under it, and the log across the
+-- width just above the touch controls (drawer, routine strip, dock)
+function _M:applyPortraitPlaces()
+	local TI = require "engine.TouchInput"
+	if not (TI.active() and TI.portrait()) then return end
+	local w, h = core.display.size()
+	local sa = TI.safeArea()
+	local ms = 0.55
+	local TM = require "mod.class.TouchManual"
+	self.places.player = {x=sa.l, y=sa.t, scale=1, a=1}
+	self.places.resources = {x=sa.l, y=sa.t + 111, scale=1, a=1}
+	self.places.minimap = {x=w - sa.r - math.floor(239 * ms), y=sa.t, scale=ms, a=1}
+	self.places.buffs = {x=w - sa.r - 40, y=sa.t + math.floor(160 * ms) + 60, scale=1, a=1}
+	-- everything the touch HUD stacks at the bottom: dock, routine strip / Level up pill, drawer
+	-- (mirrors TouchManual:layout: Skills bottom-aligned with the dock, More and Level up stacked above)
+	local dock_y = h - sa.b - 24 - 112
+	local levelup_y = dock_y + 112 - TM.BTN - 52 - 52
+	local drawer_y = math.min(levelup_y, dock_y - TM.ACT_STRIP_H) - 8 - TM.STRIP_H
+	local lw = w - sa.l - sa.r
+	self.places.gamelog = {x=sa.l, y=drawer_y - 8 - 200, w=lw, h=200, scale=1, a=1}
+	self.places.chatlog = {x=sa.l, y=drawer_y - 8 - 200, w=lw, h=200, scale=1, a=1}
 end
 
 function _M:boundPlaces(w, h)
@@ -600,17 +625,30 @@ function _M:handleResolutionChange(w, h, ow, oh)
 --	local w, h = core.display.size()
 --	game:setResolution(w.."x"..h, true)
 
-	-- Adjust UI
-	local w2, h2 = math.floor(ow / 2), math.floor(oh / 2)
-	for what, d in pairs(self.places) do
-		if d.x > w2 then d.x = d.x + w - ow end
-		if d.y > h2 then d.y = d.y + h - oh end
+	local TI = require "engine.TouchInput"
+	if TI.active() then
+		-- iOS port: a rotation. Insets and the HUD depend on the orientation,
+		-- so rebuild the places instead of shifting them.
+		TI._safe = nil
+		self:resetPlaces()
+		if self.logdisplay and self.logdisplay.resize then self.logdisplay:resize(self.logdisplay.display_x or 0, self.logdisplay.display_y or 0, self.places.gamelog.w, self.places.gamelog.h) end
+		if self.touch_manual then self.touch_manual:hide() end
+		print(("[IOS] layout %dx%d %s, %s hand"):format(w, h, TI.portrait() and "portrait" or "landscape", TI.hand()))
+	else
+		-- Adjust UI
+		local w2, h2 = math.floor(ow / 2), math.floor(oh / 2)
+		for what, d in pairs(self.places) do
+			if d.x > w2 then d.x = d.x + w - ow end
+			if d.y > h2 then d.y = d.y + h - oh end
+		end
 	end
 
 	print("minimalist:handleResolutionChange: toggling UI to refresh")
 	-- Toggle the UI to refresh the changes
 	self:toggleUI()
 	self:toggleUI()
+	-- the map was rebuilt at 1x by the viewport resize: put the zoom back
+	if TI.active() and game.level and game.level.map and game.level.map.applyZoom then game.level.map:applyZoom() end
 
 	self:boundPlaces()
 	self:saveSettings()
@@ -2097,8 +2135,17 @@ function _M:displayTouchPips()
 			if cd and cd > 0 then cooling[#cooling+1] = {i=i, t=t, cd=cd} end
 		end
 	end
-	local y0 = 268 -- under the status-effect icons, which sit in the row above
-	local x0 = game.w - sa.r - 24 - #cooling * (size + gap)
+	local TI = require "engine.TouchInput"
+	local y0, x0
+	if TI.portrait() then
+		-- under the (smaller) minimap in the top-right corner
+		local mm = self.places.minimap
+		y0 = (mm and mm.y or sa.t) + math.floor(160 * ((mm and mm.scale) or 1)) + 8
+		x0 = game.w - sa.r - 12 - #cooling * (size + gap)
+	else
+		y0 = 268 -- under the status-effect icons, which sit in the row above
+		x0 = game.w - sa.r - 24 - #cooling * (size + gap)
+	end
 	for k, c in ipairs(cooling) do
 		local x = x0 + (k - 1) * (size + gap)
 		core.display.drawQuad(x, y0, size, size, 12, 12, 14, 210)
@@ -2114,10 +2161,10 @@ end
 -- iOS port: Cast / Cancel buttons at the right thumb while aiming a talent
 function _M:displayTouchTargeting()
 	local targeting = game.key == game.targetmode_key
-	local bw, gap = 112, 10
-	local sa = TouchWheel.safeArea and TouchWheel.safeArea() or require("engine.TouchInput").safeArea()
-	local x1, y = game.w - sa.r - 24 - bw * 2 - gap, game.h - sa.b - 24 - bw
-	local x2 = x1 + bw + gap
+	local bw = 112
+	-- the dock rectangles: Act under the thumb (x2), AUTO beside it (x1)
+	local lr = self.touch_manual:layout()
+	local x2, x1, y = lr.act.x, lr.auto.x, lr.act.y
 	local function zone(name, x, fct)
 		if not game.mouse:updateZone(name, x, y, bw, bw, nil, 1) then
 			game.mouse:registerZone(x, y, bw, bw, function(button, mx, my, xrel, yrel, bx, by, event)
@@ -2164,8 +2211,9 @@ function _M:displayTouchAttack(x, y, bw)
 	local p = game.player
 	if not p or not p.actStep then return end
 	self.touch_attack_rect = {x=x - 130, y=y - 70, w=bw + 130, h=bw + 70}
-	-- the AUTO button, left of Act
-	local ax = x - bw - 10
+	-- the AUTO button, beside Act towards the middle of the screen
+	local ar = self.touch_manual.rects and self.touch_manual.rects.auto
+	local ax = ar and ar.x or (x - bw - 10)
 	self.touch_auto_rect = {x=ax, y=y, w=bw, h=bw}
 	if not game.mouse:updateZone("touch_auto", ax, y, bw, bw, nil, 1) then
 		game.mouse:registerZone(ax, y, bw, bw, function(button, mx, my, xrel, yrel, bx, by, event)
@@ -2247,7 +2295,8 @@ function _M:displayTouchAttack(x, y, bw)
 	if n > 0 then
 		local sz, gap = 26, 4
 		local total = n * sz + (n - 1) * gap
-		local sx = x + bw - total
+		local lefty = require("engine.TouchInput").hand() == "left"
+		local sx = lefty and x or (x + bw - total)
 		local sy = y - sz - 8
 		-- tapping a box jumps the routine to that step (reset / skip / jump)
 		local zx, zw = math.min(sx, x) - 8, math.max(total, bw) + 16
@@ -2258,7 +2307,7 @@ function _M:displayTouchAttack(x, y, bw)
 					local nn = #rr.steps
 					if nn > 0 then
 						local tot = nn * sz + (nn - 1) * gap
-						local start = x + bw - tot
+						local start = lefty and x or (x + bw - tot)
 						local i = util.bound(math.floor((mx - start) / (sz + gap)) + 1, 1, nn)
 						rr.pos = i
 						game.player.act_preview_key = nil

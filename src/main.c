@@ -1162,6 +1162,21 @@ void do_resize(int w, int h, bool fullscreen, bool borderless, float zoom)
 	screen_zoom = zoom;
 
 	printf("[DO RESIZE] Requested: %dx%d (%d, %d); zoom %d%%\n", w, h, fullscreen, borderless, (int)(zoom * 100));
+#ifdef TE4_IOS
+	{
+		/* SDL picks the starting orientation from the window's shape, and the saved
+		 * resolution is landscape: ask for a tall window when portrait is wanted
+		 * (setting) or the phone is held so (auto), for both creation and resizes */
+		extern int te4_ios_is_portrait(void);
+		const char *o = SDL_GetHint(SDL_HINT_ORIENTATIONS);
+		int only_portrait = o && !strcmp(o, "Portrait");
+		int allows_both = o && strstr(o, "Portrait") && strstr(o, "Landscape");
+		int want_portrait = only_portrait || (allows_both && te4_ios_is_portrait());
+		if (want_portrait && w > h) { int t = w; w = h; h = t; }
+		if (!want_portrait && h > w) { int t = w; w = h; h = t; }
+		printf("[IOS] window %dx%d (%s)\n", w, h, want_portrait ? "portrait" : "landscape");
+	}
+#endif
 
 	/* See if we need to reinitialize the window */
 	if (resizeNeedsNewWindow(w, h, fullscreen, borderless)) {
@@ -1293,6 +1308,35 @@ void do_resize(int w, int h, bool fullscreen, bool borderless, float zoom)
 	resizeWindow(aw, ah);
 
 }
+
+#ifdef TE4_IOS
+/* iOS port: a rotation arrives as a window size change. The window is always
+ * fullscreen on iOS, so the desktop RESIZED path (which refuses fullscreen
+ * resizes) is bypassed: refresh the screen surface and GL projection at the
+ * new drawable size (same zoom, so 1398x645 <-> 645x1398 logically) and run
+ * the engine's resolution-change path. */
+static void ios_handle_rotation(void)
+{
+	int dw = 0, dh = 0;
+	if (!window) return;
+	SDL_GL_GetDrawableSize(window, &dw, &dh);
+	if (dw <= 0 || dh <= 0) return;
+	if (screen && screen->w == dw && screen->h == dh) return;
+	update_screen_surface(window);
+	SDL_GL_MakeCurrent(window, maincontext);
+	resizeWindow(dw, dh);
+	printf("[IOS] rotated to %dx%d (logical %dx%d)\n", dw, dh, (int)(dw / screen_zoom), (int)(dh / screen_zoom));
+	if (current_game != LUA_NOREF)
+	{
+		lua_rawgeti(L, LUA_REGISTRYINDEX, current_game);
+		lua_pushstring(L, "onResolutionChange");
+		lua_gettable(L, -2);
+		lua_remove(L, -2);
+		lua_rawgeti(L, LUA_REGISTRYINDEX, current_game);
+		docall(L, 1, 0);
+	}
+}
+#endif
 
 void boot_lua(int state, bool rebooting, int argc, char *argv[])
 {
@@ -1661,6 +1705,27 @@ int main(int argc, char *argv[])
 	/* iOS port: fingers are handled by engine.TouchInput, not turned into mouse events */
 	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
 	SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
+	/* iOS port: portrait and landscape both allowed; Lua narrows this from the
+	 * touch.orientation setting (core.display.setOrientation) once it boots */
+	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight Portrait");
+	{
+		/* honour the saved touch.orientation at launch too: iOS keeps the orientation the
+		 * app started in until the device rotates, so a "portrait" setting must be known
+		 * before the window exists (a tiny scan of settings/touch.cfg is enough) */
+		extern const char *te4_ios_documents_path(void);
+		const char *docs = te4_ios_documents_path();
+		if (docs) {
+			char cfg[1400];
+			snprintf(cfg, sizeof(cfg), "%s/t-engine/4.0/settings/touch.cfg", docs);
+			FILE *f = fopen(cfg, "r");
+			if (f) {
+				char buf[2048]; size_t n = fread(buf, 1, sizeof(buf) - 1, f); buf[n] = 0; fclose(f);
+				if (strstr(buf, "orientation=\"portrait\"")) SDL_SetHint(SDL_HINT_ORIENTATIONS, "Portrait");
+				else if (strstr(buf, "orientation=\"landscape\"")) SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
+				printf("[IOS] launch orientations: %s\n", SDL_GetHint(SDL_HINT_ORIENTATIONS));
+			}
+		}
+	}
 #endif
 	if (SDL_Init (flags) < 0) {
 		printf("cannot initialize SDL: %s\n", SDL_GetError ());
@@ -1749,6 +1814,12 @@ int main(int argc, char *argv[])
 			case SDL_WINDOWEVENT:
 				switch (event.window.event)
 				{
+#ifdef TE4_IOS
+				case SDL_WINDOWEVENT_SIZE_CHANGED:
+				case SDL_WINDOWEVENT_RESIZED:
+					ios_handle_rotation();
+					break;
+#else
 				case SDL_WINDOWEVENT_RESIZED:
 					/* Note: SDL can't resize a fullscreen window, so don't bother! */
 					if (!is_fullscreen) {
@@ -1768,6 +1839,7 @@ int main(int argc, char *argv[])
 
 					}
 					break;
+#endif
 				case SDL_WINDOWEVENT_MOVED: {
 					int x, y;
 					/* Note: SDL can't resize a fullscreen window, so don't bother! */

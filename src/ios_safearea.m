@@ -84,3 +84,31 @@ const char *te4_ios_documents_path(void)
 	snprintf(buf, sizeof(buf), "%s", [dir UTF8String]);
 	return buf;
 }
+
+/* iOS port: the allowed orientations changed (SDL reads SDL_HINT_ORIENTATIONS
+   whenever UIKit asks). On iOS 16+ the view controller can be told to re-ask
+   at once, which rotates the app if it is now held the wrong way; older
+   versions only re-read on the next launch. Returns 1 when applied live. */
+int te4_ios_orientation_changed(void)
+{
+	int live = 0;
+	if (@available(iOS 16.0, *)) {
+		for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+			if (![scene isKindOfClass:[UIWindowScene class]]) continue;
+			for (UIWindow *w in ((UIWindowScene *)scene).windows) {
+				UIViewController *vc = w.rootViewController;
+				if (!vc) continue;
+				[vc setNeedsUpdateOfSupportedInterfaceOrientations];
+				live = 1;
+			}
+		}
+	}
+	return live;
+}
+
+/* iOS port: is the screen currently taller than wide (device held portrait)? */
+int te4_ios_is_portrait(void)
+{
+	CGRect b = [UIScreen mainScreen].bounds;
+	return b.size.height > b.size.width ? 1 : 0;
+}

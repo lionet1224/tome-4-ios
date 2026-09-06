@@ -156,26 +156,59 @@ end
 -- layout
 ---------------------------------------------------------------------------
 
---- Screen rectangles for this frame (the Act/AUTO dock is placed by the uiset)
+--- Height of the routine strip drawn above Act by the uiset (boxes + name)
+_M.ACT_STRIP_H = 76
+
+--- Screen rectangles for this frame. This is the one place the touch HUD is
+-- laid out: the uiset draws Act/AUTO (and Cast/Cancel) at r.act / r.auto.
+-- The hand setting puts the dock under that thumb and Skills/More on the
+-- other side; in portrait the drawer spans the width above the dock row.
 function _M:layout()
 	local sa = TouchInput.safeArea()
 	local w, h = game.w, game.h
 	local bw, gap = 112, 10
-	local act_x = w - sa.r - 24 - bw
-	local auto_x = act_x - bw - gap
-	local dock_y = h - sa.b - 24 - bw
+	local portrait = TouchInput.portrait()
+	local left = TouchInput.hand() == "left"
+	local fs = _M.BTN
 	local r = self.rects
+	r.portrait, r.hand = portrait, left and "left" or "right"
+	local dock_y = h - sa.b - 24 - bw
+	local dock_bottom = dock_y + bw
+	-- Act under the thumb, AUTO beside it towards the middle
+	local act_x, auto_x
+	if left then
+		act_x = sa.l + 24
+		auto_x = act_x + bw + gap
+	else
+		act_x = w - sa.r - 24 - bw
+		auto_x = act_x - bw - gap
+	end
 	r.act = {x=act_x, y=dock_y, w=bw, h=bw}
 	r.auto = {x=auto_x, y=dock_y, w=bw, h=bw}
-	-- the Skills button just left of AUTO, bottom-aligned with the dock; More above it
-	local fs = _M.BTN
-	local sk_x = auto_x - gap - fs
-	local dock_bottom = dock_y + bw
-	r.skills = {x=sk_x, y=dock_bottom - fs, w=fs, h=fs}
-	r.more = {x=sk_x, y=r.skills.y - 8 - 44, w=fs, h=44}
-	-- a glowing Level up pill above More whenever points are unspent
-	r.levelup = {x=sk_x, y=r.more.y - 8 - 44, w=fs, h=44}
-	r.strip = {x=sa.l + 120, y=h - sa.b - 24 - _M.STRIP_H, w=sk_x - 12 - (sa.l + 120), h=_M.STRIP_H}
+	if portrait then
+		-- Skills / More / Level up stacked on the other edge, bottom-aligned with the dock
+		local sk_x = left and (w - sa.r - 24 - fs) or (sa.l + 24)
+		r.skills = {x=sk_x, y=dock_bottom - fs, w=fs, h=fs}
+		r.more = {x=sk_x, y=r.skills.y - 8 - 44, w=fs, h=44}
+		r.levelup = {x=sk_x, y=r.more.y - 8 - 44, w=fs, h=44}
+		-- the drawer: full width, above the routine strip and the Level up pill
+		local above = math.min(r.levelup.y, dock_y - _M.ACT_STRIP_H)
+		r.strip = {x=sa.l + 12, y=above - 8 - _M.STRIP_H, w=w - sa.l - sa.r - 24, h=_M.STRIP_H}
+	else
+		-- Skills just past AUTO, More above it, the drawer filling the rest of the bottom edge
+		local sk_x = left and (auto_x + bw + gap) or (auto_x - gap - fs)
+		r.skills = {x=sk_x, y=dock_bottom - fs, w=fs, h=fs}
+		r.more = {x=sk_x, y=r.skills.y - 8 - 44, w=fs, h=44}
+		-- a glowing Level up pill above More whenever points are unspent
+		r.levelup = {x=sk_x, y=r.more.y - 8 - 44, w=fs, h=44}
+		local sy = h - sa.b - 24 - _M.STRIP_H
+		if left then
+			local x0 = sk_x + fs + 12
+			r.strip = {x=x0, y=sy, w=(w - sa.r - 120) - x0, h=_M.STRIP_H}
+		else
+			r.strip = {x=sa.l + 120, y=sy, w=sk_x - 12 - (sa.l + 120), h=_M.STRIP_H}
+		end
+	end
 	return r
 end
 
@@ -184,8 +217,12 @@ function _M:hudHit(x, y)
 	if inRect(r.strip, x, y) and self.drawer_open then return true end
 	if inRect(r.more, x, y) or inRect(r.skills, x, y) or inRect(r.act, x, y) or inRect(r.auto, x, y) then return true end
 	if self:levelUpPending() and inRect(r.levelup, x, y) then return true end
-	-- the routine strip above Act
-	if r.act and x >= r.act.x - 140 and y >= r.act.y - 76 and y < r.act.y then return true end
+	-- the routine strip above Act (it grows away from the screen edge)
+	if r.act and y >= r.act.y - _M.ACT_STRIP_H and y < r.act.y then
+		if r.hand == "left" then
+			if x < r.act.x + r.act.w + 140 then return true end
+		elseif x >= r.act.x - 140 then return true end
+	end
 	return false
 end
 

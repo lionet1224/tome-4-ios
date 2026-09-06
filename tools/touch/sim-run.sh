@@ -13,9 +13,10 @@ mkdir -p "$OUT"
 D=$(xcrun simctl get_app_container "$UD" org.te4.tome.dev data)
 NAME="touch-test.lua"
 cp "$SCRIPT" "$D/Documents/t-engine/4.0/$NAME"
-if [ "$EARLY" = "boot" ]; then printf 'touch = {show_island=true, script="/%s", script_boot=true}\n' "$NAME" > "$D/Documents/t-engine/4.0/settings/touch.cfg"
-elif [ -n "$EARLY" ]; then printf 'touch = {show_island=true, script="/%s", script_early=true}\n' "$NAME" > "$D/Documents/t-engine/4.0/settings/touch.cfg"
-else printf 'touch = {show_island=true, script="/%s"}\n' "$NAME" > "$D/Documents/t-engine/4.0/settings/touch.cfg"; fi
+EXTRA="${TOUCH_EXTRA:-}"   # e.g. TOUCH_EXTRA=', orientation="portrait", hand="left"'
+if [ "$EARLY" = "boot" ]; then printf 'touch = {show_island=true, script="/%s", script_boot=true%s}\n' "$NAME" "$EXTRA" > "$D/Documents/t-engine/4.0/settings/touch.cfg"
+elif [ -n "$EARLY" ]; then printf 'touch = {show_island=true, script="/%s", script_early=true%s}\n' "$NAME" "$EXTRA" > "$D/Documents/t-engine/4.0/settings/touch.cfg"
+else printf 'touch = {show_island=true, script="/%s"%s}\n' "$NAME" "$EXTRA" > "$D/Documents/t-engine/4.0/settings/touch.cfg"; fi
 printf 'audio.enable = false\naudio.music_volume = 0\naudio.effects_volume = 0\n' > "$D/Documents/t-engine/4.0/settings/audio.cfg"
 if [ -n "$EARLY" ]; then printf 'autopilot = false\n' > "$D/Documents/t-engine/4.0/settings/autopilot.cfg"
 else printf 'autopilot = true\nautopilot_birth_only = true\n' > "$D/Documents/t-engine/4.0/settings/autopilot.cfg"; fi
