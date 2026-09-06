@@ -1555,7 +1555,10 @@ function _M:actDo(step)
 		if self:isTalentCoolingDown(t) then return false, _t"cooling down" end
 		if not self:preUseTalent(t, true, true) then return false, _t"not usable" end
 		local ok, tg = pcall(self.getTalentTarget, self, t)
-		if not ok or not tg then print("[ACT] talent (no target)", t.name) self:useTalent(t.id) return true end
+		-- archery shots (Kneecapper and the other called shots) declare no target table but still
+		-- aim: treat any talent with a range or requires_target as targeted so the routine's rule applies
+		local aims = (ok and tg) or t.requires_target or (self:getTalentRange(t) or 0) > 0
+		if not aims then print("[ACT] talent (no target)", t.name) self:useTalent(t.id) return true end
 		local tgt = self:actResolveTarget(step, t)
 		if tgt == "manual" then print("[ACT] talent manual", t.name) self:useTalent(t.id) return true end
 		if tgt == self then print("[ACT] talent self", t.name) self:useTalent(t.id, nil, nil, nil, self) return true end

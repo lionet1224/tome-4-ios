@@ -93,8 +93,9 @@ function _M:cast(tid, target, allow_manual)
 	elseif not p:preUseTalent(t, true, true) then why = _t"not usable now" end
 	if why then game.logPlayer(p, "%s: %s.", t.name, why) return false, why end
 	local ok, tg = pcall(p.getTalentTarget, p, t)
-	if not ok or not tg then print("[TOUCH] cast (no target)", t.name) p:useTalent(t.id) return true end
-	if tg.type == "self" or (tg.range and tg.range == 0 and not tg.radius) then print("[TOUCH] cast self", t.name) p:useTalent(t.id, nil, nil, nil, p) return true end
+	local aims = (ok and tg) or t.requires_target or (p:getTalentRange(t) or 0) > 0
+	if not aims then print("[TOUCH] cast (no target)", t.name) p:useTalent(t.id) return true end
+	if tg and (tg.type == "self" or (tg.range and tg.range == 0 and not tg.radius)) then print("[TOUCH] cast self", t.name) p:useTalent(t.id, nil, nil, nil, p) return true end
 	if not target then
 		if allow_manual then print("[TOUCH] cast manual", t.name) p:useTalent(t.id) return true end
 		game.logPlayer(p, "%s: no enemy in view. Hold the button to aim by hand.", t.name)
