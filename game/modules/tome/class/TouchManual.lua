@@ -101,8 +101,13 @@ function _M:cast(tid, target, allow_manual)
 		return false, _t"no target"
 	end
 	local d = core.fov.distance(p.x, p.y, target.x, target.y)
-	if d > p:getTalentRange(t) then game.logPlayer(p, "%s: %s is out of range.", t.name, target.name) return false, _t"out of range" end
-	if not p:hasLOS(target.x, target.y) then game.logPlayer(p, "%s: no line of sight to %s.", t.name, target.name) return false, _t"no line of sight" end
+	-- out of range or sight for this target: let the game's own aiming decide instead of refusing
+	-- (some talents, Disengage among them, aim at a spot rather than the creature)
+	if d > p:getTalentRange(t) or not p:hasLOS(target.x, target.y) then
+		print("[TOUCH] cast -> manual aim (range/LOS)", t.name)
+		p:useTalent(t.id)
+		return true
+	end
 	print("[TOUCH] cast", t.name, "->", target.name)
 	p:useTalent(t.id, nil, nil, nil, target)
 	return true
