@@ -91,6 +91,19 @@ function _M:use(item)
 
 	local act = item.action
 
+	if act == "bar-put" then
+		local Picker = require "mod.dialogs.TouchSlotPicker"
+		local o, actor = self.object, self.actor
+		game:registerDialog(Picker.new(actor, ("Put %s on the bar"):tformat(o:getName{do_color=false, no_count=true}), function(slot) Picker.bindItem(actor, o, slot) end,
+			Picker.itemSlot(actor, o), {subject=o:getName{no_count=true}, on_remove=function() Picker.unbindItem(actor, o) end}))
+		return
+	elseif act == "bar-remove" then
+		require("mod.dialogs.TouchSlotPicker").unbindItem(self.actor, self.object)
+		-- a deliberate removal keeps auto-bar items (Rod of Recall) from coming back by themselves
+		if self.object.define_as then self.actor.touch_autobound = self.actor.touch_autobound or {} self.actor.touch_autobound[self.object.define_as] = true end
+		return
+	end
+
 	if act == "use" then
 		if self.object:wornInven() and not self.object.wielded and not self.object.use_no_wear then
 			self:simplePopup(_t"Impossible", _t"You must wear this object to use it!")
@@ -201,6 +214,12 @@ function _M:generateList()
 	if not self.object.__transmo then if self.inven ~= self.actor.INVEN_INVEN and self.object.is_tinker and self.object.tinkered then list[#list+1] = {name=_t"Detach from item", action="tinker-remove"} end end
 	if not self.object.__transmo then if self.inven == self.actor.INVEN_INVEN and self.object.is_tinker and not self.object.tinkered then list[#list+1] = {name=_t"Attach to item", action="tinker-add"} end end
 	if not self.object.__transmo and self.object.tinker then list[#list+1] = { name = _t'Detach tinker', action='tinker-detach' } end
+	-- iOS port: usable items (rods, wands, torques...) go on the action bar like talents
+	if require("engine.TouchInput").active() and not self.dst_actor and not self.object.__transmo and self.object:canUseObject() and self.actor.hotkey then
+		local Picker = require "mod.dialogs.TouchSlotPicker"
+		if Picker.itemSlot(self.actor, self.object) then list[#list+1] = {name=_t"Remove from bar", action="bar-remove"}
+		else list[#list+1] = {name=_t"Put on bar", action="bar-put"} end
+	end
 	if not self.dst_actor and not self.object.__tagged and self.inven == self.actor.INVEN_INVEN then list[#list+1] = {name=_t"Drop", action="drop"} end
 	if not self.dst_actor and self.inven == self.actor.INVEN_INVEN and not self.object.plot and not self.object.quest and game.party:countInventoryAble() >= 2 then list[#list+1] = {name=_t"Transfer to party", action="transfer"} end
 	if not self.dst_actor and not self.object.__tagged and self.inven == self.actor.INVEN_INVEN and transmo_chest and self.actor:transmoFilter(self.object) then list[#list+1] = {name=("%s now"):tformat(self.actor:transmoGetWord():capitalize()), action="transmo"} end

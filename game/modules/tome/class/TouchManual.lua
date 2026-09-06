@@ -114,7 +114,7 @@ function _M:cast(tid, target, allow_manual)
 	return true
 end
 
---- Every activable hotkey talent of the player, deduplicated, ready ones first
+--- Every entry of the bar: activable hotkey talents and usable hotkey items, in slot order
 function _M:stripTalents()
 	local p = game.player
 	local list, seen = {}, {}
@@ -128,6 +128,15 @@ function _M:stripTalents()
 				seen[hk[2]] = true
 				local cd = p:isTalentCoolingDown(t)
 				list[#list+1] = {tid=t.id, t=t, cd=(cd and cd > 0) and cd or nil, slot=i}
+			end
+		elseif hk and hk[1] == "inventory" and not seen["item:"..tostring(hk[2])] then
+			-- a bar item (Rod of Recall...): skipped when it is gone from the pack
+			local o = p:findInAllInventories(hk[2], {no_add_name=true, force_id=true, no_count=true})
+			if o then
+				seen["item:"..tostring(hk[2])] = true
+				local okc, cd = pcall(o.getObjectCooldown, o, p)
+				cd = okc and tonumber(cd) or nil
+				list[#list+1] = {item=hk[2], o=o, name=o:getName{do_color=false, no_count=true}, cd=(cd and cd > 0) and cd or nil, slot=i}
 			end
 		end
 	end
@@ -223,7 +232,8 @@ function _M:displaySkills()
 	-- a small talent glyph: the first ready hotkey talent, else a star
 	local list = self:stripTalents()
 	local first = list[1]
-	if first and first.t.display_entity then self:drawTalentIcon(first.t, r.x + (r.w - 40) / 2, r.y + 8, 40, false)
+	if first and first.t and first.t.display_entity then self:drawTalentIcon(first.t, r.x + (r.w - 40) / 2, r.y + 8, 40, false)
+	elseif first and first.o then pcall(first.o.toScreen, first.o, nil, r.x + (r.w - 40) / 2, r.y + 8, 40, 40)
 	else self:label("*", r.x + r.w / 2, r.y + 30, 1.8, 0.94, 0.83, 0.54, 1) end
 	self:label(_t"SKILLS", r.x + r.w / 2, r.y + r.h - 16, 0.6, 0.9, 0.87, 0.78, 1)
 	self:zone("touch_skills", r, function(button) if button == "left" then self:toggleDrawer() end end)
@@ -313,6 +323,7 @@ function _M:displayStrip()
 	-- who: the target, or what a tap will do without one
 	local who_w = 170
 	local cx = r.x + 12 + who_w / 2 - 6
+	self.strip_who_rect = t and {x=r.x, y=r.y, w=12 + who_w, h=r.h} or nil
 	if t then
 		local nm = t.name or "?"
 		if #nm > 18 then nm = nm:sub(1, 17).."." end
@@ -322,7 +333,7 @@ function _M:displayStrip()
 		local sub = ("L%d %s · %d%%"):format(t.level or 1, tostring(rank):gsub("#[^#]*#", ""), life)
 		if #sub > 26 then sub = sub:sub(1, 25) end
 		self:label(sub, cx, r.y + 52, 0.55, 0.56, 0.53, 0.47, 1)
-		self:label(_t"tap to cast", cx, r.y + 74, 0.5, 0.56, 0.53, 0.47, 1)
+		self:label(_t"tap name for details", cx, r.y + 74, 0.5, 0.94, 0.83, 0.54, 1)
 	else
 		self:label(_t"No target", cx, r.y + 30, 0.8, 0.9, 0.87, 0.78, 1)
 		local n = #self:enemies()
@@ -350,16 +361,27 @@ function _M:displayStrip()
 		local y = r.y + (r.h - ch) / 2
 		if x + cw > x0 and x < x0 + avail then
 			quad(x, y, cw, ch, 36, 39, 47, 255)
-			self:drawTalentIcon(e.t, x + (cw - 44) / 2, y + 4, 44, e.cd ~= nil)
-			if e.cd then
-				self:label(tostring(math.ceil(e.cd)), x + cw - 12, y + 12, 0.7, 1, 0.75, 0.65, 1)
-			elseif p:preUseTalent(e.t, true, true) then
-				frame(x, y, cw, ch, 210, 170, 74, 255, 2)
+			if e.t then
+				self:drawTalentIcon(e.t, x + (cw - 44) / 2, y + 4, 44, e.cd ~= nil)
+				if e.cd then
+					self:label(tostring(math.ceil(e.cd)), x + cw - 12, y + 12, 0.7, 1, 0.75, 0.65, 1)
+				elseif p:preUseTalent(e.t, true, true) then
+					frame(x, y, cw, ch, 210, 170, 74, 255, 2)
+				end
+			else
+				-- a bar item: its own icon, dimmed while it recharges
+				pcall(e.o.toScreen, e.o, nil, x + (cw - 44) / 2, y + 4, 44, 44)
+				if e.cd then
+					quad(x + (cw - 44) / 2, y + 4, 44, 44, 0, 0, 0, 110)
+					self:label(tostring(math.ceil(e.cd)), x + cw - 12, y + 12, 0.7, 1, 0.75, 0.65, 1)
+				else
+					frame(x, y, cw, ch, 120, 170, 210, 255, 2)
+				end
 			end
-			local n = e.t.name
+			local n = e.t and e.t.name or e.name or "?"
 			if #n > 9 then n = n:sub(1, 8).."." end
 			self:label(n, x + cw / 2, y + ch - 12, 0.5, 0.9, 0.87, 0.78, 1)
-			self.strip_rects[i] = {x=x, y=y, w=cw, h=ch, tid=e.tid}
+			self.strip_rects[i] = {x=x, y=y, w=cw, h=ch, tid=e.tid, item=e.item}
 		end
 	end
 	core.display.glScissor(false)
@@ -373,8 +395,24 @@ end
 
 function _M:stripTap(button, mx, my)
 	if inRect(self.strip_close_rect, mx, my) then self:setTarget(nil) self.drawer_open = false print("[TOUCH] skills drawer closed") return end
+	-- the target's name: open its sheet (the desktop hover tooltip has no finger equivalent)
+	if self.strip_who_rect and inRect(self.strip_who_rect, mx, my) then
+		local t = self:target()
+		if t then
+			print("[TOUCH] inspect", t.name)
+			local ok, err = pcall(function() game:registerDialog(require("mod.dialogs.CharacterSheet").new(t)) end)
+			if not ok then print("[TOUCH] inspect failed", tostring(err)) end
+		end
+		return
+	end
 	for _, c in pairs(self.strip_rects or {}) do
 		if inRect(c, mx, my) then
+			if c.item then
+				-- exactly what the hotkey does: use the item (its own targeting if it aims)
+				print("[TOUCH] bar item", c.item)
+				if game.key == game.normal_key then game.player:hotkeyInventory(c.item) end
+				return
+			end
 			if button == "right" then self:cast(c.tid, nil, true) return end
 			local tgt = self:target() or self:nearestEnemy()
 			-- nobody in view: aim by hand (Cast / Cancel)
@@ -503,9 +541,43 @@ end
 ---------------------------------------------------------------------------
 
 --- Called by the uiset (no dialog open, not targeting)
+-- items that go on the bar by themselves the first time they are in the pack (define_as names)
+_M.AUTO_BAR = {"ROD_OF_RECALL"}
+
+--- Bind the AUTO_BAR items to a free slot once per character; a deliberate removal (the item
+-- sheet's "Remove from bar" sets the same latch) keeps them off afterwards
+function _M:autoBind()
+	local p = game.player
+	if not p or not p.inven or not p.hotkey then return end
+	local now_t = now()
+	if self.autobind_at and now_t - self.autobind_at < 1500 then return end
+	self.autobind_at = now_t
+	local SP = require "mod.dialogs.TouchSlotPicker"
+	p.touch_autobound = p.touch_autobound or {}
+	local pack = p:getInven(p.INVEN_INVEN)
+	if not pack then return end
+	for _, def in ipairs(_M.AUTO_BAR) do
+		if not p.touch_autobound[def] then
+			for _, o in ipairs(pack) do
+				if o.define_as == def and o:canUseObject() then
+					if not SP.itemSlot(p, o) then
+						local slot
+						for i = 1, 12 * (p.nb_hotkey_pages or 3) do if not p.hotkey[i] then slot = i break end end
+						if slot then SP.bindItem(p, o, slot) print("[TOUCH] auto-bound", o.name, "to slot", slot) end
+					end
+					p.touch_autobound[def] = true
+					if def == "ROD_OF_RECALL" then p.touch_autobound_recall = true end
+					break
+				end
+			end
+		end
+	end
+end
+
 function _M:display()
 	if not game.level or not game.player then return end
 	self:layout()
+	self:autoBind()
 	self:flushPendingStep()
 	self:displayTarget()
 	self:displayStepPreview()

@@ -98,6 +98,10 @@ function _M:use(item)
 		else
 			game.player:useTalent(d.talent.id)
 		end
+	elseif act == "inspect" then
+		-- iOS port: no hover tooltip on touch, so the tile menu opens the creature's sheet
+		local a = item.actor or game.level.map(self.tmx, self.tmy, Map.ACTOR)
+		if a then game:registerDialog(require("mod.dialogs.CharacterSheet").new(a)) end
 	elseif act == "debug-inspect" then
 		local DebugConsole = require"engine.DebugConsole"
 		local d = DebugConsole.new()
@@ -144,6 +148,7 @@ function _M:generateList()
 	-- Generic actions
 	if g and g.change_level and self.on_player then list[#list+1] = {name=_t"Change level", action="change_level", color=colors.simple(colors.VIOLET)} end
 	if o and self.on_player then list[#list+1] = {name=_t"Pickup item", action="pickup", color=colors.simple(colors.ANTIQUE_WHITE)} end
+	if a and not self.on_player and require("engine.TouchInput").active() then list[#list+1] = {name=(_t"Inspect %s"):format(a:getName()), action="inspect", color=colors.simple(colors.GOLD), actor=a} end
 	if g and not self.on_player then list[#list+1] = {name=_t"Move to", action="move_to", color=colors.simple(colors.ANTIQUE_WHITE)} end
 	if a and not self.on_player and game.party:canControl(a, false) then list[#list+1] = {name=_t"Control", action="control", color=colors.simple(colors.TEAL), actor=a} end
 	if a and not self.on_player and game.party:canOrder(a, false) then list[#list+1] = {name=_t"Give order", action="order", color=colors.simple(colors.TEAL), actor=a} end

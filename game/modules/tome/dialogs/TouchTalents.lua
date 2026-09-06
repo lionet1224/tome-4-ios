@@ -269,30 +269,11 @@ end
 function _M:openSlots()
 	local e = self.cur
 	if not e or e.t.mode == "passive" then return end
-	self.mode = "slots"
-	self.browse_scroll = self.c_flow.scrollbar.pos
-	local secs = {}
-	local pages = math.min(_M.WHEEL_PAGES, self.actor.nb_hotkey_pages or _M.WHEEL_PAGES)
+	-- the shared bar picker (the item sheet uses the same one)
+	local Picker = require "mod.dialogs.TouchSlotPicker"
 	local mine = self:slotOf(e.talent)
-	for p = 1, pages do
-		local items = {}
-		for j = 1, _M.SLOTS_PER_PAGE do
-			local i = _M.SLOTS_PER_PAGE * (p - 1) + j
-			local name, ent, empty = self:slotLabel(i)
-			local slot = i
-			items[#items+1] = {name=("%d · %s"):format(j, name), sub=empty and _t"free" or _t"replace", sel=mine == i, locked=false,
-				icon=ent and function(x, y, size) self:drawIcon(ent, x, y, size, nil, false) end or nil,
-				on_tap=function() self:assignSlot(slot) end}
-		end
-		secs[#secs+1] = {title=("Wheel page %d"):tformat(p), items=items, cols=4, row_h=66, icon_size=44}
-	end
-	local more = {}
-	if mine then more[#more+1] = {name=_t"Remove from bar", sub=("now in slot %d"):tformat(mine), on_tap=function() self:unassign() end} end
-	more[#more+1] = {name=_t"Back", sub=_t"keep it where it is", on_tap=function() self:closeSlots() end}
-	secs[#secs+1] = {title=tostring(e.cname), items=more, min_w=200, row_h=66}
-	self.c_flow:setSections(secs)
-	self.c_flow.scrollbar.pos = 0
-	self:showDetail()
+	game:registerDialog(Picker.new(self.actor, ("Put %s on the bar"):tformat(tostring(e.cname)), function(slot) self:assignSlot(slot) end, mine,
+		{subject=tostring(e.cname), on_remove=function() self:unassign() end}))
 end
 
 function _M:closeSlots()
@@ -311,7 +292,7 @@ function _M:assignSlot(i)
 	end
 	self.actor.hotkey[i] = {"talent", e.talent}
 	self.actor.changed = true
-	print("[TOUCH] talent -> wheel slot", tostring(e.talent), i)
+	print("[TOUCH] talent -> bar slot", tostring(e.talent), i)
 	if self.mode == "slots" then self:closeSlots() else self:refresh(true) end
 end
 
@@ -323,8 +304,8 @@ function _M:unassign()
 		if hk and hk[1] == "talent" and hk[2] == e.talent then self.actor.hotkey[k] = nil end
 	end
 	self.actor.changed = true
-	print("[TOUCH] talent off wheel", tostring(e.talent))
-	self:closeSlots()
+	print("[TOUCH] talent off bar", tostring(e.talent))
+	if self.mode == "slots" then self:closeSlots() else self:refresh(true) end
 end
 
 ---------------------------------------------------------------------------
