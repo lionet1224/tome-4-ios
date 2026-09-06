@@ -346,3 +346,30 @@ Mock `tools/ios/design/manual-mockup.html`. Built in `mod/class/TouchManual.lua`
 Jordan tried it on the phone and asked to drop it: step detection kept missing (one-hit kills vanish from the entity list; the Auto step demanded AUTO use), and the exit behaved oddly. The zone, coach, subrace, quest, texts and tests were deleted (commit "remove the interactive practice level"). Keep for the record: a practice needs its checks written against *outcomes* (counts of living creatures, positions) never against how the player got there, and the map string must end right before `]]`. The six-page **Controls reference** (`TouchTutorial.lua`: first run, More, Options) stays.
 
 **Loading time (2026-09-05):** timed in the sim: boot→menu 3 s, game module load 1 s, birth+level 1 s, but `Module:instanciate` spent 16 s hashing every Lua file for the online validation (`module MD5 computed in 15938`). `engine/Module.lua` now skips the hash on iOS (`hash_valid=false, "iOS: module hash skipped"`); new game/load went from ~22 s to ~6 s after the tap.
+
+## 25. Portrait mode prototype (2026-09-06)
+
+Jordan: "Let's do it. I bet we'll want a lefty and righty mode. I'm a lefty." Settings `touch.orientation`
+(auto / landscape / portrait, Options > Touch "Orientation") and `touch.hand` (left default, "Thumb side").
+Dialogs are still designed for landscape; only the HUD has a portrait layout.
+
+**Getting iOS to actually rotate took four fixes, all needed:**
+1. `tools/touch/sim-run.sh` rewrote `touch.cfg` on every run — `TOUCH_EXTRA=', orientation="portrait", hand="left"'`
+   is appended into the `touch = {...}` block instead.
+2. SDL reads `SDL_HINT_ORIENTATIONS` at `SDL_Init`, so `main.c` parses `settings/touch.cfg` *before* init
+   and sets the hint ("Portrait" / landscapes / all three). `core.display.setOrientation` +
+   `te4_ios_orientation_changed()` handle live changes on iOS 16+.
+3. SDL derives the initial orientation from the window shape (w>h = landscape) and the saved resolution is
+   wide, so `do_resize` swaps w/h at the top whenever portrait is wanted (`[IOS] window WxH (portrait)`).
+4. The **simulator bundle's Info.plist** (template in `tools/ios/build-engine.sh`) declared landscape only, so
+   iOS refused portrait no matter what SDL asked. The Xcode project plist already had Portrait.
+
+**Portrait HUD** (`Minimalist:applyPortraitPlaces`, `TouchManual:layout`): character panel top-left under the
+safe top, minimap at 0.55 top-right, buff column under it, cooldown pips under the minimap, log across the
+width above the drawer, drawer full width above the routine strip, dock (Act, AUTO) under the chosen thumb,
+Skills / More / Level up stacked at the other side. Right hand mirrors. Screen is 645x1398 logical.
+
+**Test traps:** `tests/portrait.lua` must dismiss the birth-time level-up and intro dialogs with the EXIT key —
+`unregisterDialog` skips their exit callbacks, `creating_player` stays true and `Minimalist:display` draws no
+HUD at all (looked like a rendering bug for an hour). A player near a level edge is drawn off-centre because
+the view clamps at the edge — not a portrait bug.
