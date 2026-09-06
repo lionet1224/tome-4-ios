@@ -38,7 +38,13 @@ function _M:init(title, store_inven, actor_inven, store_filter, actor_filter, ac
 end
 
 function _M:getStoreTitle()
+	-- portrait: the purse line does not fit the title bar; it is drawn in the sheet instead
+	if require("engine.TouchInput").portrait() then return self.base_title end
 	return self.base_title..(" (pays up to %0.2f gold, your gold: %0.2f)"):tformat(self.store_actor.store.purse, self.actor_actor.money)
+end
+
+function _M:purseLine()
+	return ("Pays up to %0.2f gold  ·  you have %0.2f gold"):tformat(self.store_actor.store.purse, self.actor_actor.money)
 end
 
 function _M:build()
@@ -50,7 +56,7 @@ function _M:build()
 		self.sheet_h = 400
 		self.sheet_y = self.ih - self.sheet_h
 		self.list_w = self.iw
-		local list_h = self.sheet_y - self.c_tabs.h - 16
+		local list_h = self.sheet_y - self.c_tabs.h - 16 - 24 -- 24: the purse line under the tabs
 		self.c_list = TouchItemList.new{width=self.iw, height=list_h, actor=self.actor_actor, scrollbar=true, items={},
 			on_select=function(e) self:selectEntry(e) end, on_use=function(e) self:primary() end}
 		local dh = self.sheet_h - bh - 16
@@ -58,7 +64,7 @@ function _M:build()
 		self.b_primary = Button.new{text=_t"Select an item", width=300, font=self.bigfont, fct=function() self:primary() end}
 		self.uis_def = {
 			{left=0, top=0, ui=self.c_tabs},
-			{left=0, top=self.c_tabs.h + 8, ui=self.c_list},
+			{left=0, top=self.c_tabs.h + 32, ui=self.c_list},
 			{left=8, top=self.sheet_y + 8, ui=self.c_desc},
 			{right=0, bottom=0, ui=self.b_primary},
 		}
@@ -144,6 +150,9 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	if not self.portrait then return end
 	local K = require "engine.ui.TouchKit"
 	K.quad(x + self.ix, y + self.iy + self.sheet_y, self.iw, self.sheet_h, K.PANE)
+	-- the purse line above the tabs (the title bar is too narrow for it)
+	local d = K.text(self:purseLine(), 18, 240, 212, 138, false, self.iw - 16)
+	if d then K.draw(d, x + self.ix + 8, y + self.iy + self.c_tabs.h + 4) end
 end
 
 -- the store calls these after a transaction

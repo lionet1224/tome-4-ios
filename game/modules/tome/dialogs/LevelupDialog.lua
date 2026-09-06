@@ -897,6 +897,10 @@ function _M:pointLabel(kind, n)
 end
 
 function _M:createDisplayTouch()
+	-- iOS port: a tap gives the point buttons mouse focus and their hover tooltip
+	-- would stay on screen with nothing to move it away; show the explanation in
+	-- the description pane instead (the small-screen mode the dialog already has)
+	self.no_tooltip = true
 	local TouchTalentList = require "mod.dialogs.elements.TouchTalentList"
 	local font = core.display.newFont(FontPackage:getFont("default"), 16)
 	local bottom_h = (self.b_prodigies and self.b_prodigies.h or 0) + 8
