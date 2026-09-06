@@ -80,6 +80,7 @@ end
 local function park() _M.park_cursor = 2 end
 
 function _M.escape()
+	_M.hideKeyboard("escape")
 	print("[TOUCH] two-finger tap -> EXIT")
 	local k = engine.KeyBind and engine.KeyBind.current or (engine.Key and engine.Key.current)
 	if k and k.triggerVirtual then k:triggerVirtual("EXIT") end
@@ -96,6 +97,12 @@ end
 
 function _M.fingerDown(id, x, y)
 	_M.last_down = now()
+	local o = _M.osk
+	if o and o.box then
+		local b = o.box
+		local inside = b.last_screen_x and x >= b.last_screen_x and x < b.last_screen_x + (b.w or 0) and y >= b.last_screen_y and y < b.last_screen_y + (b.h or 0)
+		if not inside then _M.hideKeyboard("tap outside the box") end
+	end
 	-- a touch that starts with nothing down is a fresh gesture: drop stale state
 	if _M.nb <= 0 or (not _M.t and not _M.multi) then
 		if _M.nb > 0 then print("[TOUCH] stale gesture state reset", _M.nb) end
@@ -233,14 +240,18 @@ end
 --- Called every frame by the engine
 -- the on-screen keyboard belongs to one dialog's text box: hide it as soon as that
 -- dialog is no longer on top (a popup over it, or it closed) so the popup is reachable
+function _M.hideKeyboard(why)
+	if not _M.osk then return end
+	print("[IOS-OSK] hide:", why or "")
+	_M.osk = nil
+	if core.key and core.key.unicodeInput then core.key.unicodeInput(false) end
+end
+
 function _M.checkKeyboard()
 	local o = _M.osk
 	if not o then return end
 	local top = game and game.dialogs and game.dialogs[#game.dialogs]
-	if top ~= o.dialog then
-		_M.osk = nil
-		if core.key and core.key.unicodeInput then core.key.unicodeInput(false) end
-	end
+	if top ~= o.dialog or not top then _M.hideKeyboard("dialog changed") end
 end
 
 function _M.tick()
