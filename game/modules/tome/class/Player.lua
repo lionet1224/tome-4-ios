@@ -1498,6 +1498,14 @@ function _M:actResolveTarget(step, t)
 	if rule == "manual" then return "manual" end
 	local enemies = self:actEnemies()
 	if #enemies == 0 then return nil end
+	-- iOS port: a creature the player tapped (the target ring) overrides every
+	-- enemy rule while it is alive and in view (Jordan: the routine kept hitting a
+	-- summoned shadow with "the withering one" selected)
+	local m = self.touch_target
+	if m and m ~= self and not m.dead and m.x and self:canSee(m) and game.level.map(m.x, m.y, Map.ACTOR) == m and self:reactionToward(m) < 0 then
+		local range = t and self:getTalentRange(t) or nil
+		if rule ~= "furthest" or not range or core.fov.distance(self.x, self.y, m.x, m.y) <= range then return m end
+	end
 	local range = t and self:getTalentRange(t) or nil
 	if rule == "marked" then
 		local m = self.act_marked
