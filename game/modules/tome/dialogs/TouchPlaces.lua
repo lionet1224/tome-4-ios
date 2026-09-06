@@ -46,6 +46,9 @@ function _M:scan()
 	local map = game.level.map
 	local p = game.player
 	local wild = game.zone and game.zone.wilderness
+	-- in a town the residents are fixed and known: list every talkable person, seen or not
+	local zn = game.zone and tostring(game.zone.short_name or "") or ""
+	local is_town = zn:find("^town") ~= nil or ({["last-hope"]=1, ["zigur"]=1, ["angolwen"]=1, ["irkkk"]=1, ["shatur"]=1, ["elvala"]=1, ["gates-of-morning"]=1, ["sunwall"]=1, ["iron-council"]=1, ["kruk-pride"]=1})[zn] ~= nil
 	local towns, dungeons, exits, shops, people = {}, {}, {}, {}, {}
 	for x = 0, map.w - 1 do for y = 0, map.h - 1 do
 		if map.remembers(x, y) or map.seens(x, y) then
@@ -62,7 +65,7 @@ function _M:scan()
 			if t and t.is_store then
 				shops[#shops+1] = {x=x, y=y, ent=t, name=tostring(t.name or _t"shop"), d=dist(x, y)}
 			end
-			if map.seens(x, y) then
+			if map.seens(x, y) or is_town then
 				local a = map(x, y, Map.ACTOR)
 				if a and a ~= p and not (game.party and game.party:hasMember(a)) and p:reactionToward(a) >= 0 and (a.can_talk or a.store or a.quest_giver) then
 					people[#people+1] = {x=x, y=y, ent=a, name=tostring(a.name or _t"someone"), d=dist(x, y), actor=true}
