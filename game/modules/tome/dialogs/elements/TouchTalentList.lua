@@ -25,7 +25,8 @@ function _M:init(t)
 	self.tooltip = assert(t.tooltip, "no tooltip")
 	self.on_use = assert(t.on_use, "no on_use")
 	self.on_expand = t.on_expand
-	self.can_add = t.can_add -- function(item) -> are there points to spend on it
+	self.can_add = t.can_add
+	self.can_remove = t.can_remove -- function(item) -> true when the level-up rules allow taking a point back -- function(item) -> are there points to spend on it
 	self.no_cross = t.no_cross
 	self.icon_size = 48
 	self.row_h = 68
@@ -211,7 +212,8 @@ function _M:drawRow(r, x, y)
 	self:drawText(item.text_name, tx, y + 8, true)
 	self:drawText(item.text_status, tx, y + 10 + item.text_name.h, true)
 	local can_plus = not item.touch_shadow and (not self.can_add or self.can_add(item))
-	self:drawButtons(x, y + (self.row_h - self.btn_h) / 2 - 6, item.touch_changed, can_plus)
+	local can_minus = item.touch_changed or (self.can_remove and self.can_remove(item)) or false
+	self:drawButtons(x, y + (self.row_h - self.btn_h) / 2 - 6, can_minus, can_plus)
 end
 
 function _M:display(x, y, nb_keyframes, screen_x, screen_y)

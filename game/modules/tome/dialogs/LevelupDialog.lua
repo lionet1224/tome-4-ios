@@ -900,7 +900,13 @@ function _M:createDisplayTouch()
 		return self.actor.unused_talents > 0
 	end
 	local mk = function(tree, tip, nocross)
-		return TouchTalentList.new{font=font, tree=tree, width=pane_w, height=pane_h, tooltip=tip, no_cross=nocross, can_add=can_add,
+		-- gold "-" also for talents learnt in the last few levels (the stock rule), not only this session's
+		local can_remove = function(item)
+			if not item.talent then return false end
+			local t = self.actor:getTalentFromId(item.talent)
+			return t and self.actor:getTalentLevelRaw(t) > 0 and self:isUnlearnable(t, true) and true or false
+		end
+		return TouchTalentList.new{font=font, tree=tree, width=pane_w, height=pane_h, tooltip=tip, no_cross=nocross, can_add=can_add, can_remove=can_remove,
 			on_use=function(item, inc) self:onUseTalent(item, inc) end,
 			on_expand=function(item) self.actor.__hidden_talent_types[item.type] = not item.shown end,
 			scrollbar=true}
