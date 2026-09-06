@@ -2097,7 +2097,7 @@ function _M:displayTouchPips()
 			if cd and cd > 0 then cooling[#cooling+1] = {i=i, t=t, cd=cd} end
 		end
 	end
-	local y0 = 210
+	local y0 = 268 -- under the status-effect icons, which sit in the row above
 	local x0 = game.w - sa.r - 24 - #cooling * (size + gap)
 	for k, c in ipairs(cooling) do
 		local x = x0 + (k - 1) * (size + gap)

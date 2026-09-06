@@ -164,6 +164,8 @@ function _M:layout()
 	local dock_bottom = dock_y + bw
 	r.skills = {x=sk_x, y=dock_bottom - fs, w=fs, h=fs}
 	r.more = {x=sk_x, y=r.skills.y - 8 - 44, w=fs, h=44}
+	-- a glowing Level up pill above More whenever points are unspent
+	r.levelup = {x=sk_x, y=r.more.y - 8 - 44, w=fs, h=44}
 	r.strip = {x=sa.l + 120, y=h - sa.b - 24 - _M.STRIP_H, w=sk_x - 12 - (sa.l + 120), h=_M.STRIP_H}
 	return r
 end
@@ -172,6 +174,7 @@ function _M:hudHit(x, y)
 	local r = self.rects
 	if inRect(r.strip, x, y) and self.drawer_open then return true end
 	if inRect(r.more, x, y) or inRect(r.skills, x, y) or inRect(r.act, x, y) or inRect(r.auto, x, y) then return true end
+	if self:levelUpPending() and inRect(r.levelup, x, y) then return true end
 	-- the routine strip above Act
 	if r.act and x >= r.act.x - 140 and y >= r.act.y - 76 and y < r.act.y then return true end
 	return false
@@ -258,6 +261,26 @@ function _M:displayMore()
 	if down then frame(r.x, r.y, r.w, r.h, 210, 170, 74, 255, 2) else frame(r.x, r.y, r.w, r.h, 58, 61, 70, 255, 2) end
 	self:label("...", r.x + r.w / 2, r.y + r.h / 2 - 4, 1.4, 0.9, 0.87, 0.78, 1)
 	self:zone("touch_more", r, function(button) if button == "left" then self:openMore() end end)
+	self:displayLevelUp()
+end
+
+function _M:levelUpPending()
+	local p = game.player
+	if not p then return false end
+	return (p.unused_stats or 0) > 0 or (p.unused_talents or 0) > 0 or (p.unused_generics or 0) > 0 or (p.unused_talents_types or 0) > 0 or (p.unused_prodigies or 0) > 0
+end
+
+-- the desktop HUD glows a level-up icon by the portrait; here a pulsing gold pill above More
+function _M:displayLevelUp()
+	local r = self.rects.levelup
+	if not r then return end
+	if not self:levelUpPending() then self:dropZone("touch_levelup") return end
+	local pulse = 0.6 + 0.4 * math.sin(core.game.getTime() / 220)
+	local down = K.pressed(r.x, r.y, r.w, r.h)
+	quad(r.x, r.y, r.w, r.h, 60, 46, 16, 235)
+	frame(r.x, r.y, r.w, r.h, 210, 170, 74, math.floor(255 * (down and 1 or pulse)), 2)
+	self:label(_t"LEVEL UP", r.x + r.w / 2, r.y + r.h / 2, 0.62, 1, 0.9, 0.55, 1)
+	self:zone("touch_levelup", r, function(button) if button == "left" then game.key:triggerVirtual("LEVELUP") end end)
 end
 
 ---------------------------------------------------------------------------

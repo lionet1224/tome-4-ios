@@ -270,8 +270,6 @@ function _M:refresh()
 	self.b_back.text = self.page == 1 and _t"Skip" or _t"Back"
 	self.b_back.fct = function() if self.page == 1 then self:finish(true) else self:go(-1) end end
 	self.b_back:generate()
-	-- the Practice button lives on the last page only (hidden widgets still take taps: park it)
-	end
 end
 
 -- remember that the guide was seen (kept with the other touch settings)
