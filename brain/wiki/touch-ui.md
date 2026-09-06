@@ -460,3 +460,16 @@ Tests: `portrait.lua` (band numbers), `stripscroll.lua`, `band.lua`.
 - **AUTO ending at the entrance**: `PlayerExplore` keeps a previously chosen exit target sticky until reached;
   an up-stair chosen while the way down was unknown stayed the target after the down stairs was seen. The
   stickiness is dropped for a previous-level exit once unexplored ground or a way down/next zone is known.
+
+## 31. Two-finger pan, More closes itself, tap tooltips (2026-09-06 late)
+
+- **Two-finger drag pans the map** (one-finger drag is the step gesture). `TouchInput` keeps finger positions
+  (`fingers[id] = {x,y}`), `twoFingerPan()` scrolls by the midpoint's movement in tiles (12 px dead zone,
+  sub-tile remainder carried); pinch zoom still works in the same gesture; a gesture that panned is not the
+  two-finger tap (Escape). Test `twopan.lua`. Game.lua's one-finger pan code is now unreachable but kept.
+- **More stayed open under what it opened**: `Dialog:listPopup` runs an item's own `fct` and returns without
+  closing; `TouchManual:openMore` wraps each item to close More first (a world-map trip from Places stopped
+  with "dialog is displayed" once Places closed). Test `placesmore.lua`.
+- **Tooltip after a tap**: `click()` emits a motion before the button events, which made the map show the
+  tapped tile's tooltip with nothing to move the pointer away (tapping yourself to rest left your own sheet
+  up). `click()` now calls `clearTooltip("tap")`. Test `taptooltip.lua`.

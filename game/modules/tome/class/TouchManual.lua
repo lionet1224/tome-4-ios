@@ -343,7 +343,15 @@ function _M:openMore()
 	list[#list+1] = {name=_t"Options", fct=function() game:registerDialog((TouchInput.active() and require("mod.dialogs.TouchOptions") or require("mod.dialogs.GameOptions")).new()) end}
 	list[#list+1] = {name=_t"Touch controls guide", fct=function() game:registerDialog(require("mod.dialogs.TouchTutorial").new()) end}
 	key(_t"Game menu", "EXIT")
-	Dialog:listPopup(_t"More", "", list, 360, 60 + #list * 46, function(item) if item and item.fct then item.fct() end end)
+	-- listPopup runs an item's own fct and returns without closing itself: close More
+	-- first, or it stays under whatever the item opens (a run then stops with
+	-- "dialog is displayed" once that closes)
+	local more
+	for _, it in ipairs(list) do
+		local f = it.fct
+		if f then it.fct = function() if more then game:unregisterDialog(more) more = nil end f() end end
+	end
+	more = Dialog:listPopup(_t"More", "", list, 360, 60 + #list * 46, function(item) if item and item.fct then item.fct() end end)
 end
 
 function _M:displayMore()

@@ -78,6 +78,9 @@ local function click(button, x, y)
 		m:receiveMouse(button, x, y, false)
 		m:receiveMouse(button, x, y, true)
 	end)
+	-- the motion above makes the map show the tile's tooltip, and nothing moves the
+	-- pointer away afterwards (tapping yourself to rest left your own sheet up)
+	if _M.clearTooltip then _M.clearTooltip("tap") end
 end
 local function park() _M.park_cursor = 2 end
 
@@ -120,7 +123,7 @@ function _M.fingerDown(id, x, y)
 		_M.reset()
 	end
 	if not _M.fingers[id] then _M.nb = _M.nb + 1 end
-	_M.fingers[id] = true
+	_M.fingers[id] = {x=x, y=y}
 	if _M.nb >= 2 then
 		local t = _M.t
 		if t then
@@ -140,7 +143,34 @@ function _M.fingerDown(id, x, y)
 	if _M.wheel then _M.t.wheel_zone = _M.wheel:zoneOf(x, y) end
 end
 
+--- Two fingers: pan the map by the movement of their midpoint (pinch keeps
+-- zooming; a gesture can do both, like a map app). The pan is applied here in
+-- tiles, with the sub-tile remainder carried over.
+local function twoFingerPan()
+	local m = _M.multi
+	if not m or _M.nb < 2 then return end
+	local n, cx, cy = 0, 0, 0
+	for _, f in pairs(_M.fingers) do if type(f) == "table" then n = n + 1 cx, cy = cx + f.x, cy + f.y end end
+	if n < 2 then return end
+	cx, cy = cx / n, cy / n
+	if not m.cx then m.cx, m.cy, m.pdx, m.pdy = cx, cy, 0, 0 return end
+	m.pdx, m.pdy = m.pdx + (cx - m.cx), m.pdy + (cy - m.cy)
+	m.cx, m.cy = cx, cy
+	if not m.panned and (math.abs(m.pdx) > 12 or math.abs(m.pdy) > 12) then m.panned = true print("[TOUCH] two-finger pan") end
+	if not m.panned then return end
+	local map = type(game) == "table" and game.level and game.level.map
+	if not map or not map.setScroll then return end
+	local tw, th = map.tile_w * (map.zoom or 1), map.tile_h * (map.zoom or 1)
+	local sx, sy = math.floor(m.pdx / tw), math.floor(m.pdy / th)
+	if sx ~= 0 or sy ~= 0 then
+		map:setScroll(map.mx - sx, map.my - sy)
+		m.pdx, m.pdy = m.pdx - sx * tw, m.pdy - sy * th
+	end
+end
+
 function _M.fingerMove(id, x, y)
+	if type(_M.fingers[id]) == "table" then _M.fingers[id].x, _M.fingers[id].y = x, y end
+	if _M.nb >= 2 then twoFingerPan() end
 	local t = _M.t
 	if not t or _M.nb >= 2 or t.multi then return end
 	local px, py = t.x, t.y
@@ -196,7 +226,7 @@ function _M.fingerUp(id, x, y)
 	_M.nb = 0
 	for _ in pairs(_M.fingers) do _M.nb = _M.nb + 1 end
 	local m = _M.multi
-	if m and not m.fired and not m.pinched and now() - m.t0 < 600 then
+	if m and not m.fired and not m.pinched and not m.panned and now() - m.t0 < 600 then
 		m.fired = true
 		_M.escape()
 	end
