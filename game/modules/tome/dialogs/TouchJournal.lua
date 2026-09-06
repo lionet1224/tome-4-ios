@@ -32,13 +32,32 @@ function _M:init(start_tab, select_id)
 	self.tiles = Tiles.new(16, 16, nil, nil, true)
 	self.icon_cache = {}
 
+	self.touch_args = {start_tab, select_id}
 	Dialog.init(self, _t"Journal", game.w * 0.96, game.h * 0.96)
 
 	self.c_tabs = Tabs.new{width=self.iw, tabs=TABS, on_change=function(kind) self:switchTab(kind) end}
 	local top = self.c_tabs.h + 10
+	self.gap = 16
+	-- portrait (phone held upright): tabs, the list full width, the entry's
+	-- header and text in a bottom sheet
+	self.portrait = require("engine.TouchInput").portrait()
+	if self.portrait then
+		self.list_w, self.detail_w = self.iw, self.iw
+		self.hero_h = 104
+		self.sheet_h = 400
+		self.sheet_y = self.ih - self.sheet_h
+		local list_h = self.sheet_y - 8 - top
+		self.c_flow = K.Flow.new{width=self.list_w, height=list_h}
+		local desc_h = self.sheet_h - self.hero_h - 8
+		self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.iw - 16, height=desc_h, dest_area={h=desc_h}}
+		self:loadUI{
+			{left=0, top=0, ui=self.c_tabs},
+			{left=0, top=top, ui=self.c_flow},
+			{left=8, top=self.sheet_y + self.hero_h, ui=self.c_desc},
+		}
+	else
 	local list_h = self.ih - top
 	self.list_w = math.floor(self.iw * 0.55)
-	self.gap = 16
 	self.detail_w = self.iw - self.list_w - self.gap
 	self.hero_h = 132
 	self.c_flow = K.Flow.new{width=self.list_w, height=list_h}
@@ -50,6 +69,7 @@ function _M:init(start_tab, select_id)
 		{left=0, top=top, ui=self.c_flow},
 		{left=self.list_w + self.gap + 8, top=top + self.hero_h, ui=self.c_desc},
 	}
+	end
 	self:setupUI()
 	self:setFocus(self.c_flow)
 	self.built = true
@@ -276,9 +296,10 @@ function _M:showDetail()
 				local ok, img = pcall(Image.new, {file="lore/" .. e.image, auto_width=true, auto_height=true})
 				if ok and img and img.w and img.w > 0 then
 					local r = img.w / img.h
-					img.w = math.min(self.detail_w - 32, img.w)
+					local max_h = self.portrait and 120 or 200
+					img.w = math.min(self.portrait and 200 or (self.detail_w - 32), img.w)
 					img.h = img.w / r
-					if img.h > 200 then img.h = 200 img.w = img.h * r end
+					if img.h > max_h then img.h = max_h img.w = img.h * r end
 					e.image = img
 				else e.image = nil end
 			end
@@ -299,9 +320,18 @@ end
 function _M:innerDisplayBack(x, y, nb_keyframes)
 	x, y = x + self.ix, y + self.iy
 	local top = self.c_tabs.h + 10
-	local dx, dy = x + self.list_w + self.gap, y + top
-	K.quad(x, dy, self.list_w, self.ih - top, {18, 19, 23})
-	K.quad(dx, dy, self.detail_w, self.ih - top, K.PANE)
+	local dx, dy
+	if self.portrait then
+		-- list over a bottom sheet
+		dx, dy = x, y + self.sheet_y
+		K.quad(x, y + top, self.iw, self.sheet_y - 8 - top, {18, 19, 23})
+		K.quad(dx, dy, self.iw, self.sheet_h, K.PANE)
+		K.quad(dx, dy, self.iw, 2, {60, 63, 72})
+	else
+		dx, dy = x + self.list_w + self.gap, y + top
+		K.quad(x, dy, self.list_w, self.ih - top, {18, 19, 23})
+		K.quad(dx, dy, self.detail_w, self.ih - top, K.PANE)
+	end
 	local it = self.cur
 	local tx = dx + 12
 	local title, meta, meta_color
@@ -310,9 +340,10 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 		if it.kind == "achievement" then
 			local tex = self:achievementIcon(e.a)
 			if tex then
-				K.quad(dx + 12, dy + 12, 104, 104, {14, 15, 18})
-				tex[1]:toScreenFull(dx + 16, dy + 16, 96, 96, tex[2], tex[3])
-				tx = dx + 12 + 104 + 16
+				local isz = self.portrait and 72 or 96
+				K.quad(dx + 12, dy + 12, isz + 8, isz + 8, {14, 15, 18})
+				tex[1]:toScreenFull(dx + 16, dy + 16, isz, isz, tex[2], tex[3])
+				tx = dx + 12 + isz + 8 + 16
 			end
 			title = it.name
 			meta = e.earned and (_t"Earned " .. tostring(e.when) .. (e.who and e.who ~= "--" and (" · " .. tostring(e.who)) or "")) or (_t"Locked · " .. tostring(e.category))
@@ -345,4 +376,35 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 		local ix, iy = dx + self.detail_w - iw - 12, y + self.ih - ih - 8
 		pcall(self.image.display, self.image, ix, iy)
 	end
+end
+
+-- the same journal entry across a refresh (item tables are rebuilt each time)
+function _M:sameEntry(a, b)
+	if a == b then return true end
+	if a.quest and b.quest and a.quest == b.quest then return true end
+	if a.lore and b.lore and a.lore == b.lore then return true end
+	if a.id and b.id and a.id == b.id then return true end
+	-- the entry tables are rebuilt on every refresh: the name is the stable key
+	return a.name ~= nil and a.name == b.name
+end
+
+-- a rotation: the game hook swaps the dialog for a fresh one laid out for the
+-- new orientation, keeping the tab, filter, selection and scroll position
+function _M:touch_reopen()
+	local d = _M.new(self.touch_args[1], nil)
+	d.filters = {quests=self.filters.quests, achievements=self.filters.achievements}
+	if d.c_tabs.select then d.c_tabs:select(self.kind) end
+	d:switchTab(self.kind)
+	local old = self.cur
+	if old and old.data then
+		local found
+		for _, sec in ipairs(d.c_flow.sections) do
+			for _, it in ipairs(sec.items) do
+				if not found and it.data and it.kind == old.kind and self:sameEntry(it.data, old.data) then found = it end
+			end
+		end
+		if found then d:pick(found) end
+	end
+	d.c_flow.scrollbar.pos = util.minBound(self.c_flow.scrollbar.pos or 0, 0, d.c_flow.scrollbar.max)
+	return d
 end

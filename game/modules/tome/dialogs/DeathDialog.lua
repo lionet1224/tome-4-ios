@@ -398,6 +398,7 @@ local K = require "engine.ui.TouchKit"
 
 function _M:initTouch(actor, opts)
 	self.touch = true
+	self.touch_args = {actor, opts}
 	self.preview = opts and opts.preview or false
 	self.no_close_box = true
 	Dialog.init(self, _t"You have #LIGHT_RED#died#LAST#!", math.floor(game.w * 0.96), math.floor(game.h * 0.96))
@@ -415,8 +416,15 @@ function _M:initTouch(actor, opts)
 	self.tiles = Tiles.new(64, 64, nil, nil, true, nil)
 
 	local gap = 12
-	self.left_w = math.floor(self.iw * 0.42)
 	self.hero_h = 200
+	-- portrait (phone held upright): the character card on top, the death text
+	-- under it, the choices full width below; landscape keeps the two columns
+	self.portrait = require("engine.TouchInput").portrait()
+	if self.portrait then
+		self.left_w = self.iw
+	else
+		self.left_w = math.floor(self.iw * 0.42)
+	end
 	local right_w = self.iw - self.left_w - gap
 
 	-- death text + achievements, scrolling under the character card
@@ -427,11 +435,17 @@ You can dump your character data to a file to remember her/him forever, or you c
 		desc = desc .. ("\n#LIGHT_GREEN#During your game you#WHITE#:\n* %s"):tformat(table.concat(game.party.on_death_show_achieved, "\n* "))
 	end
 	local desc_h = self.ih - self.hero_h - 8
+	if self.portrait then desc_h = 230 end
 	self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.left_w - 8, height=desc_h, dest_area={h=desc_h}}
 	self.c_desc:switchItem("death", desc)
 
 	-- the choices
-	self.c_flow = K.Flow.new{width=right_w, height=self.ih}
+	if self.portrait then
+		self.flow_y = self.hero_h + desc_h + gap
+		self.c_flow = K.Flow.new{width=self.iw, height=self.ih - self.flow_y}
+	else
+		self.c_flow = K.Flow.new{width=right_w, height=self.ih}
+	end
 	local items = {}
 	for _, item in ipairs(self.list) do
 		items[#items+1] = {name=tostring(item.name):gsub("#[^#]*#", ""), sub=item.sub or self:touchSub(item), data=item,
@@ -439,12 +453,28 @@ You can dump your character data to a file to remember her/him forever, or you c
 	end
 	self.c_flow:setSections{{title=_t"What now?", items=items, cols=1, row_h=64}}
 
-	self:loadUI{
-		{left=4, top=self.hero_h, ui=self.c_desc},
-		{left=self.left_w + gap, top=0, ui=self.c_flow},
-	}
+	if self.portrait then
+		self:loadUI{
+			{left=4, top=self.hero_h, ui=self.c_desc},
+			{left=0, top=self.flow_y, ui=self.c_flow},
+		}
+	else
+		self:loadUI{
+			{left=4, top=self.hero_h, ui=self.c_desc},
+			{left=self.left_w + gap, top=0, ui=self.c_flow},
+		}
+	end
 	self:setFocus(self.c_flow)
 	self:setupUI(false, true)
+end
+
+--- Rotation: a fresh dialog for the new orientation. Only the side-effect free
+-- preview can be rebuilt; a real death screen has already saved, paused and
+-- fired its achievements, so it keeps its layout.
+function _M:touch_reopen()
+	if not self.touch or not self.preview then return nil end
+	local a = self.touch_args
+	return _M.new(a[1], a[2])
 end
 
 -- one line under each choice saying what it costs / does
@@ -540,5 +570,9 @@ function _M:touchDisplayBack(x, y, nb_keyframes)
 		draw(T(f[2], 15, 234, 227, 209, true, cw - 16), cx + 8, cy + 17)
 	end
 	-- the choices pane
-	quad(x + self.left_w + 12, y, self.iw - self.left_w - 12, self.ih, K.PANE)
+	if self.portrait then
+		quad(x, y + self.flow_y, self.iw, self.ih - self.flow_y, K.PANE)
+	else
+		quad(x + self.left_w + 12, y, self.iw - self.left_w - 12, self.ih, K.PANE)
+	end
 end

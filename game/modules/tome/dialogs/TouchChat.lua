@@ -172,6 +172,28 @@ function _M:init(chat, id, width)
 	self:generateList()
 
 	local gap = 12
+	self.portrait = TI.portrait()
+	if self.portrait then
+		-- portrait: a header row (speaker + name), the speech full width, the answers under it
+		self.header_h = 112
+		local rw = self.iw
+		local body = avail - self.header_h - gap
+		self.c_answers = Answers.new{width=rw, height=60, on_use=function(item) self:use(item) end}
+		self.c_answers:setList(self.list)
+		local ans_max = math.floor(body * 0.55)
+		local ans_h = math.min(self.c_answers.content_h, ans_max)
+		local probe = Textzone.new{font=chat.dialog_text_font, width=rw, height=1, auto_height=true, text=self.text .. "\n"}
+		local desc_h = math.max(math.min(probe.h + 8, body - ans_h - gap), 60)
+		self.c_desc = TextzoneList.new{font=chat.dialog_text_font, width=rw, height=desc_h, scrollbar=true, dest_area={h=desc_h}}
+		self.c_desc:switchItem(self.text, self.text)
+		self.c_answers:setHeight(math.min(self.c_answers.content_h, body - desc_h - gap))
+		self:loadUI{
+			{left=0, top=self.header_h + gap, ui=self.c_desc},
+			{left=0, top=self.header_h + gap + desc_h + gap, ui=self.c_answers},
+		}
+		self:setFocus(self.c_answers)
+		self:setupUI(false, true)
+	else
 	local rw = self.iw - self.portrait_w - gap
 
 	-- answers first: they must always be reachable; the speech takes the rest and scrolls
@@ -194,6 +216,7 @@ function _M:init(chat, id, width)
 	}
 	self:setFocus(self.c_answers)
 	self:setupUI(false, true)
+	end
 
 	self.key:addCommands{
 		__TEXTINPUT = function(c)
@@ -212,8 +235,38 @@ function _M:regen()
 	self.next_dialog = d
 end
 
+-- rotation: the same node laid out for the new orientation
+function _M:touch_reopen()
+	local d = _M.new(self.chat, self.cur_id, self.force_width)
+	d.__showup = false
+	return d
+end
+
 function _M:innerDisplayBack(x, y, nb_keyframes)
 	x, y = x + self.ix, y + self.iy
+	if self.portrait then
+		-- header: the speaker at the left, the name beside it, you small at the right
+		local hh = self.header_h
+		quad(x, y, self.iw, hh, PANE)
+		local sz = 96
+		local px, py = x + 12, y + 8
+		quad(px - 4, py - 4, sz + 8, sz + 8, {14, 15, 18})
+		local who = self.npc.chat_display_entity or self.npc
+		pcall(who.toScreen, who, self.tiles, px, py, sz, sz)
+		local name = self.npc.getName and self.npc:getName() or self.npc.name
+		local tx = px + sz + 16
+		local maxw = self.iw - (tx - x) - 80
+		for li, line in ipairs(wrap((tostring(name):gsub("#[^#]*#", "")), font(18), maxw, 2)) do
+			draw(text(line, 18, 240, 212, 138, true, maxw), tx, y + 24 + (li - 1) * 24)
+		end
+		local you = self.player.chat_display_entity or self.player
+		local ys = 48
+		local yx, yy = x + self.iw - ys - 12, y + 12
+		pcall(you.toScreen, you, self.tiles, yx, yy, ys, ys)
+		local d = text(_t"You", 12, 142, 136, 120, true)
+		if d then draw(d, yx + (ys - d.w) / 2, yy + ys + 4) end
+		return
+	end
 	local pw = self.portrait_w
 	quad(x, y, pw, self.ih, PANE)
 	-- the speaker

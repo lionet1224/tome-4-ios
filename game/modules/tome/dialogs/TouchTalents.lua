@@ -29,17 +29,46 @@ local AUTO_MODES = {
 
 function _M:init(actor)
 	self.actor = actor
+	self.touch_args = {actor}
 	actor.hotkey = actor.hotkey or {}
 	self.mode = "browse"
 	self.bigfont = font(22)
 	Dialog.init(self, ("Talents: %s"):tformat(actor:getName()), game.w * 0.98, game.h * 0.98)
 
 	local gap = 12
+	local bh = 56
+	-- portrait (phone held upright): the cards take the full width, the
+	-- description and buttons live in a bottom sheet
+	self.portrait = require("engine.TouchInput").portrait()
+	if self.portrait then
+		self.detail_w, self.content_w = self.iw, self.iw
+		self.head_h = 96                        -- icon, name, status
+		local desc_h = 190
+		self.sheet_h = self.head_h + desc_h + 2 * (bh + 8)
+		self.sheet_y = self.ih - self.sheet_h
+		self.desc_y = self.sheet_y + self.head_h
+		self.c_flow = Flow.new{width=self.iw, height=self.sheet_y - 8}
+		self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.iw - 16, height=desc_h, dest_area={h=desc_h}}
+		-- Button adds 16 px of frame to the requested width
+		local half = math.floor((self.iw - 8) / 2) - 16
+		self.b_use = Button.new{text=_t"Use", width=self.iw - 16, font=self.bigfont, fct=function() self:useCurrent() end}
+		self.b_wheel = Button.new{text=_t"Put on bar", width=half, font=self.bigfont, fct=function() self:openSlots() end}
+		self.b_auto = Button.new{text=_t"Auto-use", width=half, font=self.bigfont, fct=function() self:autoMenu() end}
+		self.b_back = Button.new{text=_t"Back", width=self.iw - 16, font=self.bigfont, fct=function() self:closeSlots() end}
+		self:loadUI{
+			{left=0, top=0, ui=self.c_flow},
+			{left=8, top=self.desc_y, ui=self.c_desc},
+			{left=0, bottom=bh + 8, ui=self.b_use},
+			{left=0, bottom=0, ui=self.b_wheel},
+			{left=half + 16 + 8, bottom=0, ui=self.b_auto},
+			{left=0, bottom=0, ui=self.b_back},
+		}
+		self:setupUI()
+	else
 	self.detail_w = 400
 	self.content_w = self.iw - self.detail_w - gap
 	self.c_flow = Flow.new{width=self.content_w, height=self.ih}
 
-	local bh = 56
 	self.desc_y = 104
 	local desc_h = self.ih - self.desc_y - bh * 2 - 16
 	self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.detail_w - 16, height=desc_h, dest_area={h=desc_h}}
@@ -59,6 +88,7 @@ function _M:init(actor)
 		{left=dx, bottom=0, ui=self.b_back},
 	}
 	self:setupUI()
+	end
 	for _, b in ipairs{self.b_use, self.b_wheel, self.b_auto, self.b_back} do
 		local u = self.ui_by_ui[b]
 		u.home_x, u.home_y = u.x, u.y
@@ -314,6 +344,7 @@ end
 
 function _M:innerDisplayBack(x, y, nb_keyframes)
 	x, y = x + self.ix, y + self.iy
+	if self.portrait then return self:innerDisplayBackPortrait(x, y) end
 	quad(x, y, self.content_w, self.ih, {18, 19, 23})
 	local dx = x + self.content_w + 12
 	quad(dx, y, self.detail_w, self.ih, PANE)
@@ -336,4 +367,45 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 		local slot = self:slotOf(e.talent)
 		draw(text(slot and ("On the wheel: slot %d, page %d"):tformat(slot, math.floor((slot - 1) / _M.SLOTS_PER_PAGE) + 1) or _t"Not on the bar", 13, 142, 136, 120, false, maxw), tx, y + 68)
 	end
+end
+
+-- portrait: cards on top, the header of the selected talent at the top of the
+-- bottom sheet (its description and buttons are uis placed in the sheet)
+function _M:innerDisplayBackPortrait(x, y)
+	quad(x, y, self.iw, self.sheet_y - 8, {18, 19, 23})
+	local sy = y + self.sheet_y
+	quad(x, sy, self.iw, self.sheet_h, PANE)
+	quad(x, sy, self.iw, 2, {60, 63, 72})
+	local e = self.cur
+	if not e then
+		draw(text(self.mode == "slots" and _t"Pick a slot" or _t"Talents", 22, 240, 212, 138, true), x + 12, sy + 16)
+		return
+	end
+	local sz = 64
+	quad(x + 12, sy + 12, sz + 8, sz + 8, {14, 15, 18})
+	self:drawIcon(e.entity, x + 16, sy + 16, sz, e.talent, not e.ok)
+	local tx = x + 12 + sz + 20
+	local maxw = self.iw - (tx - x) - 12
+	draw(text(e.cname, 22, 240, 212, 138, true, maxw), tx, sy + 16)
+	local sc = e.ok and {123, 211, 137} or {224, 122, 106}
+	draw(text(e.status, 13, sc[1], sc[2], sc[3], false, maxw), tx, sy + 48)
+	if self.mode == "slots" then
+		draw(text(_t"Tap a slot: this is the order of the skill drawer", 13, 142, 136, 120, false, maxw), tx, sy + 68)
+	else
+		local slot = self:slotOf(e.talent)
+		draw(text(slot and ("On the wheel: slot %d, page %d"):tformat(slot, math.floor((slot - 1) / _M.SLOTS_PER_PAGE) + 1) or _t"Not on the bar", 13, 142, 136, 120, false, maxw), tx, sy + 68)
+	end
+end
+
+-- a rotation: the game swaps this dialog for a fresh one laid out for the
+-- new orientation, keeping the talent being read
+function _M:touch_reopen()
+	local d = _M.new(unpack(self.touch_args))
+	local tid = self.cur and self.cur.talent
+	if tid then
+		for _, g in ipairs(d.groups or {}) do for _, e in ipairs(g.items) do if e.talent == tid then d:select(e) end end end
+	end
+	d.mode = "browse"
+	d:showDetail()
+	return d
 end

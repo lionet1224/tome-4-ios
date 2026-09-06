@@ -13,6 +13,8 @@ local TouchItemList = require "mod.dialogs.elements.TouchItemList"
 module(..., package.seeall, class.inherit(Dialog))
 
 function _M:init(title, store_inven, actor_inven, store_filter, actor_filter, action, desc, descprice, allow_sell, allow_buy, on_select, store_actor, actor_actor)
+	self.touch_args = {title, store_inven, actor_inven, store_filter, actor_filter, action, desc, descprice, allow_sell, allow_buy, on_select, store_actor, actor_actor}
+	self.portrait = require("engine.TouchInput").portrait()
 	self.on_select = on_select
 	self.allow_sell, self.allow_buy = allow_sell, allow_buy
 	self.action = action
@@ -42,6 +44,26 @@ end
 function _M:build()
 	self.c_tabs = Tabs.new{width=self.iw, tabs={{title=_t"Buy", kind="buy"}, {title=_t"Sell", kind="sell"}}, on_change=function(kind) self.mode = kind self.cur = nil if self.c_list then self.c_desc:erase() self:refresh() end end}
 	local bh = 56
+	if self.portrait then
+		-- portrait: Buy / Sell tabs on top, the list fills the width, the description
+		-- and the action button are a bottom sheet
+		self.sheet_h = 400
+		self.sheet_y = self.ih - self.sheet_h
+		self.list_w = self.iw
+		local list_h = self.sheet_y - self.c_tabs.h - 16
+		self.c_list = TouchItemList.new{width=self.iw, height=list_h, actor=self.actor_actor, scrollbar=true, items={},
+			on_select=function(e) self:selectEntry(e) end, on_use=function(e) self:primary() end}
+		local dh = self.sheet_h - bh - 16
+		self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.iw - 16, height=dh, dest_area={h=dh}}
+		self.b_primary = Button.new{text=_t"Select an item", width=300, font=self.bigfont, fct=function() self:primary() end}
+		self.uis_def = {
+			{left=0, top=0, ui=self.c_tabs},
+			{left=0, top=self.c_tabs.h + 8, ui=self.c_list},
+			{left=8, top=self.sheet_y + 8, ui=self.c_desc},
+			{right=0, bottom=0, ui=self.b_primary},
+		}
+		return
+	end
 	local list_h = self.ih - self.c_tabs.h - bh - 24
 	self.list_w = math.floor(self.iw * 0.56)
 	self.c_list = TouchItemList.new{width=self.list_w, height=list_h, actor=self.actor_actor, scrollbar=true, items={},
@@ -106,6 +128,22 @@ function _M:primary()
 	else
 		if util.getval(self.allow_sell, e.object, e.item) then self.action("sell", e.object, e.item) end
 	end
+end
+
+--- Rotation: a fresh dialog for the new orientation, same tab and selection
+function _M:touch_reopen()
+	local nd = _M.new(unpack(self.touch_args, 1, 13))
+	if self.mode ~= nd.mode then nd.c_tabs:select(self.mode) end
+	if self.cur and self.cur.object then
+		for i, e in ipairs(nd.c_list.items) do if e.object == self.cur.object then nd.c_list:select(i, true) nd:selectEntry(e) end end
+	end
+	return nd
+end
+
+function _M:innerDisplayBack(x, y, nb_keyframes)
+	if not self.portrait then return end
+	local K = require "engine.ui.TouchKit"
+	K.quad(x + self.ix, y + self.iy + self.sheet_y, self.iw, self.sheet_h, K.PANE)
 end
 
 -- the store calls these after a transaction

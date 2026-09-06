@@ -138,6 +138,19 @@ function _M:init()
 	self.lists = {}
 
 	local gap = 12
+	self.touch_args = {}
+	-- portrait (phone held upright): section chips on top, the rows full width under them
+	self.portrait = require("engine.TouchInput").portrait()
+	if self.portrait then
+		self.nav_h = 3 * 56 + 2 * 8 + 4
+		self.nav_w, self.rows_w = self.iw, self.iw
+		self.c_nav = K.Flow.new{width=self.iw, height=self.nav_h}
+		self.c_rows = Rows.new{width=self.iw, height=self.ih - self.nav_h - gap, on_tap=function(it) self:tapRow(it) end}
+		self:loadUI{
+			{left=0, top=0, ui=self.c_nav},
+			{left=0, top=self.nav_h + gap, ui=self.c_rows},
+		}
+	else
 	self.nav_w = 230
 	self.rows_w = self.iw - self.nav_w - gap
 	self.c_nav = K.Flow.new{width=self.nav_w, height=self.ih}
@@ -147,6 +160,7 @@ function _M:init()
 		{left=0, top=0, ui=self.c_nav},
 		{left=self.nav_w + gap, top=0, ui=self.c_rows},
 	}
+	end
 	self:setupUI()
 	self:setFocus(self.c_rows)
 	self.key:addBinds{ EXIT = function() game:unregisterDialog(self) end }
@@ -195,7 +209,8 @@ function _M:refreshNav()
 	for _, s in ipairs(self.sections) do
 		items[#items+1] = {name=s.name, sub=s.sub, sel=s.kind == self.kind, on_tap=function() self:switchTo(s.kind) end}
 	end
-	self.c_nav:setSections{{items=items, cols=1, row_h=64}}
+	if self.portrait then self.c_nav:setSections{{items=items, cols=3, row_h=56, center=true}}
+	else self.c_nav:setSections{{items=items, cols=1, row_h=64}} end
 end
 
 function _M:tapRow(it)
@@ -207,6 +222,20 @@ end
 
 function _M:innerDisplayBack(x, y, nb_keyframes)
 	x, y = x + self.ix, y + self.iy
+	if self.portrait then
+		quad(x, y, self.iw, self.nav_h, PANE)
+		quad(x, y + self.nav_h + 12, self.iw, self.ih - self.nav_h - 12, {18, 19, 23})
+		return
+	end
 	quad(x, y, self.nav_w, self.ih, PANE)
 	quad(x + self.nav_w + 12, y, self.rows_w, self.ih, {18, 19, 23})
+end
+
+-- a rotation: the game hook swaps the dialog for a fresh one laid out for the
+-- new orientation, keeping the section and scroll position
+function _M:touch_reopen()
+	local d = _M.new()
+	if self.kind then d:switchTo(self.kind) end
+	d.c_rows.scrollbar.pos = util.minBound(self.c_rows.scrollbar.pos or 0, 0, d.c_rows.scrollbar.max)
+	return d
 end

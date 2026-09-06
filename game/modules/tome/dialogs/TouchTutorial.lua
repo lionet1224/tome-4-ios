@@ -239,9 +239,21 @@ function _M:init(opts)
 	self.page = 1
 	self.anim = 0
 	Dialog.init(self, _t"Controls reference", game.w * 0.96, game.h * 0.96)
-	self.ill_w = math.floor(self.iw * 0.45)
-	self.text_x = self.ill_w + 16
-	self.text_w = self.iw - self.text_x
+	-- portrait: the illustration across the top, the words under it
+	self.portrait = require("engine.TouchInput").portrait()
+	if self.portrait then
+		self.ill_w = self.iw
+		self.ill_h = math.floor(self.ih * 0.42)
+		self.text_x = 0
+		self.text_y = self.ill_h + 12
+		self.text_w = self.iw
+	else
+		self.ill_w = math.floor(self.iw * 0.45)
+		self.ill_h = self.ih
+		self.text_x = self.ill_w + 16
+		self.text_y = 0
+		self.text_w = self.iw - self.text_x
+	end
 	local bigfont = K.font(22)
 	self.b_back = Button.new{text=_t"Back", width=140, font=bigfont, fct=function() self:go(-1) end}
 	self.b_next = Button.new{text=_t"Next", width=220, font=bigfont, fct=function() if self.page >= #_M.PAGES then self:finish() else self:go(1) end end}
@@ -261,6 +273,14 @@ end
 function _M:go(d)
 	self.page = util.bound(self.page + d, 1, #_M.PAGES)
 	self:refresh()
+end
+
+--- Rotation: a fresh dialog for the new orientation, on the same page
+function _M:touch_reopen()
+	local d = _M.new(self.opts)
+	d.page = self.page
+	d:refresh()
+	return d
 end
 
 function _M:refresh()
@@ -284,7 +304,7 @@ function _M:trackSwipe()
 	local TI = require "engine.TouchInput"
 	local t = TI.active() and TI.t
 	local ix, iy = (self.display_x or 0) + self.ix, (self.display_y or 0) + self.iy
-	if t and t.moved and not t.held and t.x0 and t.x0 >= ix and t.x0 < ix + self.ill_w and t.y0 >= iy and t.y0 < iy + self.ih then
+	if t and t.moved and not t.held and t.x0 and t.x0 >= ix and t.x0 < ix + self.ill_w and t.y0 >= iy and t.y0 < iy + self.ill_h then
 		self.swipe = {dx = t.x - t.x0}
 	elseif not t and self.swipe then
 		local dx = self.swipe.dx
@@ -299,19 +319,23 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	x, y = x + self.ix, y + self.iy
 	local page = _M.PAGES[self.page]
 	-- panes
-	K.quad(x, y, self.ill_w, self.ih, PANE)
-	K.quad(x + self.text_x, y, self.text_w, self.ih, {18, 19, 23})
+	K.quad(x, y, self.ill_w, self.ill_h, PANE)
+	if self.portrait then
+		K.quad(x, y + self.text_y, self.text_w, self.ih - self.text_y, {18, 19, 23})
+	else
+		K.quad(x + self.text_x, y, self.text_w, self.ih, {18, 19, 23})
+	end
 	-- illustration
-	if page.draw then pcall(page.draw, self, x, y, self.ill_w, self.ih - 40, self.anim) end
+	if page.draw then pcall(page.draw, self, x, y, self.ill_w, self.ill_h - 40, self.anim) end
 	-- page dots under the illustration
 	local n = #_M.PAGES
 	local dx = x + self.ill_w / 2 - (n * 18) / 2
 	for i = 1, n do
-		if i == self.page then K.circle(dx + (i - 1) * 18 + 6, y + self.ih - 18, 6, GOLD, 1)
-		else K.circle(dx + (i - 1) * 18 + 6, y + self.ih - 18, 5, {80, 83, 92}, 1) end
+		if i == self.page then K.circle(dx + (i - 1) * 18 + 6, y + self.ill_h - 18, 6, GOLD, 1)
+		else K.circle(dx + (i - 1) * 18 + 6, y + self.ill_h - 18, 5, {80, 83, 92}, 1) end
 	end
 	-- words
-	local tx, ty = x + self.text_x + 14, y + 10
+	local tx, ty = x + self.text_x + 14, y + self.text_y + 10
 	label(("%d / %d"):format(self.page, n), 12, MUTE, tx, ty)
 	label(page.title, 26, {240, 212, 138}, tx, ty + 18, true, self.text_w - 28)
 	local yy = ty + 62

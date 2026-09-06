@@ -53,6 +53,7 @@ local function restore(dest, backup)
 end
 
 function _M:init(actor, on_finish, on_birth)
+	self.touch_args = {actor, on_finish, on_birth}
 	self.on_birth = on_birth
 	actor.is_dialog_talent_leveling = true
 	actor.no_last_learnt_talents_cap = true
@@ -691,7 +692,7 @@ function _M:createDisplay()
 							self.actor.unused_talents_types = self.actor.unused_talents_types - 1
 							self.actor.max_inscriptions = self.actor.max_inscriptions + 1
 							self.actor.inscriptions_slots_added = self.actor.inscriptions_slots_added + 1
-							self.b_types.text = ("Category points: %s"):tformat(self.actor.unused_talents_types)
+							self.b_types.text = self:pointLabel("types", self.actor.unused_talents_types)
 							self.b_types:generate()
 						end end)
 					else
@@ -776,7 +777,7 @@ function _M:createDisplay()
 		no_tooltip = self.no_tooltip,
 	}
 
-	self.b_stat = Button.new{can_focus = false, can_focus_mouse=true, text=("Stats: %s"):tformat(self.actor.unused_stats), fct=function() end, on_select=function()
+	self.b_stat = Button.new{can_focus = false, can_focus_mouse=true, text=self:pointLabel("stat", self.actor.unused_stats), fct=function() end, on_select=function()
 		local str = desc_stats
 		if self.no_tooltip then
 			self.c_desc:erase()
@@ -785,7 +786,7 @@ function _M:createDisplay()
 			game:tooltipDisplayAtMap(self.b_stat.last_display_x + self.b_stat.w, self.b_stat.last_display_y, str)
 		end
 	end}
-	self.b_class = Button.new{can_focus = false, can_focus_mouse=true, text=("Class points: %s"):tformat(self.actor.unused_talents), fct=function() end, on_select=function()
+	self.b_class = Button.new{can_focus = false, can_focus_mouse=true, text=self:pointLabel("class", self.actor.unused_talents), fct=function() end, on_select=function()
 		local str = desc_class
 		if self.no_tooltip then
 			self.c_desc:erase()
@@ -794,7 +795,7 @@ function _M:createDisplay()
 			game:tooltipDisplayAtMap(self.b_stat.last_display_x + self.b_stat.w, self.b_stat.last_display_y, str)
 		end
 	end}
-	self.b_generic = Button.new{can_focus = false, can_focus_mouse=true, text=("Generic points: %s"):tformat(self.actor.unused_generics), fct=function() end, on_select=function()
+	self.b_generic = Button.new{can_focus = false, can_focus_mouse=true, text=self:pointLabel("generic", self.actor.unused_generics), fct=function() end, on_select=function()
 		local str = desc_generic
 		if self.no_tooltip then
 			self.c_desc:erase()
@@ -803,7 +804,7 @@ function _M:createDisplay()
 			game:tooltipDisplayAtMap(self.b_stat.last_display_x + self.b_stat.w, self.b_stat.last_display_y, str)
 		end
 	end}
-	self.b_types = Button.new{can_focus = false, can_focus_mouse=true, text=("Category points: %s"):tformat(self.actor.unused_talents_types), fct=function() end, on_select=function()
+	self.b_types = Button.new{can_focus = false, can_focus_mouse=true, text=self:pointLabel("types", self.actor.unused_talents_types), fct=function() end, on_select=function()
 		local str = desc_types
 		if self.no_tooltip then
 			self.c_desc:erase()
@@ -859,7 +860,8 @@ function _M:createDisplay()
 		{hcenter=self.b_types, top=-self.t_messages.h, ui=self.t_messages},
 	}
 	if self.b_inscriptions then table.insert(ret, {right=self.b_prodigies.w, bottom=0, ui=self.b_inscriptions}) end
-	table.insert(ret, {right=self.b_inscriptions or self.b_prodigies, bottom=0, ui=self.c_hide_unknown})
+	if self.portrait then table.insert(ret, {left=0, bottom=(self.b_prodigies and self.b_prodigies.h or 0) + 6, ui=self.c_hide_unknown})
+	else table.insert(ret, {right=self.b_inscriptions or self.b_prodigies, bottom=0, ui=self.c_hide_unknown}) end
 
 	-- iOS port: the point buttons are anchored to column positions sized for
 	-- desktop fonts; at 150% font scale they overlap. Chain them left to right.
@@ -885,12 +887,32 @@ end
 
 -- iOS port: Stats / Class / Generic as tabs (the point buttons), one
 -- drag-scrolling list at a time, description on the right.
+-- iOS port: the point buttons sit two per row in portrait, so the labels shorten
+function _M:pointLabel(kind, n)
+	local short = require("engine.TouchInput").active() and require("engine.TouchInput").portrait()
+	if kind == "stat" then return short and ("Stats: %s"):tformat(n) or ("Stats: %s"):tformat(n)
+	elseif kind == "class" then return short and ("Class: %s"):tformat(n) or ("Class points: %s"):tformat(n)
+	elseif kind == "generic" then return short and ("Generic: %s"):tformat(n) or ("Generic points: %s"):tformat(n)
+	else return short and ("Category: %s"):tformat(n) or ("Category points: %s"):tformat(n) end
+end
+
 function _M:createDisplayTouch()
 	local TouchTalentList = require "mod.dialogs.elements.TouchTalentList"
 	local font = core.display.newFont(FontPackage:getFont("default"), 16)
 	local bottom_h = (self.b_prodigies and self.b_prodigies.h or 0) + 8
 	local pane_h = self.ih - self.b_stat.h - 12 - bottom_h
 	local pane_w = math.floor(self.iw * 0.56)
+	-- portrait (phone held upright): the point buttons in two rows on top, the
+	-- list full width, the description as a bottom sheet above the bottom row
+	self.portrait = require("engine.TouchInput").portrait()
+	local sheet_h = 300
+	if self.portrait then
+		self.top_h = 2 * self.b_stat.h + 4 + 8
+		pane_w = self.iw
+		-- the "hide unlearnt" checkbox gets its own row above the bottom buttons
+		bottom_h = bottom_h + (self.c_hide_unknown and self.c_hide_unknown.h + 6 or 0)
+		pane_h = self.ih - self.top_h - 8 - sheet_h - 8 - bottom_h
+	end
 	local desc_fct = function(item) local ret = self:getTalentDesc(item) self.c_desc:erase() self.c_desc:switchItem(ret, ret) return ret end
 	local stat_fct = function(item) local ret = self:getStatDesc(item) self.c_desc:erase() self.c_desc:switchItem(ret, ret) return ret end
 	local can_add = function(item)
@@ -918,7 +940,11 @@ function _M:createDisplayTouch()
 	self.recreate_trees_touch()
 	self.c_stat = mk(self.tree_stats, stat_fct, true)
 	local desc_w = self.iw - pane_w - 24
+	if self.portrait then
+		self.c_desc = TextzoneList.new{ focus_check = true, scrollbar = true, pingpong=20, width=self.iw - 8, height=sheet_h, dest_area={h=sheet_h} }
+	else
 	self.c_desc = TextzoneList.new{ focus_check = true, scrollbar = true, pingpong=20, width=desc_w, height=pane_h, dest_area={h=pane_h} }
+	end
 	self.c_pane = self.c_stat
 	self.b_stat.fct = function() self:switchPane("stat") end
 	self.b_class.fct = function() self:switchPane("class") end
@@ -933,7 +959,21 @@ function _M:createDisplayTouch()
 	end
 	local align = Empty.new{width=0, height=8}
 	local vsep = Separator.new{dir="horizontal", size=pane_h}
-	local ret = {
+	local ret
+	if self.portrait then
+		local row2 = self.b_stat.h + 4
+		ret = {
+			{left=0, top=0, ui=self.b_stat},
+			{left=self.b_stat, top=0, ui=self.b_class},
+			{left=0, top=row2, ui=self.b_generic},
+			{left=self.b_generic, top=row2, ui=self.b_types},
+			{left=0, top=self.top_h, ui=self.c_stat},
+			{left=4, top=self.top_h + pane_h + 8, ui=self.c_desc},
+			{right=0, bottom=0, ui=self.b_prodigies},
+			{hcenter=self.b_types, top=-self.t_messages.h, ui=self.t_messages},
+		}
+	else
+	ret = {
 		{left=0, top=0, ui=self.b_stat},
 		{left=self.b_stat, top=0, ui=self.b_class},
 		{left=self.b_class, top=0, ui=self.b_generic},
@@ -945,11 +985,40 @@ function _M:createDisplayTouch()
 		{right=0, bottom=0, ui=self.b_prodigies},
 		{hcenter=self.b_types, top=-self.t_messages.h, ui=self.t_messages},
 	}
+	end
 	if self.b_inscriptions then table.insert(ret, {right=self.b_prodigies.w, bottom=0, ui=self.b_inscriptions}) end
-	table.insert(ret, {right=self.b_inscriptions or self.b_prodigies, bottom=0, ui=self.c_hide_unknown})
+	if self.portrait then table.insert(ret, {left=0, bottom=(self.b_prodigies and self.b_prodigies.h or 0) + 6, ui=self.c_hide_unknown})
+	else table.insert(ret, {right=self.b_inscriptions or self.b_prodigies, bottom=0, ui=self.c_hide_unknown}) end
 	self:setPaneGlow("stat")
 	self.c_stat:selectFirst()
 	return ret
+end
+
+--- Which tab is showing: "stat" | "class" | "generic"
+function _M:paneKind()
+	if self.c_pane == self.c_ctree then return "class" elseif self.c_pane == self.c_gtree then return "generic" end
+	return "stat"
+end
+
+--- Rotation: a fresh dialog for the new orientation, same tab. Only while
+-- nothing has been spent yet: a new dialog backs up the actor as it is now, so
+-- Cancel could no longer undo earlier points. With changes pending the dialog
+-- keeps its layout (nil tells the hook to leave it alone).
+function _M:touch_reopen()
+	if not self.touch_args or not self.actor_dup then return nil end
+	local a, dup = self.actor, self.actor_dup
+	if a.unused_stats ~= dup.unused_stats or a.unused_talents_types ~= dup.unused_talents_types or a.unused_talents ~= dup.unused_talents
+		or a.unused_generics ~= dup.unused_generics or a.unused_prodigies ~= dup.unused_prodigies then return nil end
+	if dup.last_learnt_talents and a.last_learnt_talents then
+		if #a.last_learnt_talents.class ~= #dup.last_learnt_talents.class or #a.last_learnt_talents.generic ~= #dup.last_learnt_talents.generic then return nil end
+		for i = 1, #a.last_learnt_talents.class do if a.last_learnt_talents.class[i] ~= dup.last_learnt_talents.class[i] then return nil end end
+		for i = 1, #a.last_learnt_talents.generic do if a.last_learnt_talents.generic[i] ~= dup.last_learnt_talents.generic[i] then return nil end end
+	end
+	local t = self.touch_args
+	local d = _M.new(t[1], t[2], t[3])
+	d.on_finish_prodigies = self.on_finish_prodigies
+	if d.switchPane and d.c_ctree then d:switchPane(self:paneKind()) end
+	return d
 end
 
 function _M:switchPane(kind)
@@ -1182,13 +1251,13 @@ function _M:onUseTalent(item, inc)
 		self.c_gtree:redrawAllItems()
 	end
 
-	self.b_stat.text = ("Stats: %s"):tformat(self.actor.unused_stats)
+	self.b_stat.text = self:pointLabel("stat", self.actor.unused_stats)
 	self.b_stat:generate()
-	self.b_class.text = ("Class points: %s"):tformat(self.actor.unused_talents)
+	self.b_class.text = self:pointLabel("class", self.actor.unused_talents)
 	self.b_class:generate()
-	self.b_generic.text = ("Generic points: %s"):tformat(self.actor.unused_generics)
+	self.b_generic.text = self:pointLabel("generic", self.actor.unused_generics)
 	self.b_generic:generate()
-	self.b_types.text = ("Category points: %s"):tformat(self.actor.unused_talents_types)
+	self.b_types.text = self:pointLabel("types", self.actor.unused_talents_types)
 	self.b_types:generate()
 end
 

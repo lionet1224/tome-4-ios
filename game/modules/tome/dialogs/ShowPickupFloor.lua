@@ -96,16 +96,41 @@ function _M:initTouch(title, x, y, filter, action, takeall, actor)
 	self.filter = filter
 	self.action = action
 	self.actor = actor
+	self.touch_args = {title=title, x=x, y=y, filter=filter, action=action, takeall=takeall, actor=actor}
 	self.bigfont = K.font(22)
+	self.portrait = require("engine.TouchInput").portrait()
 	Dialog.init(self, _t"On the floor", game.w * 0.96, game.h * 0.9)
 
 	local gap, pane_w, bh = 12, 380, 56
+	local takeall_txt = takeall and tostring(takeall):gsub("^%(%*%)%s*", "") or _t"Take all"
+	if self.portrait then
+		-- portrait: rows fill the width, the pane becomes a bottom sheet
+		self.sheet_h = 400
+		self.sheet_y = self.ih - self.sheet_h
+		self.pane_w = self.iw
+		self.c_list = TouchItemList.new{width=self.iw, height=self.sheet_y - gap, actor=actor, scrollbar=true, items={},
+			on_select=function(e) self:use(e) end, on_use=function(e) self:showDesc(e) end}
+		local dh = self.sheet_h - bh * 2 - 16 - 40
+		self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.iw - 16, height=dh, dest_area={h=dh}}
+		-- Button adds 16 px of frame to the requested width
+		self.b_all = Button.new{text=takeall_txt, width=self.iw - 16, font=self.bigfont, fct=function() self:takeAll() end}
+		self.b_done = Button.new{text=_t"Done", width=self.iw - 16, font=self.bigfont, fct=function() game:unregisterDialog(self) end}
+
+		self:generateList()
+
+		self:loadUI{
+			{left=0, top=0, ui=self.c_list},
+			{left=8, top=self.sheet_y + 40, ui=self.c_desc},
+			{left=0, bottom=bh + 8, ui=self.b_all},
+			{left=0, bottom=0, ui=self.b_done},
+		}
+	else
 	self.pane_w = pane_w
 	self.c_list = TouchItemList.new{width=self.iw - pane_w - gap, height=self.ih, actor=actor, scrollbar=true, items={},
 		on_select=function(e) self:use(e) end, on_use=function(e) self:showDesc(e) end}
 	local dh = self.ih - bh * 2 - 16 - 40
 	self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=pane_w - 16, height=dh, dest_area={h=dh}}
-	self.b_all = Button.new{text=takeall and tostring(takeall):gsub("^%(%*%)%s*", "") or _t"Take all", width=pane_w, font=self.bigfont, fct=function() self:takeAll() end}
+	self.b_all = Button.new{text=takeall_txt, width=pane_w, font=self.bigfont, fct=function() self:takeAll() end}
 	self.b_done = Button.new{text=_t"Done", width=pane_w, font=self.bigfont, fct=function() game:unregisterDialog(self) end}
 
 	self:generateList()
@@ -117,12 +142,24 @@ function _M:initTouch(title, x, y, filter, action, takeall, actor)
 		{left=px, bottom=bh + 8, ui=self.b_all},
 		{left=px, bottom=0, ui=self.b_done},
 	}
+	end
 	self:setFocus(self.c_list)
 	self:setupUI()
 	self.key:addBinds{
 		EXIT = function() game:unregisterDialog(self) end,
 	}
 	self:showDesc(nil)
+end
+
+--- Rotation: a fresh touch dialog for the new orientation, same item read about
+function _M:touch_reopen()
+	if not self.touch then return nil end
+	local a = self.touch_args
+	local nd = _M.new(a.title, a.x, a.y, a.filter, a.action, a.takeall, a.actor)
+	if self.cur_item and self.cur_item.object then
+		for _, e in ipairs(nd.list) do if e.object == self.cur_item.object then nd:showDesc(e) end end
+	end
+	return nd
 end
 
 -- the desktop dialog turns the keyboard on for letter shortcuts: not on a phone
@@ -182,11 +219,17 @@ end
 
 function _M:innerDisplayBack(x, y, nb_keyframes)
 	if not self.touch then return end
-	local px = x + self.ix + self.iw - self.pane_w
-	K.quad(px, y + self.iy, self.pane_w, self.ih, K.PANE)
+	local px, py
+	if self.portrait then
+		px, py = x + self.ix, y + self.iy + self.sheet_y
+		K.quad(px, py, self.iw, self.sheet_h, K.PANE)
+	else
+		px, py = x + self.ix + self.iw - self.pane_w, y + self.iy
+		K.quad(px, py, self.pane_w, self.ih, K.PANE)
+	end
 	if self.actor and self.actor.getEncumbrance then
 		local enc, max = self.actor:getEncumbrance(), self.actor:getMaxEncumbrance()
 		local heavy = enc > max
-		K.draw(K.text((_t"Carrying %d / %d"):format(enc, max), 14, heavy and 224 or 142, heavy and 122 or 136, heavy and 106 or 120, true), px + 8, y + self.iy + 12)
+		K.draw(K.text((_t"Carrying %d / %d"):format(enc, max), 14, heavy and 224 or 142, heavy and 122 or 136, heavy and 106 or 120, true), px + 8, py + 12)
 	end
 end

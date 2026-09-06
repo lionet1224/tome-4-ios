@@ -393,3 +393,27 @@ the view clamps at the edge — not a portrait bug.
   that has it and `replaceDialog`s the result in place. Dialogs opt in by implementing it (TouchInventory,
   TouchRoutines first). `engine.ui.Base:init` clamps width/height < 8 (a landscape three-column layout gave
   Routines a negative middle column in portrait → native crash on the phone).
+
+## 27. Portrait layouts for the dialogs (2026-09-06, seven parallel fork builders, verified in the sim)
+
+Every touch dialog with fixed side columns got a `TouchInput.portrait()` branch (landscape code untouched in the
+`else`), a `touch_reopen()` for the rotation hook (§26), and a `tools/touch/tests/<name>-portrait.lua` run with
+`TOUCH_EXTRA=', orientation="portrait", hand="left"'`. Common shape: rail → chip row on top, content full width,
+detail pane → bottom sheet (400–450 px: scrollable description + the buttons). Hidden uis are parked at 100000
+(they still take taps otherwise). `engine.ui.Button` adds 16 px of frame to `width`: full width = `iw - 16`,
+a row of three = `floor((iw - 12) / 3) - 16`. Dialog entry x/y include `ix/iy` (bounds checks must add them).
+
+| dialog | portrait | reopen keeps |
+|---|---|---|
+| TouchInventory (incl. Transmo tab) | Worn chip shows the doll; list; sheet 520 | tab, selected object |
+| TouchRoutines | routine chips + buttons; steps; sheet 418 | edit_idx, sel_step |
+| TouchTalents / TouchProdigies | cards; sheet 414 / 382 | selected talent |
+| TouchJournal / TouchOptions | tabs, list, sheet 400 / nav chips 3×56 | tab+entry / section |
+| TouchMap / ShowPickupFloor / TouchStore | map + sheet 300 / list + sheet 400 / Buy-Sell tabs + sheet 400 | view / item / tab+item |
+| TouchBirther / TouchChat | step pills 56, cards, sheet 440 / header 112, speech, answers | step+race+class+name / node |
+| DeathDialog / LevelupDialog / TouchTutorial | stacked / two button rows + list + sheet 300 / illustration 42% | preview only / only with nothing spent / page |
+
+Rotation while creating a character: `TouchBirther.on_register` skips the autopilot roll when `self.reopened`.
+Live rotation from Lua: `core.display.setOrientation("portrait")` → iOS rotates → `[IOS] rotated` → resize →
+`Game:checkResolutionChange` → HUD relayout + dialog rebuilds (`tests/rotate.lua`, orientation="auto").
+The Simulator cannot be rotated from a script (osascript keystrokes need Accessibility permission).

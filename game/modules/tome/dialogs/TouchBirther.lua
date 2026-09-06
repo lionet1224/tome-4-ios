@@ -22,12 +22,55 @@ local font, text, draw, quad, frame, circle, wrap, pitch = K.font, K.text, K.dra
 local Rail, Flow = K.Rail, K.Flow
 
 ---------------------------------------------------------------------------
+-- StepBar: the five steps as a row of pills (portrait replacement for Rail)
+---------------------------------------------------------------------------
+local Base = require "engine.ui.Base"
+local Focusable = require "engine.ui.Focusable"
+local StepBar = class.inherit(Base, Focusable){}
+function StepBar:init(t)
+	self.w, self.h = t.width, t.height
+	self.steps = t.steps
+	self.on_pick = t.on_pick
+	self.gap = 6
+	self.pill_w = math.floor((self.w - (#self.steps - 1) * self.gap) / #self.steps)
+	Base.init(self, t)
+end
+function StepBar:generate()
+	self.mouse:reset()
+	self.key:reset()
+	self.mouse:registerZone(0, 0, self.w, self.h, function(button, x, y, xrel, yrel, bx, by, event)
+		if event ~= "button" or button ~= "left" then return end
+		local i = math.floor(x / (self.pill_w + self.gap)) + 1
+		if self.steps[i] then self.on_pick(i) end
+	end)
+end
+function StepBar:display(x, y, nb_keyframes)
+	for i, s in ipairs(self.steps) do
+		local px = x + (i - 1) * (self.pill_w + self.gap)
+		local cur = i == self.cur
+		local done = s.done() and i ~= self.cur
+		local reach = s.reach()
+		local a = reach and 1 or 0.35
+		quad(px, y + 4, self.pill_w, self.h - 8, cur and {36, 39, 47} or {24, 25, 30})
+		if cur then frame(px, y + 4, self.pill_w, self.h - 8, GOLD, 2) end
+		local cx, cy = px + 18, y + self.h / 2
+		if done then circle(cx, cy, 11, {123, 211, 137}, a) circle(cx, cy, 4, {16, 32, 26}, a)
+		else
+			circle(cx, cy, 11, cur and GOLD or {60, 63, 72}, a, 9)
+			draw(text(tostring(i), 12, cur and 240 or 150, cur and 212 or 150, cur and 138 or 150, true), cx - 4, cy - 8, a)
+		end
+		draw(text(s.name, 14, cur and 234 or 200, cur and 227 or 195, cur and 209 or 180, cur, self.pill_w - 40), px + 34, cy - 9, a)
+	end
+end
+
+---------------------------------------------------------------------------
 -- The dialog
 ---------------------------------------------------------------------------
 _M.STEPS = {"who", "race", "class", "difficulty", "start"}
 
 function _M:init(title, actor, order, at_end, quickbirth, w, h)
 	if __IOS__ then require("mod.class.TouchWheel").applyUnlocks() end
+	self.touch_args = {title, actor, order, at_end, quickbirth, w, h}
 	self.quickbirth = quickbirth
 	self.actor = actor:cloneFull()
 	self.actor_base = actor
@@ -70,20 +113,49 @@ function _M:init(title, actor, order, at_end, quickbirth, w, h)
 	self:generateRaces()
 	self:generateClasses()
 
-	-- layout: rail | content | detail
+	-- layout: rail | content | detail (landscape) or steps / content / bottom sheet (portrait)
 	local gap = 12
-	self.rail_w, self.detail_w = 200, 400
-	self.content_w = self.iw - self.rail_w - self.detail_w - 2 * gap
-	self.c_rail = Rail.new{width=self.rail_w, height=self.ih, on_pick=function(i) self:goStep(i) end, steps={
+	self.portrait = require("engine.TouchInput").portrait()
+	local steps = {
 		{name=_t"Who", value=function() return self.c_name.text ~= "" and (self.c_name.text .. ", " .. (self.descriptors_by_type.sex == "Female" and _t"female" or _t"male")) or "" end, reach=function() return true end, done=function() return self.c_name.text:len() >= 2 end},
 		{name=_t"Race", value=function() return self.sel_race and self.sel_race.basename:toString() or "" end, reach=function() return self:canReach(2) end, done=function() return self.sel_race ~= nil end},
 		{name=_t"Class", value=function() return self.sel_class and self.sel_class.basename:toString() or "" end, reach=function() return self:canReach(3) end, done=function() return self.sel_class ~= nil end},
 		{name=_t"Difficulty", value=function() return tostring(self.descriptors_by_type.difficulty) .. " · " .. tostring(self.descriptors_by_type.permadeath) end, reach=function() return self:canReach(4) end, done=function() return self.step > 4 end},
 		{name=_t"Start", value=function() return "" end, reach=function() return self:canReach(5) end, done=function() return false end},
-	}}
+	}
+	local bh = 60
+	if self.portrait then
+		-- top: step pills; middle: the cards full width; bottom sheet: sprite, pitch, stat chips, description, Back/Next
+		self.rail_w, self.detail_w, self.content_w = self.iw, self.iw, self.iw
+		self.bar_h = 56
+		self.content_y = self.bar_h + 8
+		self.sheet_h = 440
+		self.sheet_y = self.ih - self.sheet_h
+		self.c_rail = StepBar.new{width=self.iw, height=self.bar_h, on_pick=function(i) self:goStep(i) end, steps=steps}
+		self.c_flow = Flow.new{width=self.iw, height=self.sheet_y - self.content_y - 8}
+		self.desc_y = self.sheet_y + 12 + 112 + 16 + 2 * 44 + 4
+		local desc_h = self.ih - self.desc_y - bh - 14
+		self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.iw - 16, height=desc_h, dest_area={h=desc_h}}
+		-- Button adds 16 px of frame to the requested width
+		self.b_back = Button.new{text=_t"Back", width=120, font=bigfont, fct=function() self:goStep(self.step - 1) end}
+		self.b_next = Button.new{text=_t"Next", width=self.iw - 136 - 8 - 16, font=bigfont, fct=function() self:nextPressed() end}
+		self.c_ok = self.b_next -- Birther:atEnd looks at ui_by_ui[c_ok].hidden
+		self:loadUI{
+			{left=0, top=0, ui=self.c_rail},
+			{left=0, top=self.content_y, ui=self.c_flow},
+			{left=8, top=self.desc_y, ui=self.c_desc},
+			{left=0, bottom=0, ui=self.b_back},
+			{left=136 + 8, bottom=0, ui=self.b_next},
+			{left=8, top=self.content_y + 44, ui=self.c_name},
+			{left=8 + self.c_name.w + 8, top=self.content_y + 44, ui=self.b_dice},
+		}
+		self:setupUI()
+	else
+	self.rail_w, self.detail_w = 200, 400
+	self.content_w = self.iw - self.rail_w - self.detail_w - 2 * gap
+	self.c_rail = Rail.new{width=self.rail_w, height=self.ih, on_pick=function(i) self:goStep(i) end, steps=steps}
 	self.c_flow = Flow.new{width=self.content_w, height=self.ih}
 	self.desc_y = 236
-	local bh = 60
 	self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.detail_w - 16, height=self.ih - self.desc_y - bh - 14, dest_area={h=self.ih - self.desc_y - bh - 14}}
 	self.b_back = Button.new{text=_t"Back", width=120, font=bigfont, fct=function() self:goStep(self.step - 1) end}
 	self.b_next = Button.new{text=_t"Next", width=self.detail_w - 120 - 8, font=bigfont, fct=function() self:nextPressed() end}
@@ -101,6 +173,7 @@ function _M:init(title, actor, order, at_end, quickbirth, w, h)
 		{left=cx + 8 + self.c_name.w + 8, top=44, ui=self.b_dice},
 	}
 	self:setupUI()
+	end
 	self.name_pos = {x=self.ui_by_ui[self.c_name].x, y=self.ui_by_ui[self.c_name].y, dx=self.ui_by_ui[self.b_dice].x, dy=self.ui_by_ui[self.b_dice].y}
 	self.built = true
 	self:setFocus(self.c_flow)
@@ -119,7 +192,8 @@ end
 function _M:on_register()
 	Birther.on_register(self)
 	local ok, AP = pcall(require, "mod.class.AutoPilot")
-	if ok and AP.enabled() and game.creating_player then
+	-- a dialog rebuilt after a rotation must not roll a second character
+	if ok and AP.enabled() and game.creating_player and not self.reopened then
 		game:onTickEnd(function()
 			local okb, err = pcall(function()
 				self:raceUse(self.all_races[1].nodes[1])
@@ -385,14 +459,25 @@ end
 
 function _M:innerDisplayBack(x, y, nb_keyframes)
 	x, y = x + self.ix, y + self.iy
-	local dx = x + self.rail_w + 12 + self.content_w + 12
-	local dy = y
+	local dx, dy
+	if self.portrait then
+		-- top strip, the cards, the bottom sheet
+		quad(x, y, self.iw, self.bar_h, PANE)
+		quad(x, y + self.content_y, self.iw, self.sheet_y - self.content_y - 4, {18, 19, 23})
+		dx, dy = x, y + self.sheet_y
+		quad(dx, dy, self.iw, self.sheet_h, PANE)
+		quad(dx, dy, self.iw, 2, {60, 63, 72})
+		if self.step == 1 then draw(text(_t"NAME", 12, 142, 136, 120, true), x + 8, y + self.content_y + 12) end
+	else
+	dx = x + self.rail_w + 12 + self.content_w + 12
+	dy = y
 	-- panes
 	quad(x, y, self.rail_w, self.ih, PANE)
 	quad(x + self.rail_w + 12, y, self.content_w, self.ih, {18, 19, 23})
 	quad(dx, dy, self.detail_w, self.ih, PANE)
 	-- name label on the first step
 	if self.step == 1 then draw(text(_t"NAME", 12, 142, 136, 120, true), x + self.rail_w + 12 + 8, y + 12) end
+	end
 	-- hero: the character as it will look, name and one line
 	local sz = 112
 	quad(dx + 12, dy + 12, sz + 8, sz + 8, {14, 15, 18})
@@ -437,4 +522,31 @@ function _M:innerDisplay(x, y, nb_keyframes)
 		-- Begin: a gold frame so it reads as the one big action
 		frame(x + b.x - 3, y + b.y - 3, self.b_next.w + 6, self.b_next.h + 6, GOLD, 3)
 	end
+end
+
+-- rotation: a fresh dialog for the new orientation with the same choices and step
+function _M:touch_reopen()
+	local a = self.touch_args
+	local d = _M.new(a[1], a[2], a[3], a[4], a[5], a[6], a[7])
+	d.reopened = true
+	d.c_name:setText(self.c_name.text)
+	local sex = self.descriptors_by_type.sex or "Female"
+	d.c_female.checked = sex == "Female" d.c_male.checked = sex ~= "Female"
+	d:setDescriptor("sex", sex)
+	local function pick(list, id, fct)
+		if not id then return end
+		for _, it in ipairs(list) do if it.id == id then fct(it) return true end end
+	end
+	pick(d.all_campaigns, self.descriptors_by_type.world, function(it) d:campaignUse(it) end)
+	pick(d.all_difficulties, self.descriptors_by_type.difficulty, function(it) d:difficultyUse(it) end)
+	pick(d.all_permadeaths, self.descriptors_by_type.permadeath, function(it) d:permadeathUse(it) end)
+	if self.sel_race then
+		for _, r in ipairs(d.all_races) do for _, n in ipairs(r.nodes) do if n.id == self.sel_race.id and not n.locked then d:raceUse(n) end end end
+	end
+	if self.sel_class then
+		for _, c in ipairs(d.all_classes) do for _, n in ipairs(c.nodes) do if n.id == self.sel_class.id and not n.locked then d:classUse(n) end end end
+	end
+	d:setDescriptor()
+	d:goStep(self.step)
+	return d
 end

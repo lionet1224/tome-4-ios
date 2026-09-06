@@ -17,15 +17,24 @@ local PANE_W = 230
 
 function _M:init(mm_mode)
 	self.mm_mode = mm_mode
+	self.touch_args = {mm_mode=mm_mode}
 	self.title_shadow = false
 	local map = game.level.map
 	self.map = map
+	self.portrait = require("engine.TouchInput").portrait()
 
 	Dialog.init(self, ("Map: #0080FF#%s"):tformat(game.old_zone_name or (game.zone and game.zone.name) or ""), game.w * 0.96, game.h * 0.96)
 
 	local gap = 12
-	self.map_w = self.iw - PANE_W - gap
-	self.map_h = self.ih
+	if self.portrait then
+		-- portrait: the map fills the width, the pane becomes a bottom sheet
+		self.sheet_h = 300
+		self.map_w = self.iw
+		self.map_h = self.ih - self.sheet_h - gap
+	else
+		self.map_w = self.iw - PANE_W - gap
+		self.map_h = self.ih
+	end
 	-- fit the whole level if we can; otherwise a readable size and panning
 	self.fit_size = math.max(2, math.floor(math.min(self.map_w / map.w, self.map_h / map.h)))
 	self.bsize = util.bound(self.fit_size, 6, 24)
@@ -45,6 +54,30 @@ function _M:init(mm_mode)
 	end, nil, nil, true)
 
 	local bigfont = K.font(22)
+	if self.portrait then
+		-- Button adds 16 px of frame to the requested width
+		local full = self.iw - 16
+		local third = math.floor((self.iw - 12) / 3) - 16
+		local half = math.floor((self.iw - 6) / 2) - 16
+		self.b_exit = Button.new{text=self:exitLabel(), width=full, font=bigfont, fct=function() self:goExit() end}
+		self.b_center = Button.new{text=_t"Find me", width=third, font=bigfont, fct=function() self:centerOn(game.player.x, game.player.y) end}
+		self.b_zin = Button.new{text=_t"Zoom in", width=third, font=bigfont, fct=function() self:zoom(1) end}
+		self.b_zout = Button.new{text=_t"Zoom out", width=third, font=bigfont, fct=function() self:zoom(-1) end}
+		self.b_places = Button.new{text=_t"Places", width=half, font=bigfont, fct=function() game:unregisterDialog(self) game:registerDialog(require("mod.dialogs.TouchPlaces").new()) end}
+		self.b_close = Button.new{text=_t"Close", width=half, font=bigfont, fct=function() game:unregisterDialog(self) end}
+		local sy = self.map_h + gap
+		local bh = self.b_exit.h + 8
+		self.sheet_y = sy
+		self:loadUI{
+			{left=0, top=0, ui=mc},
+			{left=0, top=sy + 96, ui=self.b_exit},
+			{left=0, top=sy + 96 + bh, ui=self.b_center},
+			{left=third + 16 + 6, top=sy + 96 + bh, ui=self.b_zin},
+			{left=2 * (third + 16 + 6), top=sy + 96 + bh, ui=self.b_zout},
+			{left=0, bottom=0, ui=self.b_places},
+			{left=half + 16 + 6, bottom=0, ui=self.b_close},
+		}
+	else
 	local bw = PANE_W
 	self.b_exit = Button.new{text=self:exitLabel(), width=bw, font=bigfont, fct=function() self:goExit() end}
 	self.b_zin = Button.new{text=_t"Zoom in", width=math.floor((bw - 8) / 2), font=bigfont, fct=function() self:zoom(1) end}
@@ -63,6 +96,7 @@ function _M:init(mm_mode)
 		{left=px, bottom=self.b_close.h + 8, ui=self.b_places},
 		{left=px, bottom=0, ui=self.b_close},
 	}
+	end
 	self.key:addBind("EXIT", function() game:unregisterDialog(self) end)
 	self.key:addBind("ACCEPT", function() game:unregisterDialog(self) end)
 	self.key:addBind("SHOW_MAP", function() game:unregisterDialog(self) end)
@@ -79,6 +113,16 @@ function _M:unload()
 	game.uiset.no_minimap = nil
 	if game.level then game.uiset:setupMinimap(game.level) end
 	if self.mm_mode then self.mm_mode() end
+end
+
+--- Rotation: a fresh dialog for the new orientation, same zoom and view
+function _M:touch_reopen()
+	local nd = _M.new(self.touch_args.mm_mode)
+	nd.bsize = self.bsize
+	nd.map._map:setupMiniMapGridSize(nd.bsize)
+	local cx, cy = self:tileAt(self.map_w / 2, self.map_h / 2)
+	if cx then nd:centerOn(cx, cy) else nd:clampScroll() end
+	return nd
 end
 
 -- tiles visible in the pane at the current zoom
@@ -148,17 +192,22 @@ function _M:goExit()
 end
 
 function _M:innerDisplayBack(x, y, nb_keyframes)
-	-- side pane
-	local px = x + self.ix + self.map_w + 12
-	local py = y + self.iy
-	K.quad(px, py, PANE_W, self.ih, K.PANE)
+	-- side pane (landscape) or bottom sheet (portrait)
+	local px, py, pw
+	if self.portrait then
+		px, py, pw = x + self.ix, y + self.iy + self.sheet_y, self.iw
+		K.quad(px, py, pw, self.sheet_h, K.PANE)
+	else
+		px, py, pw = x + self.ix + self.map_w + 12, y + self.iy, PANE_W
+		K.quad(px, py, pw, self.ih, K.PANE)
+	end
 	local zone = game.zone and (game.zone.display_name or game.zone.name) or ""
 	if type(zone) == "function" then zone = zone(game.zone) end
 	zone = tostring(zone or "")
-	K.draw(K.text(zone, 20, 240, 212, 138, true, PANE_W - 16), px + 8, py + 10)
+	K.draw(K.text(zone, 20, 240, 212, 138, true, pw - 16), px + 8, py + 10)
 	local lvl = game.level and game.level.level or 1
 	K.draw(K.text((_t"Level %d · %dx%d"):format(lvl, self.map.w, self.map.h), 13, 142, 136, 120), px + 8, py + 40)
-	K.draw(K.text(_t"Tap a tile to travel there. Drag to pan.", 12, 142, 136, 120, false, PANE_W - 16), px + 8, py + 62)
+	K.draw(K.text(_t"Tap a tile to travel there. Drag to pan.", 12, 142, 136, 120, false, pw - 16), px + 8, py + 62)
 	if self.exit_target then K.draw(K.text((_t"Exit at %d,%d"):format(self.exit_target.x, self.exit_target.y), 12, 142, 136, 120), px + 8, py + 82) end
 end
 

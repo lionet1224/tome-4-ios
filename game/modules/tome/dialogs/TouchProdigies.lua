@@ -33,6 +33,7 @@ _M.evotext = _t"Evolutions are special prodigies specific to a class or race. On
 function _M:init(actor, levelup_end_prodigies)
 	self.actor = actor
 	self.levelup_end_prodigies = levelup_end_prodigies or {}
+	self.touch_args = {actor, self.levelup_end_prodigies}
 	self.bigfont = font(22)
 
 	self.actor_dup = actor:clone()
@@ -41,11 +42,32 @@ function _M:init(actor, levelup_end_prodigies)
 	Dialog.init(self, ("Prodigies: %s"):tformat(actor:getName()), game.w * 0.98, game.h * 0.98)
 
 	local gap = 12
+	local bh = 56
+	-- portrait (phone held upright): the cards take the full width, the
+	-- header, description and Learn button live in a bottom sheet
+	self.portrait = require("engine.TouchInput").portrait()
+	if self.portrait then
+		self.detail_w, self.content_w = self.iw, self.iw
+		self.head_h = 128                       -- icon, name, status (two lines), points
+		local desc_h = 190
+		self.sheet_h = self.head_h + desc_h + bh + 8
+		self.sheet_y = self.ih - self.sheet_h
+		self.desc_y = self.sheet_y + self.head_h
+		self.c_flow = Flow.new{width=self.iw, height=self.sheet_y - 8}
+		self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.iw - 16, height=desc_h, dest_area={h=desc_h}}
+		-- Button adds 16 px of frame to the requested width
+		self.b_learn = Button.new{text=_t"Learn", width=self.iw - 16, font=self.bigfont, fct=function() self:useCurrent() end}
+		self:loadUI{
+			{left=0, top=0, ui=self.c_flow},
+			{left=8, top=self.desc_y, ui=self.c_desc},
+			{left=0, bottom=0, ui=self.b_learn},
+		}
+		self:setupUI()
+	else
 	self.detail_w = 400
 	self.content_w = self.iw - self.detail_w - gap
 	self.c_flow = Flow.new{width=self.content_w, height=self.ih}
 
-	local bh = 56
 	self.desc_y = 128
 	local desc_h = self.ih - self.desc_y - bh - 16
 	self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.detail_w - 16, height=desc_h, dest_area={h=desc_h}}
@@ -58,6 +80,7 @@ function _M:init(actor, levelup_end_prodigies)
 		{left=dx, bottom=0, ui=self.b_learn},
 	}
 	self:setupUI()
+	end
 	do
 		local u = self.ui_by_ui[self.b_learn]
 		u.home_x, u.home_y = u.x, u.y
@@ -293,6 +316,7 @@ end
 
 function _M:innerDisplayBack(x, y, nb_keyframes)
 	x, y = x + self.ix, y + self.iy
+	if self.portrait then return self:innerDisplayBackPortrait(x, y) end
 	quad(x, y, self.content_w, self.ih, {18, 19, 23})
 	local dx = x + self.content_w + 12
 	quad(dx, y, self.detail_w, self.ih, PANE)
@@ -317,4 +341,46 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	elseif e.kind == "locked" then sc = {224, 122, 106} end
 	for li, l in ipairs(K.wrap(e.status, font(13), maxw, 2)) do draw(text(l, 13, sc[1], sc[2], sc[3], false, maxw), tx, y + 48 + (li - 1) * 18) end
 	draw(pd, tx, y + 90)
+end
+
+-- portrait: cards on top, the selected prodigy's header at the top of the
+-- bottom sheet (description and Learn are uis placed in the sheet)
+function _M:innerDisplayBackPortrait(x, y)
+	quad(x, y, self.iw, self.sheet_y - 8, {18, 19, 23})
+	local sy = y + self.sheet_y
+	quad(x, sy, self.iw, self.sheet_h, PANE)
+	quad(x, sy, self.iw, 2, {60, 63, 72})
+	local e = self.cur
+	local points = self.actor.unused_prodigies or 0
+	local pd = text((_t"Points left: %d"):format(points), 13, points > 0 and 240 or 142, points > 0 and 212 or 136, points > 0 and 138 or 120, true)
+	if not e then
+		draw(text(_t"Prodigies", 22, 240, 212, 138, true), x + 12, sy + 16)
+		draw(pd, x + 12, sy + 52)
+		draw(text(_t"Tap a prodigy to read about it.", 13, 142, 136, 120), x + 12, sy + 76)
+		return
+	end
+	local sz = 64
+	quad(x + 12, sy + 12, sz + 8, sz + 8, {14, 15, 18})
+	self:drawIcon(e.entity, x + 16, sy + 16, sz, e.kind)
+	local tx = x + 12 + sz + 20
+	local maxw = self.iw - (tx - x) - 12
+	draw(text(e.cname, 22, 240, 212, 138, true, maxw), tx, sy + 16)
+	local sc = {142, 136, 120}
+	if e.kind == "ok" then sc = {123, 211, 137}
+	elseif e.kind == "known" or e.kind == "pending" then sc = {240, 212, 138}
+	elseif e.kind == "locked" then sc = {224, 122, 106} end
+	for li, l in ipairs(K.wrap(e.status, font(13), maxw, 2)) do draw(text(l, 13, sc[1], sc[2], sc[3], false, maxw), tx, sy + 48 + (li - 1) * 18) end
+	draw(pd, tx, sy + 90)
+end
+
+-- a rotation: the game swaps this dialog for a fresh one laid out for the
+-- new orientation, keeping the prodigy being read (the old dialog's unload
+-- has already given back its evolution attribute; init takes it again)
+function _M:touch_reopen()
+	local d = _M.new(unpack(self.touch_args))
+	local tid = self.cur and self.cur.talent
+	if tid then
+		for _, g in ipairs(d.groups or {}) do for _, e in ipairs(g.items) do if e.talent == tid then d:select(e) end end end
+	end
+	return d
 end
