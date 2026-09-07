@@ -425,12 +425,30 @@ function _M:displayCtxPill(name, rect, txt, fct)
 	self:zone(name, rect, function(button) if button == "left" then fct() end end)
 end
 
+--- Something to recover by resting: life, a resource that regenerates, a cooldown
+function _M:needRest()
+	local p = game.player
+	if not p or not p.max_life then return false end
+	if p.life < p.max_life then return true end
+	for _, res in ipairs(p.resources_def or {}) do
+		if not res.invert_values and not res.switch_direction and (not res.talent or p:knowTalent(res.talent)) then
+			local max, v = p["max_"..res.short_name], p[res.short_name]
+			if max and v and max > 0 and v < max then return true end
+		end
+	end
+	for tid, cd in pairs(p.talents_cd or {}) do if cd and cd > 0 then return true end end
+	return false
+end
+
 function _M:displayCtx()
 	local r = self.rects
 	if not r.ctx_lo then r.ctx_exit, r.ctx_wait = nil, nil return end
 	local exit_txt = self:exitLabel()
-	local wait_on = #self:enemies() > 0
-	self.ctx_exit_label = exit_txt
+	-- the second slot: Wait with enemies in view, Rest with none (and something to recover)
+	local enemies = #self:enemies() > 0
+	local wait_txt = enemies and _t"Wait" or (self:needRest() and _t"Rest" or nil)
+	local wait_on = wait_txt ~= nil
+	self.ctx_exit_label, self.ctx_wait_label = exit_txt, wait_txt
 	-- one pill takes the lower slot; both stack, the transition on top
 	if exit_txt and wait_on then r.ctx_exit, r.ctx_wait = r.ctx_hi, r.ctx_lo
 	elseif exit_txt then r.ctx_exit, r.ctx_wait = r.ctx_lo, nil
@@ -442,8 +460,10 @@ function _M:displayCtx()
 		end)
 	else self:dropZone("touch_ctx_exit") end
 	if r.ctx_wait then
-		self:displayCtxPill("touch_ctx_wait", r.ctx_wait, _t"Wait", function()
-			if game.key == game.normal_key then print("[TOUCH] context pill: wait") game.key:triggerVirtual("MOVE_STAY") end
+		self:displayCtxPill("touch_ctx_wait", r.ctx_wait, wait_txt, function()
+			if game.key ~= game.normal_key then return end
+			if wait_txt == _t"Rest" then print("[TOUCH] context pill: rest") game.key:triggerVirtual("REST")
+			else print("[TOUCH] context pill: wait") game.key:triggerVirtual("MOVE_STAY") end
 		end)
 	else self:dropZone("touch_ctx_wait") end
 end
@@ -776,7 +796,7 @@ function _M:display()
 	self:displayCtx()
 	self:displayStrip()
 	-- what the test harness reads
-	self.uiset.touch_ctx_rects = {exit=self.rects.ctx_exit, wait=self.rects.ctx_wait, exit_label=self.ctx_exit_label}
+	self.uiset.touch_ctx_rects = {exit=self.rects.ctx_exit, wait=self.rects.ctx_wait, exit_label=self.ctx_exit_label, wait_label=self.ctx_wait_label}
 	self.uiset.touch_skills_rect = self.rects.skills
 	self.uiset.touch_more_rect = self.rects.more
 	self.uiset.touch_strip_rects = self.strip_rects
