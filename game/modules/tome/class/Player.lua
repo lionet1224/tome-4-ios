@@ -1821,7 +1821,9 @@ function _M:autoActTick()
 	local fast = TI.setting("auto_pace") == "fast"
 	if not game.paused and game.tick then
 		local t0 = os.clock()
-		if fast then
+		-- resting and running are all world turns and no picture: burst through them
+		-- even at the smooth pace (Jordan: "resting on auto is super slow")
+		if fast or self.resting or self.running then
 			local n = 0
 			-- 60 % of a frame for the world (a heavy turn overruns it and the frame stutters)
 			local budget = 0.6 / (config.settings.display_fps or 30)

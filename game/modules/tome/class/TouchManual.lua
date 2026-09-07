@@ -401,10 +401,11 @@ function _M:displayLevelUp()
 	local r = self.rects.levelup
 	if not r then return end
 	if not self:levelUpPending() then self:dropZone("touch_levelup") return end
-	local pulse = 0.6 + 0.4 * math.sin(core.game.getTime() / 220)
+	-- steady, not pulsing: the band is cached and only refreshes a few times a second,
+	-- which turned the pulse into a stutter (Jordan: "just make it lit")
 	local down = K.pressed(r.x, r.y, r.w, r.h)
-	quad(r.x, r.y, r.w, r.h, 60, 46, 16, 235)
-	frame(r.x, r.y, r.w, r.h, 210, 170, 74, math.floor(255 * (down and 1 or pulse)), 2)
+	quad(r.x, r.y, r.w, r.h, down and 90 or 60, down and 70 or 46, down and 24 or 16, 235)
+	frame(r.x, r.y, r.w, r.h, 210, 170, 74, 255, 2)
 	self:label(_t"LEVEL UP", r.x + r.w / 2, r.y + r.h / 2, 0.62, 1, 0.9, 0.55, 1)
 	self:zone("touch_levelup", r, function(button) if button == "left" then game.key:triggerVirtual("LEVELUP") end end)
 end
