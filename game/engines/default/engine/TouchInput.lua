@@ -543,7 +543,9 @@ function _M.scriptTick()
 	local s = _M.script
 	-- a save pipe's forceRedraw (the vault save after birth) re-enters this tick from
 	-- inside the script's own step: never resume a coroutine that is already running
-	if coroutine.status(s.co) == "running" then return end
+	-- ("normal" when the script step itself resumed another coroutine, the level generator)
+	local st = coroutine.status(s.co)
+	if st == "running" or st == "normal" then return end
 	-- synthetic fingers are not SDL events, so the idle throttle stops the engine ticking;
 	-- keep the world moving while a script runs (same budget the soak autopilot uses)
 	if game and game.tick and game.level and game.player and not game.paused and game.__mod_info and game.__mod_info.short_name ~= "boot" then
