@@ -8,6 +8,7 @@ OUT="${1:-$ROOT/runs/sweep-$(date +%Y%m%d-%H%M%S)}"; mkdir -p "$OUT"
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 A="${UDID_A:-94E8BD6E-7084-4F64-8116-2AEC560DFCFC}"
 B="${UDID_B:-$(cat "$ROOT/tools/touch/sim-b.udid" 2>/dev/null)}"
+[ -n "$SWEEP_SINGLE" ] && B=""   # SWEEP_SINGLE=1: leave the second simulator alone
 tests=()
 for t in "$ROOT"/tools/touch/tests/*.lua; do n=$(basename "$t" .lua); case "$n" in mainmenu|loadzoom|stepdiag|settings|grab|fps) continue;; esac; tests+=("$t"); done
 run_half() { # $1 = udid, $2.. = tests

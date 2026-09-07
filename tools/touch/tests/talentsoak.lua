@@ -15,7 +15,7 @@ return function(T)
 	local function free(x, y) return map:isBound(x, y) and not map:checkEntity(x, y, Map.TERRAIN, "block_move") and not map(x, y, Map.ACTOR) end
 	local placed = false
 	for r = 0, 14 do for x = math.floor(map.w / 2) - r, math.floor(map.w / 2) + r do for y = math.floor(map.h / 2) - r, math.floor(map.h / 2) + r do
-		if not placed and free(x, y) and free(x + 2, y) and free(x + 1, y) and free(x - 1, y) and free(x, y + 1) and free(x, y - 1) then p:move(x, y, true) placed = true end
+		if not placed and free(x, y) and free(x + 3, y) and free(x + 3, y + 1) and free(x + 3, y - 1) and free(x + 2, y) and free(x + 1, y) and free(x + 1, y + 1) and free(x + 1, y - 1) and free(x - 1, y) then p:move(x, y, true) placed = true end
 	end end if placed then break end end
 	local x0, y0 = p.x, p.y
 	-- three durable targets in a clump 3 tiles away: the middle one is the aim,
@@ -35,8 +35,9 @@ return function(T)
 		a.setEffect = function(self, ...) self.__hits = (self.__hits or 0) + 1 return origEff(self, ...) end
 		return a
 	end
+	-- two clumps: adjacent (self-centred areas) and three tiles out (aimed areas)
 	local targets = {}
-	for _, d in ipairs{{3, 0}, {3, 1}, {3, -1}} do local a = mkTarget(x0 + d[1], y0 + d[2]) if a then targets[#targets+1] = a end end
+	for _, d in ipairs{{3, 0}, {3, 1}, {3, -1}, {1, 0}, {1, 1}, {1, -1}} do local a = mkTarget(x0 + d[1], y0 + d[2]) if a then targets[#targets+1] = a end end
 	local npc = targets[1]
 	if not npc then T.log("no npc") T.log("finished") return end
 	local nx0, ny0 = npc.x, npc.y
@@ -52,6 +53,7 @@ return function(T)
 		return (tg.radius and tg.radius >= 1) or tg.type == "cone" or tg.type == "beam" or tg.type == "wall" or tg.type == "ball" or tg.type == "widebeam"
 	end
 
+	local stats = {manual_ok=0, manual_refused=0, manual_error=0, auto_ok=0, auto_refused=0, auto_error=0, zone=0}
 	local function refill()
 		p.life = p.max_life
 		for _, res in ipairs(p.resources_def or {}) do
@@ -65,9 +67,10 @@ return function(T)
 	local function settle()
 		-- confirm an aim, close popups, come back home
 		for _ = 1, 4 do
-			if game.key ~= game.normal_key then T.key("ACCEPT") T.wait(120) end
-			if game.key ~= game.normal_key then T.key("EXIT") T.wait(120) end
-			if #game.dialogs > 0 then T.key("EXIT") T.wait(120) else break end
+			-- a talent's action can error when the aim is confirmed: keep the soak alive and note it
+			if game.key ~= game.normal_key then local ok, e = pcall(T.key, "ACCEPT") if not ok then T.log("ACTION ERROR on confirm:", tostring(e):sub(1, 160)) stats.confirm_error = (stats.confirm_error or 0) + 1 end T.wait(120) end
+			if game.key ~= game.normal_key then pcall(T.key, "EXIT") T.wait(120) end
+			if #game.dialogs > 0 then pcall(T.key, "EXIT") T.wait(120) else break end
 		end
 		if game.zone.short_name ~= zone0 then return false end
 		if p.x ~= x0 or p.y ~= y0 then if free(x0, y0) then p:move(x0, y0, true) end end
@@ -98,7 +101,7 @@ return function(T)
 	if limit > 0 and #list > limit then local l2 = {} for i = 1, limit do l2[i] = list[i] end list = l2 end
 	T.log("talents to exercise:", #list)
 
-	local stats = {manual_ok=0, manual_refused=0, manual_error=0, auto_ok=0, auto_refused=0, auto_error=0, zone=0}
+	-- (stats declared below; settle references it)
 	local bad = {}
 	for i, t in ipairs(list) do
 		local tid = t.id
@@ -147,7 +150,7 @@ return function(T)
 		if t.mode == "sustained" and p:isTalentActive(tid) then pcall(p.forceUseTalent, p, tid, {ignore_energy=true}) end
 		pcall(p.unlearnTalentFull, p, tid)
 	end
-	T.log(("SUMMARY manual ok %d refused %d error %d | auto ok %d refused %d error %d | area talents %d, %d covered fewer than 2 targets"):format(stats.manual_ok, stats.manual_refused, stats.manual_error, stats.auto_ok, stats.auto_refused, stats.auto_error, stats.area or 0, stats.area_bad or 0))
+	T.log(("SUMMARY manual ok %d refused %d error %d | auto ok %d refused %d error %d | area talents %d, %d covered fewer than 2 targets | %d action errors on confirm"):format(stats.manual_ok, stats.manual_refused, stats.manual_error, stats.auto_ok, stats.auto_refused, stats.auto_error, stats.area or 0, stats.area_bad or 0, stats.confirm_error or 0))
 	for _, b in ipairs(bad) do T.log("BAD", b) end
 	T.log("finished")
 end

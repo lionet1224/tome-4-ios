@@ -6382,6 +6382,9 @@ function _M:postUseTalent(ab, ret, silent)
 
 	local trigger = false
 	if ab.mode == "sustained" then
+		-- iOS port: a sustain whose activate returned true instead of its state table
+		-- (a few NPC/legacy talents) crashed here on ret._applied_costs
+		if ret == true then ret = {} end
 		local is_active = self:isTalentActive(ab.id)
 		if not is_active then -- check resources
 			if ab.sustain_feedback then -- pseudo resource

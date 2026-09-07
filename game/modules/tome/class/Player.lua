@@ -1609,6 +1609,15 @@ function _M:actDo(step)
 		if tgt == "manual" then print("[ACT] talent manual", t.name) self:useTalent(t.id) return true end
 		if tgt == self then print("[ACT] talent self", t.name) self:useTalent(t.id, nil, nil, nil, self) return true end
 		if not tgt then return false, _t"no target" end
+		-- a self-centred area talent (range 0 with a radius) is cast on yourself when the
+		-- chosen enemy is inside its reach; it used to be refused as "out of range"
+		if (self:getTalentRange(t) or 0) == 0 and ok and type(tg) == "table" and (tg.radius or 0) >= 1 then
+			local reach = self:getTalentRadius(t) or tg.radius or 1
+			if core.fov.distance(self.x, self.y, tgt.x, tgt.y) <= reach then
+				print("[ACT] talent around me", t.name, tgt.name) self:useTalent(t.id, nil, nil, nil, self) return true
+			end
+			return false, _t"nobody in reach", tgt
+		end
 		local d = core.fov.distance(self.x, self.y, tgt.x, tgt.y)
 		if d > self:getTalentRange(t) or not self:hasLOS(tgt.x, tgt.y) then return false, _t"out of range", tgt end
 		print("[ACT] talent", t.name, tgt.name)
