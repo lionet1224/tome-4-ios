@@ -1569,14 +1569,32 @@ end
 
 function _M:actPathStep(tgt)
 	local Astar = require "engine.Astar"
-	local path = Astar.new(game.level.map, self):calc(self.x, self.y, tgt.x, tgt.y)
+	-- never step into a creature that is not the target: walking into an escort or a
+	-- shopkeeper attacks it (Jordan: "It should never target non-enemies")
+	local map = game.level.map
+	local clear = function(x, y)
+		local a = map(x, y, Map.ACTOR)
+		return not a or a == tgt or a == self
+	end
+	local path = Astar.new(map, self):calc(self.x, self.y, tgt.x, tgt.y, nil, nil, clear)
 	if path then
-		for _, n in ipairs(path) do if n.x ~= self.x or n.y ~= self.y then return n.x, n.y end end
+		for _, n in ipairs(path) do if (n.x ~= self.x or n.y ~= self.y) and clear(n.x, n.y) then return n.x, n.y end end
 	end
 	local dx, dy = tgt.x - self.x, tgt.y - self.y
 	local nx, ny = self.x + (dx > 0 and 1 or dx < 0 and -1 or 0), self.y + (dy > 0 and 1 or dy < 0 and -1 or 0)
-	if self:canMove(nx, ny) then return nx, ny end
+	if self:canMove(nx, ny) and clear(nx, ny) then return nx, ny end
 	return nil
+end
+
+--- A move of the routine: refused when a creature we are not fighting stands there
+function _M:actMove(x, y, tgt)
+	local a = game.level.map(x, y, Map.ACTOR)
+	if a and a ~= self and a ~= tgt and self:reactionToward(a) >= 0 then
+		print("[ACT] refused to walk into", a.name)
+		return false
+	end
+	self:move(x, y)
+	return true
 end
 
 --- Move one tile away from the enemies in view (archers, casters)
@@ -1661,15 +1679,16 @@ function _M:actDo(step)
 	local adj = math.max(math.abs(tgt.x - self.x), math.abs(tgt.y - self.y)) <= 1
 	if kind == "bump" then
 		if not adj then return false, _t"not adjacent", tgt end
+		if self:reactionToward(tgt) >= 0 then return false, _t"not an enemy", tgt end
 		print("[ACT] bump", tgt.name)
-		self:move(tgt.x, tgt.y)
+		self:actMove(tgt.x, tgt.y, tgt)
 		return true
 	elseif kind == "approach" then
 		if adj then return false, _t"already adjacent" end
 		local nx, ny = self:actPathStep(tgt)
 		if not nx then return false, _t"no path" end
 		print("[ACT] approach", nx, ny)
-		self:move(nx, ny)
+		if not self:actMove(nx, ny, tgt) then return false, _t"blocked", tgt end
 		return true
 	elseif kind == "back" then
 		return self:touchStepBack(tgt)
@@ -1707,10 +1726,11 @@ function _M:actStep()
 			local nx, ny = self:actPathStep(far_target)
 			if nx then
 				print("[ACT] step in", nx, ny, far_target.name)
-				self:move(nx, ny)
-				self.changed = true
-				self.act_last_ok = true
-				return
+				if self:actMove(nx, ny, far_target) then
+					self.changed = true
+					self.act_last_ok = true
+					return
+				end
 			end
 		end
 		if not cooling and step.if_unusable == "wait" then
@@ -1743,6 +1763,11 @@ function _M:autoActStart(force)
 		end
 	end
 	self.auto_act = true
+	if game.uiset and game.uiset.touch_manual then
+		local tm = game.uiset.touch_manual
+		if tm.setPanMode then tm:setPanMode(false, "auto") end
+		tm.band_dirty = true -- the Pan pill goes away at once (the band is cached)
+	end
 	self.auto_start_level = self.level
 	self.auto_idle = 0
 	self.auto_last = 0
@@ -1774,6 +1799,7 @@ function _M:autoActStop(why)
 	if not self.auto_act then return end
 	self.auto_act = nil
 	self.auto_override = nil
+	if game.uiset and game.uiset.touch_manual then game.uiset.touch_manual.band_dirty = true end -- the pills come back at once
 	if why then game.logPlayer(self, "#GOLD#Auto-act stopped:#LAST# %s", why) end
 	print("[AUTO] stop", why or "")
 	if self.running then self:runStop(why) end

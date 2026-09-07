@@ -29,8 +29,13 @@ _M.CARD_W, _M.CARD_H = 68, 78
 _M.STRIP_H = 96
 -- context pills beside AUTO: "Descend" (on a transition tile) and "Wait" (enemies in view)
 _M.CTX_W, _M.CTX_H = 150, 44
+-- the Pan pill (camera drag mode) beside the context pills, shown whenever AUTO is off
+_M.PAN_W = 96
 
 local DIRS = {[-1]={[-1]=7, [0]=4, [1]=1}, [0]={[-1]=8, [0]=5, [1]=2}, [1]={[-1]=9, [0]=6, [1]=3}}
+
+-- the touch layer asks whether a one-finger map drag should scroll the camera (the Pan pill)
+TouchInput.pan_active = function() local m = game and game.uiset and game.uiset.touch_manual return m and m.pan_mode and true or false end
 
 local function now() return core.game.getTime() end
 local function quad(x, y, w, h, r, g, b, a) core.display.drawQuad(x, y, w, h, r, g, b, a or 255) end
@@ -227,6 +232,8 @@ function _M:layout()
 		local cx = left and (auto_x + bw + 12) or (auto_x - 12 - _M.CTX_W)
 		r.ctx_lo = {x=cx, y=dock_bottom - _M.CTX_H, w=_M.CTX_W, h=_M.CTX_H}
 		r.ctx_hi = {x=cx, y=r.ctx_lo.y - 8 - _M.CTX_H, w=_M.CTX_W, h=_M.CTX_H}
+		local px = left and (cx + _M.CTX_W + 10) or (cx - 10 - _M.PAN_W)
+		r.ctx_pan = {x=px, y=dock_bottom - _M.CTX_H, w=_M.PAN_W, h=_M.CTX_H}
 	else
 		r.band_y = nil
 		-- Skills just past AUTO, More above it, the drawer filling the rest of the bottom edge
@@ -247,6 +254,8 @@ function _M:layout()
 		local bottom = self.drawer_open and (sy - 8) or dock_bottom
 		r.ctx_lo = {x=cx, y=bottom - _M.CTX_H, w=_M.CTX_W, h=_M.CTX_H}
 		r.ctx_hi = {x=cx, y=r.ctx_lo.y - 8 - _M.CTX_H, w=_M.CTX_W, h=_M.CTX_H}
+		local px = left and (cx + _M.CTX_W + 10) or (cx - 10 - _M.PAN_W)
+		r.ctx_pan = {x=px, y=bottom - _M.CTX_H, w=_M.PAN_W, h=_M.CTX_H}
 	end
 	return r
 end
@@ -280,7 +289,7 @@ function _M:hudHit(x, y)
 	if inRect(r.strip, x, y) and self:stripShown() then return true end
 	if inRect(r.more, x, y) or inRect(r.skills, x, y) or inRect(r.act, x, y) or inRect(r.auto, x, y) then return true end
 	if self:levelUpPending() and inRect(r.levelup, x, y) then return true end
-	if inRect(r.ctx_exit, x, y) or inRect(r.ctx_wait, x, y) then return true end
+	if inRect(r.ctx_exit, x, y) or inRect(r.ctx_wait, x, y) or (self.ctx_pan_shown and inRect(r.ctx_pan, x, y)) then return true end
 	-- the routine strip above Act (it grows away from the screen edge)
 	if r.act and y >= r.act.y - _M.ACT_STRIP_H and y < r.act.y then
 		if r.hand == "left" then
@@ -432,8 +441,8 @@ function _M:exitLabel()
 	return _t"Enter"
 end
 
-function _M:displayCtxPill(name, rect, txt, fct)
-	local down = K.pressed(rect.x, rect.y, rect.w, rect.h)
+function _M:displayCtxPill(name, rect, txt, fct, on)
+	local down = K.pressed(rect.x, rect.y, rect.w, rect.h) or on
 	quad(rect.x, rect.y, rect.w, rect.h, down and 80 or 60, down and 62 or 46, down and 22 or 16, 235)
 	frame(rect.x, rect.y, rect.w, rect.h, 210, 170, 74, 255, 2)
 	self:label(txt, rect.x + rect.w / 2, rect.y + rect.h / 2, 0.7, 1, 0.9, 0.55, 1)
@@ -481,6 +490,25 @@ function _M:displayCtx()
 			else print("[TOUCH] context pill: wait") game.key:triggerVirtual("MOVE_STAY") end
 		end)
 	else self:dropZone("touch_ctx_wait") end
+	-- Pan: one-finger drags scroll the camera until the pill is tapped again or you step
+	local p = game.player
+	if self.pan_mode and self.pan_from and p and (p.x ~= self.pan_from.x or p.y ~= self.pan_from.y) then self:setPanMode(false, "stepped") end
+	self.ctx_pan_shown = r.ctx_pan and not (p and p.auto_act) and game.key == game.normal_key
+	if self.ctx_pan_shown then
+		self:displayCtxPill("touch_ctx_pan", r.ctx_pan, self.pan_mode and _t"Panning" or _t"Pan", function() self:setPanMode(not self.pan_mode) end, self.pan_mode)
+	else
+		self:dropZone("touch_ctx_pan")
+		if self.pan_mode then self:setPanMode(false, "hidden") end
+	end
+end
+
+function _M:setPanMode(on, why)
+	if (self.pan_mode and true or false) == (on and true or false) then return end
+	self.pan_mode = on or nil
+	self.pan_from = on and game.player and {x=game.player.x, y=game.player.y} or nil
+	self.band_dirty = true
+	print("[TOUCH] pan mode", on and "on" or "off", why or "")
+	if on then game.logPlayer(game.player, "#GOLD#Pan:#LAST# drag the map to look around; tap Pan again or step to stop.") end
 end
 
 ---------------------------------------------------------------------------
@@ -811,7 +839,7 @@ function _M:display()
 	self:displayCtx()
 	self:displayStrip()
 	-- what the test harness reads
-	self.uiset.touch_ctx_rects = {exit=self.rects.ctx_exit, wait=self.rects.ctx_wait, exit_label=self.ctx_exit_label, wait_label=self.ctx_wait_label}
+	self.uiset.touch_ctx_rects = {exit=self.rects.ctx_exit, wait=self.rects.ctx_wait, exit_label=self.ctx_exit_label, wait_label=self.ctx_wait_label, pan=self.ctx_pan_shown and self.rects.ctx_pan or nil, pan_mode=self.pan_mode}
 	self.uiset.touch_skills_rect = self.rects.skills
 	self.uiset.touch_more_rect = self.rects.more
 	self.uiset.touch_strip_rects = self.strip_rects

@@ -111,7 +111,8 @@ return function(T)
 	local bad = {}
 	-- object-granted copies (T_INFUSION:_HEALING_4...) need their item: not player talents
 	-- Fearscape builds its own zone and swaps game.level directly (no changeLevel to block)
-	local skip = {T_DEMON_PLANE=true, T_PARADOX_CLONE=true} -- Paradox Clone rebuilds the game state
+	-- Paradox Clone rebuilds the game state; Rime Wraith's summon loops forever against targets that never die
+	local skip = {T_DEMON_PLANE=true, T_PARADOX_CLONE=true, T_RIME_WRAITH=true}
 	for i, t in ipairs(list) do if i >= from and not t.id:find(":", 1, true) and not skip[t.id] then
 		local tid = t.id
 		print("[SOAK] talent", i, tid, t.name)

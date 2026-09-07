@@ -138,6 +138,7 @@ function _M.fingerDown(id, x, y)
 			if t.wheel and _M.wheel then _M.wheel:cancel() end
 			if t.step then t.step = nil if _M.on_map_drag then pcall(_M.on_map_drag, "cancel", t) end end
 			if t.hud then t.hud = nil if _M.on_map_drag then pcall(_M.on_map_drag, "cancel", t) end end
+			if t.pan then t.pan = nil end
 			if t.moved and not t.held and not t.wheel and not t.step_was then emit(function(m) m:receiveMouse("left", t.x, t.y, true) end) end
 			t.moved = true
 			t.multi = true
@@ -176,6 +177,21 @@ local function twoFingerPan()
 	end
 end
 
+-- the Pan pill: a one-finger drag scrolls the camera, whole tiles at a time
+local function panStep(t, x, y)
+	local pn = t.pan
+	pn.ax, pn.ay = pn.ax + (x - pn.x), pn.ay + (y - pn.y)
+	pn.x, pn.y = x, y
+	local map = type(game) == "table" and game.level and game.level.map
+	if not map or not map.setScroll then return end
+	local tw, th = map.tile_w * (map.zoom or 1), map.tile_h * (map.zoom or 1)
+	local sx, sy = math.floor(pn.ax / tw), math.floor(pn.ay / th)
+	if sx ~= 0 or sy ~= 0 then
+		map:setScroll(map.mx - sx, map.my - sy)
+		pn.ax, pn.ay = pn.ax - sx * tw, pn.ay - sy * th
+	end
+end
+
 function _M.fingerMove(id, x, y)
 	_M.input_serial = (_M.input_serial or 0) + 1
 	if type(_M.fingers[id]) == "table" then _M.fingers[id].x, _M.fingers[id].y = x, y end
@@ -201,17 +217,26 @@ function _M.fingerMove(id, x, y)
 		if _M.on_map_drag then pcall(_M.on_map_drag, "move", t, x, y) end
 		return
 	end
+	if t.pan then panStep(t, x, y) return end
 	if t.hud then return end -- a HUD element owns this drag (it reads _M.t): no map pan
 	if not t.moved then
 		if not far then return end
 		t.moved = true
 		-- a drag on the map may be a movement gesture (drag-to-step): the game claims it;
 		-- a drag that starts on a HUD element (the skill strip) is that element's own scroll
-		if _M.on_map_drag and _M.setting("drag_step") ~= false then
+		local panning = _M.pan_active and _M.pan_active()
+		if _M.on_map_drag and (_M.setting("drag_step") ~= false or panning) then
 			local ok, claimed = pcall(_M.on_map_drag, "start", t, x, y)
 			if ok and claimed == "hud" then
 				t.hud, t.step_was = true, true
 				print("[TOUCH] hud drag")
+				return
+			elseif panning then
+				-- Pan mode: the drag scrolls the camera instead of stepping
+				if ok and claimed then pcall(_M.on_map_drag, "cancel", t) end
+				t.pan = {x=t.x0, y=t.y0, ax=0, ay=0}
+				print("[TOUCH] pan drag")
+				panStep(t, x, y)
 				return
 			elseif ok and claimed then
 				t.step, t.step_was = true, true
@@ -254,6 +279,7 @@ function _M.fingerUp(id, x, y)
 		return
 	end
 	if t.multi then done() return end
+	if t.pan then t.pan = nil done() park() return end
 	if t.hud then
 		t.hud = nil
 		done()

@@ -517,6 +517,7 @@ function _M:refresh()
 		if f(o) and (not self.filter or self.filter(o)) then items[#items+1] = {object=o, inven=self.actor.INVEN_INVEN, item=i} end
 	end
 	self.c_list:setItems(items)
+	self:fitList()
 	if self.cur and self.cur.object then
 		local found = false
 		for i, e in ipairs(items) do if e.object == self.cur.object then found = true self.c_list:select(i, true) self.cur = e end end
@@ -571,6 +572,32 @@ function _M:showCurrent()
 	self.b_primary:generate()
 	self.b_transmo.text = (o and o.__transmo) and _t"Keep" or _t"Transmog."
 	self.b_transmo:generate()
+end
+
+-- portrait: a short list (the chest tab at level end holds a handful of items) gives its
+-- spare height to the comparison card and the description instead of an empty pane
+function _M:fitList()
+	if not self.portrait or not self.c_list or not self.pane_h or not self.pane_top then return end
+	local l = self.c_list
+	local n = #(l.items or {})
+	local rh = l.row_h or 60
+	local h = math.min(self.pane_h, math.max(1, n) * rh + 8)
+	if h == self.list_h_fit then return end
+	self.list_h_fit = h
+	l.h = h
+	if l.scrollbar then
+		l.scrollbar.size = h
+		l.scrollbar.max = math.max(0, n * rh - h + 8)
+		l.scrollbar.pos = util.minBound(l.scrollbar.pos or 0, 0, l.scrollbar.max)
+	end
+	self.sheet_y = self.pane_top + h + 10
+	local e = self.ui_by_ui[self.c_card]
+	if e then
+		e.y = self.iy + self.sheet_y
+		if self.c_card.mouse then self.c_card.mouse.delegate_offset_y = e.y end
+	end
+	self.c_desc_h_fit = nil
+	self:fitDesc()
 end
 
 -- the compare card grows with its stat rows: keep the description below it, scrolling in what is left
