@@ -136,6 +136,7 @@ end
 -- Touch layout
 ---------------------------------------------------------------------------
 function _M:initTouch(l)
+	self.touch_static_bg = true -- the game under it is frozen (see Game:display)
 	local K = require "engine.ui.TouchKit"
 	local Button = require "engine.ui.Button"
 	local TI = require "engine.TouchInput"

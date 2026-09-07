@@ -129,6 +129,7 @@ function _M:openJournal()
 end
 
 function _M:initTouch(quest, status)
+	self.touch_static_bg = true -- the game under it is frozen (see Game:display)
 	local K = require "engine.ui.TouchKit"
 	local Button = require "engine.ui.Button"
 	local TextzoneList = require "engine.ui.TextzoneList"

@@ -324,6 +324,7 @@ function _M.checkKeyboard()
 end
 
 function _M.tick()
+	_M.frames = (_M.frames or 0) + 1 -- frame counter (tests measure fps with it)
 	_M.checkKeyboard()
 	if not _M._orientation_applied and _M.active() then _M.applyOrientation() end
 	local t = _M.t

@@ -535,3 +535,15 @@ rows ("Other characters", "Fallen" for dead ones) in a Flow; **long-press** (Tou
 space via the Flow's `last_screen_x/y`) or "…" opens a bottom **actions sheet** (Load / Details / Delete with confirm).
 The two compatibility checkboxes are footer buttons (a drawn link under a dialog-level zone never receives left
 taps: the Dialog's own zone consumes them). Test `loadgame.lua` (boot mode, both orientations).
+
+## 37. Frame cost under dialogs (2026-09-07)
+
+Measured with `tests/fps.lua` (frame counter in `TouchInput.tick`, `prof_uiset` / `prof_dialogs` timers in
+`Game:display`, per-widget `prof_uis` in `Dialog:toScreen`): the game (map + post + HUD) was re-rendered under
+every dialog and a big touch sheet added 40–55 % on top. FBOs are off in this port (`fbo_active` false, the ES2
+emulation) so the engine's `full_fbo` cannot be reused; instead `core.display.grabScreen(rw, rh)` copies the
+drawable into a texture (glCopyTexImage2D, bottom-up so the blit flips V) once when a big touch dialog (≥ 45 %
+of the screen, or `touch_static_bg`) reaches the top of the stack, and `grabToScreen` blits it on later frames;
+`Game:display` then draws only the dialogs (HUD cost → 0). The snapshot is dropped when no big sheet is on top.
+The simulator is fill-rate bound (software GL): a big dialog frame costs ~150 ms there and nothing on the phone,
+so compare proportions, not milliseconds. `game.touch_bg_debug = true` draws the capture at half size.

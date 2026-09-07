@@ -2983,6 +2983,58 @@ static int gl_fbo_use(lua_State *L)
 }
 
 extern GLuint mapseentex;
+/* iOS port: copy the framebuffer we just drew into a texture (no FBO needed) and
+   blit it back later. Used to freeze the game under a big touch dialog. */
+static int gl_grab_screen(lua_State *L)
+{
+	int w = luaL_checknumber(L, 1);
+	int h = luaL_checknumber(L, 2);
+	GLuint *t = (GLuint*)lua_newuserdata(L, sizeof(GLuint));
+	auxiliar_setclass(L, "gl{texture}", -1);
+	glGenTextures(1, t);
+	tfglBindTexture(GL_TEXTURE_2D, *t);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glGetError();
+	glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, w, h, 0);
+	{ GLenum e = glGetError(); if (e) printf("[GRAB] copy %dx%d err=%x\n", w, h, e); }
+	return 1;
+}
+
+static int gl_grab_update(lua_State *L)
+{
+	GLuint *t = (GLuint*)auxiliar_checkclass(L, "gl{texture}", 1);
+	int w = luaL_checknumber(L, 2);
+	int h = luaL_checknumber(L, 3);
+	tfglBindTexture(GL_TEXTURE_2D, *t);
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, w, h);
+	return 0;
+}
+
+static int gl_grab_toscreen(lua_State *L)
+{
+	GLuint *t = (GLuint*)auxiliar_checkclass(L, "gl{texture}", 1);
+	int x = luaL_checknumber(L, 2);
+	int y = luaL_checknumber(L, 3);
+	int w = luaL_checknumber(L, 4);
+	int h = luaL_checknumber(L, 5);
+	glDisable(GL_BLEND);
+	tglBindTexture(GL_TEXTURE_2D, *t);
+	GLfloat colors[4*4] = { 1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1 };
+	glColorPointer(4, GL_FLOAT, 0, colors);
+	/* the copied framebuffer is bottom-up: flip V like the FBO blit does */
+	GLfloat texcoords[2*4] = { 0, 1,  0, 0,  1, 0,  1, 1 };
+	glTexCoordPointer(2, GL_FLOAT, 0, texcoords);
+	GLfloat vertices[2*4] = { x, y,  x, y + h,  x + w, y + h,  x + w, y };
+	glVertexPointer(2, GL_FLOAT, 0, vertices);
+	glDrawArrays(GL_QUADS, 0, 4);
+	glEnable(GL_BLEND);
+	{ GLenum e = glGetError(); if (e) printf("[GRAB] draw err=%x\n", e); }
+	return 0;
+}
+
 static int gl_fbo_toscreen(lua_State *L)
 {
 	lua_fbo *fbo = (lua_fbo*)auxiliar_checkclass(L, "gl{fbo}", 1);
@@ -3673,6 +3725,9 @@ static const struct luaL_Reg displaylib[] =
 	{"newSurface", sdl_new_surface},
 	{"newTile", sdl_new_tile},
 	{"newFBO", gl_new_fbo},
+	{"grabScreen", gl_grab_screen},
+	{"grabUpdate", gl_grab_update},
+	{"grabToScreen", gl_grab_toscreen},
 	{"newVO", gl_new_vertex},
 	{"fboSupportsTransparency", gl_fbo_supports_transparency},
 	{"newQuadratic", gl_new_quadratic},

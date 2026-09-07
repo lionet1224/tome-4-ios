@@ -1985,10 +1985,43 @@ function _M:display(nb_keyframes)
 		if self.support_shader_gamma and self.full_fbo_shader and self.full_fbo_shader.shad then self.full_fbo_shader.shad:uniGamma(config.settings.gamma_correction / 100) end
 	end
  
+	-- iOS port: under a big touch sheet the game is paused and its picture does not
+	-- change, yet map, post-effects and HUD were re-rendered every frame beneath it
+	-- (measured: the dialog added 40-55 % on top of that). Reuse the last frame the
+	-- full-screen framebuffer still holds and draw only the dialogs.
+	do
+		local TI = require("engine.TouchInput")
+		local top = self.dialogs[#self.dialogs]
+		local big = TI.active() and top and not top.__hidden and top.w and top.h
+			and (top.touch_static_bg or (top.touch_static_bg == nil and top.w * top.h >= 0.45 * self.w * self.h))
+		if big and core.display.grabScreen then
+			-- freeze the game: render it once more, copy the screen into a texture, and blit
+			-- that texture under the dialogs on every following frame (FBOs are off in this port)
+			local _, _, _, _, rw, rh = core.display.size()
+			rw, rh = rw or self.w, rh or self.h
+			if self.touch_bg_tex and (self.touch_bg_w ~= rw or self.touch_bg_h ~= rh) then self.touch_bg_tex, self.touch_bg_valid = nil, false end
+			if not self.touch_bg_valid then
+				self.uiset:display(nb_keyframes)
+				self.bignews:display(nb_keyframes)
+				if self.touch_bg_tex then core.display.grabUpdate(self.touch_bg_tex, rw, rh)
+				else self.touch_bg_tex = core.display.grabScreen(rw, rh) self.touch_bg_w, self.touch_bg_h = rw, rh end
+				self.touch_bg_valid = true
+				print("[TOUCH] static background captured for", tostring(top.title))
+			else
+				if self.touch_bg_debug then core.display.grabToScreen(self.touch_bg_tex, 0, 0, math.floor(self.w / 2), math.floor(self.h / 2))
+				else core.display.grabToScreen(self.touch_bg_tex, 0, 0, self.w, self.h) end
+			end
+			engine.GameTurnBased.display(self, nb_keyframes)
+			return
+		elseif self.touch_bg_valid then
+			self.touch_bg_valid = false -- next big sheet gets a fresh snapshot
+		end
+	end
+
 	if self.full_fbo then self.full_fbo:use(true) end
 
 	-- Now the ui
-	self.uiset:display(nb_keyframes)
+	do local _t0 = os.clock() self.uiset:display(nb_keyframes) local TI = require("engine.TouchInput") TI.prof_uiset = (TI.prof_uiset or 0) + (os.clock() - _t0) end
 
 	-- "Big News"
 	self.bignews:display(nb_keyframes)

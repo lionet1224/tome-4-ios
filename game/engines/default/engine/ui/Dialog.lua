@@ -1065,8 +1065,11 @@ function _M:toScreen(x, y, nb_keyframes)
 	if zoom < 1 then core.display.glScale(zoom, zoom, zoom) end
 
 	-- Draw the frame and shadow
+	local prof0 = require("engine.TouchInput").prof_uis
+	local pt0 = prof0 and os.clock()
 	if self.frame.shadow then self:drawFrame(x + self.frame.shadow.x, y + self.frame.shadow.y, 0, 0, 0, self.frame.shadow.a) end
 	self:drawFrame(x, y, self.frame.darkness, self.frame.darkness, self.frame.darkness, self.frame.a)
+	if prof0 then prof0["<frame>"] = (prof0["<frame>"] or 0) + (os.clock() - pt0) pt0 = os.clock() end
 
 	-- Title
 	if self.title then
@@ -1088,15 +1091,27 @@ function _M:toScreen(x, y, nb_keyframes)
 		self:textureToScreen(self.close_box_tex, x + self.w - cb.w - 2 + (cb.w - self.close_box_tex.w) / 2, y + 2 + (cb.h - self.close_box_tex.h) / 2)
 	end
 
+	if prof0 then prof0["<title>"] = (prof0["<title>"] or 0) + (os.clock() - pt0) pt0 = os.clock() end
 	self:innerDisplayBack(x, y, nb_keyframes, tx, ty)
+	if prof0 then prof0["<back>"] = (prof0["<back>"] or 0) + (os.clock() - pt0) end
 
 	-- UI elements
+	local prof = require("engine.TouchInput").prof_uis -- per-widget timing when a test asks for it
 	for i = 1, #self.uis do
 		local ui = self.uis[i]
-		if not ui.hidden then ui.ui:display(x + ui.x, y + ui.y, nb_keyframes, ox + ui.x, oy + ui.y) end
+		if not ui.hidden then
+			if prof then
+				local t0 = os.clock()
+				ui.ui:display(x + ui.x, y + ui.y, nb_keyframes, ox + ui.x, oy + ui.y)
+				local k = tostring(ui.ui.__CLASSNAME or ui.ui._NAME)
+				prof[k] = (prof[k] or 0) + (os.clock() - t0)
+			else
+				ui.ui:display(x + ui.x, y + ui.y, nb_keyframes, ox + ui.x, oy + ui.y)
+			end
+		end
 	end
-
-	self:innerDisplay(x, y, nb_keyframes, tx, ty)
+	if prof then local t0 = os.clock() self:innerDisplay(x, y, nb_keyframes, tx, ty) prof["<innerDisplay>"] = (prof["<innerDisplay>"] or 0) + (os.clock() - t0)
+	else self:innerDisplay(x, y, nb_keyframes, tx, ty) end
 
 	if self.first_display then self:firstDisplay() self.first_display = false end
 

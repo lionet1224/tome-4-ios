@@ -183,12 +183,15 @@ function _M:display(nb_keyframes)
 
 	-- Suppress the display of dialogs when drawing for a savefile screenshot.
 	if not core.display.redrawingForSavefileScreenshot() and #self.dialogs then
+		local t0 = os.clock()
 		local last = self.dialogs[#self.dialogs]
 		for i = last and last.__show_only and #self.dialogs or 1, #self.dialogs do
 			local d = self.dialogs[i]
 			d:display()
 			d:toScreen(d.display_x, d.display_y, nb_keyframes)
 		end
+		local TI = require("engine.TouchInput")
+		TI.prof_dialogs = (TI.prof_dialogs or 0) + (os.clock() - t0)
 	end
 
 	-- Check profile thread events
