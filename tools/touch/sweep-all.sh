@@ -15,7 +15,10 @@ shard_i=0; shard_n=1
 if [ -n "$SWEEP_SHARD" ]; then shard_i="${SWEEP_SHARD%/*}"; shard_n="${SWEEP_SHARD#*/}"; fi
 tests=(); k=0
 for t in "$ROOT"/tools/touch/tests/*.lua; do n=$(basename "$t" .lua); case "$n" in mainmenu|loadzoom|stepdiag|settings|grab|fps) continue;; esac
-	if (( k % shard_n == shard_i )); then tests+=("$t"); fi; k=$((k+1)); done
+	if (( k % shard_n == shard_i )); then
+		# SWEEP_SKIP_PASSED=<results.txt of an earlier sweep>: leave out what already passed there
+		if [ -n "${SWEEP_SKIP_PASSED:-}" ] && grep -qx "PASS $n" "$SWEEP_SKIP_PASSED" 2>/dev/null; then :; else tests+=("$t"); fi
+	fi; k=$((k+1)); done
 run_half() { # $1 = udid, $2.. = tests
 	local ud="$1"; shift
 	for t in "$@"; do
