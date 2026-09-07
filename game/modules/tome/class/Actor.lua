@@ -1507,7 +1507,10 @@ function _M:move(x, y, force)
 		self:incStamina(self:getTalentLevelRaw(self.T_LIGHT_OF_FOOT) * 0.2)
 	end
 
-	if moved and not force and ox and oy and (ox ~= self.x or oy ~= self.y) and config.settings.tome.smooth_move > 0 then
+	-- iOS port: fast-paced AUTO skips the walking animation (see Player:autoActTick)
+	local anim_ok = config.settings.tome.smooth_move > 0
+	if anim_ok and game.player and game.player.auto_act and require("engine.TouchInput").setting("auto_pace") == "fast" then anim_ok = false end
+	if moved and not force and ox and oy and (ox ~= self.x or oy ~= self.y) and anim_ok then
 		local blur = 0
 		if game.level.data.zero_gravity then blur = 2 end
 		if self:attr("lightning_speed") or self:attr("step_up") or self:attr("wild_speed") or self:hasEffect(self.EFF_HASTE) then blur = 3 end

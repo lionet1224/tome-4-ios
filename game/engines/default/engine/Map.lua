@@ -1484,6 +1484,13 @@ end
 --- Display the particle emitters, called by self:display()
 function _M:displayParticles(z, nb_keyframes)
 	nb_keyframes = nb_keyframes or 1
+	-- iOS port: with effects off during AUTO nothing is drawn; the particle thread keeps
+	-- updating them so they still die on time
+	if _M.skip_particles and _M.skip_particles() then
+		for e, _ in pairs(self.z_particles[z]) do if e.ps and not e.ps:isAlive() then self:removeParticleEmitter(e) end end
+		return
+	end
+	local _pt0 = os.clock()
 	local adx, ady
 	local alive
 	local dx, dy = self.display_x, self.display_y
@@ -1533,6 +1540,7 @@ function _M:displayParticles(z, nb_keyframes)
 			end
 		end
 	end
+	_M.prof_particles = (_M.prof_particles or 0) + (os.clock() - _pt0)
 end
 
 -- Returns the compass direction from a vector

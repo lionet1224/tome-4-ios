@@ -2424,11 +2424,24 @@ function _M:display(nb_keyframes)
 			self.touch_manual:hide()
 			self.touch_manual:displayQuiet()
 		else
-			self.touch_manual:displayBand() -- portrait: the band under the map, before anything drawn on it
-			self:displayTouchPips()
-			self:displayTouchTargeting()
-			if game.key == game.targetmode_key then self.touch_manual:hide() self.touch_manual:displayQuiet()
-			else self.touch_manual:display() end
+			local tm = self.touch_manual
+			local _h0 = os.clock()
+			local TI = require "engine.TouchInput"
+			if game.key ~= game.targetmode_key and tm:bandCacheWanted() and not tm:bandNeedsRefresh() then
+				-- portrait HUD cache: the band comes back from its texture, only the live
+				-- bits (target ring, step preview, pips above the band) are drawn
+				tm:blitBand()
+				self:displayTouchPips()
+				self:displayTouchTargeting()
+				tm:displayLive()
+			else
+				tm:displayBand() -- portrait: the band under the map, before anything drawn on it
+				self:displayTouchPips()
+				self:displayTouchTargeting()
+				if game.key == game.targetmode_key then tm:hide() tm:displayQuiet()
+				else tm:display() if tm:bandCacheWanted() then tm:captureBand() end end
+			end
+			TI.prof_hud = (TI.prof_hud or 0) + (os.clock() - _h0)
 		end
 		self.touch_wheel:display()
 	end

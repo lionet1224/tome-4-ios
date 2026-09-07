@@ -18,7 +18,7 @@ module(..., package.seeall, class.make)
 
 _M.LONG_PRESS_MS = 450
 _M.MOVE_TOLERANCE = 18
-_M.DEFAULTS = {wheel=false, drag_step=true, trigger="hold", pos="finger", zone="thirds", wedges=8, hold_ms=160, unlock_all=true, emulate=false, auto_life=50, auto_res=25, auto_rare=true, auto_dim=true, auto_buzz=true, orientation="auto", hand="left"}
+_M.DEFAULTS = {wheel=false, drag_step=true, trigger="hold", pos="finger", zone="thirds", wedges=8, hold_ms=160, unlock_all=true, emulate=false, auto_life=50, auto_res=25, auto_rare=true, auto_dim=true, auto_buzz=true, orientation="auto", hand="left", auto_pace="smooth", auto_effects=false, hud_cache=true}
 
 function _M.setting(k)
 	local t = config.settings.touch
@@ -117,6 +117,7 @@ function _M.clearTooltip(why)
 end
 
 function _M.fingerDown(id, x, y)
+	_M.input_serial = (_M.input_serial or 0) + 1 _M.fingers_down = (_M.fingers_down or 0) + 1
 	_M.last_down = now()
 	local o = _M.osk
 	if o and o.box then
@@ -176,6 +177,7 @@ local function twoFingerPan()
 end
 
 function _M.fingerMove(id, x, y)
+	_M.input_serial = (_M.input_serial or 0) + 1
 	if type(_M.fingers[id]) == "table" then _M.fingers[id].x, _M.fingers[id].y = x, y end
 	if _M.nb >= 2 then twoFingerPan() end
 	local t = _M.t
@@ -229,6 +231,7 @@ function _M.fingerMove(id, x, y)
 end
 
 function _M.fingerUp(id, x, y)
+	_M.input_serial = (_M.input_serial or 0) + 1 _M.fingers_down = math.max(0, (_M.fingers_down or 1) - 1)
 	_M.fingers[id] = nil
 	_M.nb = 0
 	for _ in pairs(_M.fingers) do _M.nb = _M.nb + 1 end

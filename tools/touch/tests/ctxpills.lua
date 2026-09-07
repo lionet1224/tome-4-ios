@@ -56,7 +56,7 @@ return function(T)
 	for _, d in ipairs{{2, 0}, {-2, 0}, {0, 2}, {0, -2}, {1, 1}, {-1, -1}} do
 		if free(p.x + d[1], p.y + d[2]) then
 			npc = game.zone:makeEntity(game.level, "actor", {type="vermin"}, nil, true)
-			if npc then game.zone:addEntity(game.level, npc, "actor", p.x + d[1], p.y + d[2]) npc.faction = "enemies" npc.ai = "none" npc.invulnerable = 1 npc.never_move = 1 break end
+			if npc then game.zone:addEntity(game.level, npc, "actor", p.x + d[1], p.y + d[2]) npc.faction = "enemies" npc.ai = "none" npc.invulnerable = 1 npc.never_move = 1 npc.invisible = nil npc.stealth = nil break end
 		end
 	end
 	if npc then

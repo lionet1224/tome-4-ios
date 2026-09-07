@@ -3042,6 +3042,9 @@ static int gl_grab_screen(lua_State *L)
 {
 	int w = luaL_checknumber(L, 1);
 	int h = luaL_checknumber(L, 2);
+	/* optional GL-space origin (bottom-left): a region of the drawable, the HUD band */
+	int gx = lua_isnumber(L, 3) ? lua_tonumber(L, 3) : 0;
+	int gy = lua_isnumber(L, 4) ? lua_tonumber(L, 4) : 0;
 	GLuint *t = (GLuint*)lua_newuserdata(L, sizeof(GLuint));
 	auxiliar_setclass(L, "gl{texture}", -1);
 	glGenTextures(1, t);
@@ -3051,7 +3054,7 @@ static int gl_grab_screen(lua_State *L)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glGetError();
-	glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, w, h, 0);
+	glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, gx, gy, w, h, 0);
 	{ GLenum e = glGetError(); if (e) printf("[GRAB] copy %dx%d err=%x\n", w, h, e); }
 	return 1;
 }
@@ -3061,8 +3064,10 @@ static int gl_grab_update(lua_State *L)
 	GLuint *t = (GLuint*)auxiliar_checkclass(L, "gl{texture}", 1);
 	int w = luaL_checknumber(L, 2);
 	int h = luaL_checknumber(L, 3);
+	int gx = lua_isnumber(L, 4) ? lua_tonumber(L, 4) : 0;
+	int gy = lua_isnumber(L, 5) ? lua_tonumber(L, 5) : 0;
 	tfglBindTexture(GL_TEXTURE_2D, *t);
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, w, h);
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, gx, gy, w, h);
 	return 0;
 }
 

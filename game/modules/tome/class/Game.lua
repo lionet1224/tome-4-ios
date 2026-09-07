@@ -1890,7 +1890,7 @@ function _M:displayMap(nb_keyframes, prev_fbo)
 			if self.level.data.display_prepare then self.level.data.display_prepare(self.level, 0, 0, nb_keyframes) end
 			self.fbo:use(true)
 				if self.level.data.background then self.level.data.background(self.level, 0, 0, nb_keyframes) end
-				map:display(0, 0, nb_keyframes, config.settings.tome.smooth_fov, self.fbo)
+				do local _m0 = os.clock() map:display(0, 0, nb_keyframes, config.settings.tome.smooth_fov, self.fbo) local TI = require("engine.TouchInput") TI.prof_map = (TI.prof_map or 0) + (os.clock() - _m0) end
 				if self.level.data.foreground then self.level.data.foreground(self.level, 0, 0, nb_keyframes) end
 				if self.level.data.weather_particle then self.state:displayWeather(self.level, self.level.data.weather_particle, nb_keyframes) end
 				if self.level.data.weather_shader then self.state:displayWeatherShader(self.level, self.level.data.weather_shader, map.display_x, map.display_y, nb_keyframes) end
@@ -1913,7 +1913,7 @@ function _M:displayMap(nb_keyframes, prev_fbo)
 		-- Basic display; no FBOs
 		else
 			if self.level.data.background then self.level.data.background(self.level, map.display_x, map.display_y, nb_keyframes) end
-			map:display(nil, nil, nb_keyframes, config.settings.tome.smooth_fov, nil)
+			do local _m0 = os.clock() map:display(nil, nil, nb_keyframes, config.settings.tome.smooth_fov, nil) local TI = require("engine.TouchInput") TI.prof_map = (TI.prof_map or 0) + (os.clock() - _m0) end
 			if self.target then self.target:display(nil, nil, prev_fbo, nb_keyframes) end
 			if self.level.data.foreground then self.level.data.foreground(self.level, map.display_x, map.display_y, nb_keyframes) end
 			if self.level.data.weather_particle then self.state:displayWeather(self.level, self.level.data.weather_particle, nb_keyframes) end

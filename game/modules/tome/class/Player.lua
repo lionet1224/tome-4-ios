@@ -1746,6 +1746,9 @@ function _M:autoActStart(force)
 	self.auto_start_level = self.level
 	self.auto_idle = 0
 	self.auto_last = 0
+	-- particle effects are skipped while AUTO runs unless the setting keeps them
+	local Map = require "engine.Map"
+	Map.skip_particles = function() return game.player and game.player.auto_act and not require("engine.TouchInput").setting("auto_effects") end
 	game.logPlayer(self, "#GOLD#Auto-act on.#LAST# Tap anywhere to stop.")
 	print("[AUTO] start")
 	-- idle mode: screen stays on, dimmed a little; restored on stop / background
@@ -1776,6 +1779,7 @@ function _M:autoActStop(why)
 	if self.running then self:runStop(why) end
 	if self.resting then self:restStop(why) end
 	self:autoActRestoreScreen()
+	if game.level and game.level.map then game.level.map.smooth_scroll = config.settings.tome.smooth_move or 0 end
 	if why and not quiet_stops[why] then
 		print("[AUTO] buzz")
 		if core.display.haptic and require("mod.class.TouchWheel").setting("auto_buzz") ~= false then core.display.haptic(2) end
@@ -1813,15 +1817,28 @@ function _M:autoActTick()
 	if not self.auto_act then return end
 	-- without input events the engine stops requesting game ticks (its idle
 	-- optimisation), so drive the world forward ourselves until it is our turn
+	local TI = require "engine.TouchInput"
+	local fast = TI.setting("auto_pace") == "fast"
 	if not game.paused and game.tick then
 		local t0 = os.clock()
-		local n = 0
-		-- 60 % of a frame for the world, so the display keeps its rate (was a fixed 20 ms at 30 fps)
-		local budget = 0.6 / (config.settings.display_fps or 30)
-		repeat
-			local ok = pcall(game.tick, game)
-			n = n + 1
-		until not ok or game.paused or n >= 12 or (os.clock() - t0) > budget
+		if fast then
+			local n = 0
+			-- 60 % of a frame for the world (a heavy turn overruns it and the frame stutters)
+			local budget = 0.6 / (config.settings.display_fps or 30)
+			repeat
+				local ok = pcall(game.tick, game)
+				n = n + 1
+			until not ok or game.paused or n >= 12 or (os.clock() - t0) > budget
+		else
+			-- smooth (default): exactly one world step per frame, the display keeps its rate
+			pcall(game.tick, game)
+		end
+		TI.prof_tick = (TI.prof_tick or 0) + (os.clock() - t0)
+	end
+	-- fast pace: no camera glide either (the map then renders each step once)
+	if game.level and game.level.map then
+		local want = fast and 0 or (config.settings.tome.smooth_move or 0)
+		if game.level.map.smooth_scroll ~= want then game.level.map.smooth_scroll = want end
 	end
 	-- the run/rest progress popups are not "a dialog" for us: while one is up
 	-- (or a run/rest is active) just wait; anything else needs the player

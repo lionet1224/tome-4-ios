@@ -82,6 +82,7 @@ function _M:target()
 end
 
 function _M:setTarget(a)
+	self.band_dirty = true
 	local p = game.player
 	if not p then return end
 	if a then print("[TOUCH] target", a.name) else if p.touch_target then print("[TOUCH] target cleared") end end
@@ -816,6 +817,68 @@ function _M:display()
 	self.uiset.touch_strip_rect = self.rects.strip
 	self.uiset.touch_drawer_open = self:stripShown()
 	self.uiset.touch_band_y = self.rects.band_y
+end
+
+---------------------------------------------------------------------------
+-- portrait HUD cache: the band is copied into a texture after a full draw and
+-- blitted back on frames where nothing on it can have changed (Jordan: frame
+-- rate during AUTO). A refresh happens on any finger event, every player turn,
+-- when the player changed, on layout changes, and at least every 300 ms for glows.
+---------------------------------------------------------------------------
+
+function _M:bandCacheWanted()
+	if not core.display.grabScreen or TouchInput.setting("hud_cache") == false then return false end
+	self:layout()
+	local r = self.rects
+	return (r.portrait and r.band_y) and true or false
+end
+
+function _M:bandKey()
+	local r = self.rects
+	return ("%d:%d:%d:%s:%s:%s"):format(game.w, game.h, r.band_y or 0, r.hand or "", tostring(self.strip_scroll or 0), tostring(self.drawer_open))
+end
+
+function _M:bandNeedsRefresh()
+	local p = game.player
+	if not self.band_tex or self.band_dirty then return true end
+	if self:bandKey() ~= self.band_key then return true end
+	if p and p.changed then return true end
+	if math.floor((game.turn or 0) / 10) ~= self.band_turn then return true end
+	if (TouchInput.input_serial or 0) ~= self.band_input or (TouchInput.fingers_down or 0) > 0 then return true end
+	if core.game.getTime() - (self.band_time or 0) > (self.band_fallback_ms or 300) then return true end
+	return false
+end
+
+function _M:captureBand()
+	local r = self.rects
+	local _, _, _, _, rw, rh = core.display.size()
+	rw, rh = rw or game.w, rh or game.h
+	local bh = math.floor((game.h - r.band_y) * (rh / game.h) + 0.5)
+	if self.band_tex and (self.band_tw ~= rw or self.band_th ~= bh) then self.band_tex = nil end
+	-- the band sits at the bottom of the screen: GL rows 0..bh of the drawable
+	if self.band_tex then core.display.grabUpdate(self.band_tex, rw, bh, 0, 0)
+	else self.band_tex = core.display.grabScreen(rw, bh, 0, 0) self.band_tw, self.band_th = rw, bh end
+	self.band_key = self:bandKey()
+	self.band_turn = math.floor((game.turn or 0) / 10)
+	self.band_input = TouchInput.input_serial or 0
+	self.band_time = core.game.getTime()
+	self.band_dirty = nil
+	self.band_captures = (self.band_captures or 0) + 1
+end
+
+function _M:blitBand()
+	local r = self.rects
+	core.display.grabToScreen(self.band_tex, 0, r.band_y, game.w, game.h - r.band_y)
+	self.band_blits = (self.band_blits or 0) + 1
+end
+
+--- The per-frame part of display() when the band comes from the cache
+function _M:displayLive()
+	if not game.level or not game.player then return end
+	self:autoBind()
+	self:flushPendingStep()
+	self:displayTarget()
+	self:displayStepPreview()
 end
 
 --- Called every frame while targeting or a dialog is open: only the ring stays
