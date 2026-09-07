@@ -34,7 +34,8 @@ return function(T)
 	local before = #bk.backups
 	-- Back up now
 	local b = bk.ui_by_ui[bk.b_backup]
-	T.tap(bk.display_x + b.x + bk.b_backup.w / 2, bk.display_y + b.y + bk.b_backup.h / 2)
+	-- outside the script coroutine: the backup mounts/unmounts and ticks the engine
+	game:onTickEnd(function() bk:backupNow() end)
 	T.waitFor(function() local top = game.dialogs[#game.dialogs] return top and top ~= bk and tostring(top.title or ""):find("Backed up") end, 60000)
 	local top = game.dialogs[#game.dialogs]
 	T.log("after backup: top", tostring(top and top.title), "backups", #bk.backups)

@@ -115,10 +115,12 @@ function _M.doBackup()
 		if not fs.exists("/save") then return nil, _t"No saves yet." end
 		if not fs.exists(BACKUP_DIR) then fs.mkdir(BACKUP_DIR) end
 		local name = os.date("tome-saves-%Y%m%d-%H%M.zip")
-		local real = fs.getRealPath(BACKUP_DIR)
-		if not real then return nil, "backup directory not found on disk" end
-		local zip = fs.zipOpen(real..fs.getPathSeparator()..name)
-		if not zip then return nil, "could not create the zip" end
+		-- fs.zipOpen goes through PhysFS (the save writer hands it "/vault/..." paths), so it
+		-- takes a virtual path inside the write dir, not a disk path
+		local zpath = BACKUP_DIR.."/"..name
+		local zip = fs.zipOpen(zpath)
+		print("[BACKUP] zip", zpath, "opened", tostring(zip ~= nil))
+		if not zip then return nil, "could not create the zip at "..zpath end
 		local files = walk("/save", "save")
 		local n = 0
 		for i, f in ipairs(files) do

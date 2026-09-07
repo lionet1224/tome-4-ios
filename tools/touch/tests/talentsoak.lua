@@ -29,6 +29,8 @@ return function(T)
 		a.__home = {x=x, y=y}
 		local origHit = a.takeHit
 		a.takeHit = function(self, ...) self.__hits = (self.__hits or 0) + 1 return origHit(self, ...) end
+		local origOn = a.onTakeHit
+		a.onTakeHit = function(self, ...) self.__hits = (self.__hits or 0) + 1 return origOn(self, ...) end
 		local origEff = a.setEffect
 		a.setEffect = function(self, ...) self.__hits = (self.__hits or 0) + 1 return origEff(self, ...) end
 		return a
@@ -75,9 +77,14 @@ return function(T)
 				if nt then targets[i] = nt if i == 1 then npc = nt m:setTarget(npc) end end
 			elseif (a.x ~= a.__home.x or a.y ~= a.__home.y) and free(a.__home.x, a.__home.y) then a:move(a.__home.x, a.__home.y, true) end
 		end
+		-- talents that hand control to another body (Ambuscade, possession): take it back
+		if game.player ~= p then pcall(game.party.select, game.party, p) T.wait(150) end
+		if game.player ~= p then T.log("CONTROL LOST after a talent; stopping") return false end
+		-- extra party members some talents summon would otherwise pile up
+		for _, a in ipairs(game.party.m_list or {}) do if a ~= p and a.summoner == p and a.x then pcall(a.die, a) end end
 		-- effects wear off / stun etc. would block the next cast
-		p:removeAllEffects() p.energy.value = game.energy_to_act
-		p:playerFOV()
+		pcall(p.removeAllEffects, p) p.energy.value = game.energy_to_act
+		pcall(p.playerFOV, p)
 		return true
 	end
 
@@ -102,8 +109,10 @@ return function(T)
 		-- manual: the strip's path
 		local ok, res, why = pcall(m.cast, m, tid, npc, true)
 		T.wait(150)
-		local mtouch = touched()
+		-- the aim may have opened: settle confirms it, so count only afterwards
 		if not settle() then T.log("ZONE CHANGED by", tid) stats.zone = stats.zone + 1 T.log("finished") return end
+		T.wait(100)
+		local mtouch = touched()
 		local mres
 		if not ok then mres = "ERROR "..tostring(res):sub(1, 80) stats.manual_error = stats.manual_error + 1 bad[#bad+1] = tid.." manual: "..mres
 		elseif res then mres = "ok" stats.manual_ok = stats.manual_ok + 1
@@ -112,8 +121,9 @@ return function(T)
 		-- auto: the routine's path (area talents through the best-area rule)
 		local ok2, res2, why2 = pcall(p.actDo, p, {kind="talent", tid=tid, target=area and "best_aoe" or "nearest", if_unusable="approach"})
 		T.wait(150)
-		local atouch = touched()
 		if not settle() then T.log("ZONE CHANGED by", tid) stats.zone = stats.zone + 1 T.log("finished") return end
+		T.wait(100)
+		local atouch = touched()
 		local ares
 		if not ok2 then ares = "ERROR "..tostring(res2):sub(1, 80) stats.auto_error = stats.auto_error + 1 bad[#bad+1] = tid.." auto: "..ares
 		elseif res2 then ares = "ok" stats.auto_ok = stats.auto_ok + 1
@@ -123,10 +133,14 @@ return function(T)
 		if area then
 			stats.area = (stats.area or 0) + 1
 			local mok, aok = mres == "ok", ares == "ok"
+			local anomaly = t.type and t.type[1]:find("anomal")
 			if (mok and mtouch < 2) or (aok and atouch < 2) then
-				stats.area_bad = (stats.area_bad or 0) + 1
-				T.log(("AOE %s: manual %s touched %d | auto %s touched %d"):format(tid, mres, mtouch, ares, atouch))
-				bad[#bad+1] = tid.." area covered "..mtouch.."/"..atouch.." targets"
+				if anomaly then stats.area_anomaly = (stats.area_anomaly or 0) + 1 -- not player-cast: informational
+				else
+					stats.area_bad = (stats.area_bad or 0) + 1
+					T.log(("AOE %s: manual %s touched %d | auto %s touched %d"):format(tid, mres, mtouch, ares, atouch))
+					bad[#bad+1] = tid.." area covered "..mtouch.."/"..atouch.." targets"
+				end
 			end
 		end
 		-- sustains: turn them off again so they do not stack up

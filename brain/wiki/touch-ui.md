@@ -568,6 +568,8 @@ so compare proportions, not milliseconds. `game.touch_bg_debug = true` draws the
 - **Kit batching**: `core.display.drawQuadBatch` + scoped batching inside Flow/Rail (`K.beginBatch/endBatch/flush`).
 - **Lore preload**: `PartyLore.loreImage` cache (12 entries) filled one image per tick after `Game:changeLevel`.
 - **UI text size**: `touch.ui_scale` (0.9/1/1.1) scales every kit font (Options > Touch).
-- **Talent soak** (`tests/talentsoak.lua`, `soak_limit` in touch.cfg): every activated/sustained talent cast
-  by hand and by the routine in a god-mode arena; its 11th talent (T_ACID_SPIT_HYDRA) crashed the app natively
-  in the sim — the first case for the crash reporter.
+- **Talent soak** (`tests/talentsoak.lua`, `soak_limit` in touch.cfg, 0 = all): every activated/sustained
+  talent cast by hand and by the routine in a god-mode arena with a three-target clump (area talents must touch
+  ≥ 2; chronomancy anomalies informational). Two apparent "native crashes" were the runner's 200-iteration time
+  limit killing the app (`SIM_TIMEOUT` env raises it; the full soak needs ~4000). Talents that hand control to
+  another body (Ambuscade) are taken back in `settle()`.
