@@ -14,7 +14,7 @@ B="${UDID_B:-$(cat "$ROOT/tools/touch/sim-b.udid" 2>/dev/null)}"
 shard_i=0; shard_n=1
 if [ -n "$SWEEP_SHARD" ]; then shard_i="${SWEEP_SHARD%/*}"; shard_n="${SWEEP_SHARD#*/}"; fi
 tests=(); k=0
-for t in "$ROOT"/tools/touch/tests/*.lua; do n=$(basename "$t" .lua); case "$n" in mainmenu|loadzoom|stepdiag|settings|grab|fps) continue;; esac
+for t in "$ROOT"/tools/touch/tests/*.lua; do n=$(basename "$t" .lua); case "$n" in mainmenu|loadzoom|stepdiag|settings|grab|fps|talentsoak|autofps) continue;; esac
 	if (( k % shard_n == shard_i )); then
 		# SWEEP_SKIP_PASSED=<results.txt of an earlier sweep>: leave out what already passed there
 		if [ -n "${SWEEP_SKIP_PASSED:-}" ] && grep -qx "PASS $n" "$SWEEP_SKIP_PASSED" 2>/dev/null; then :; else tests+=("$t"); fi
