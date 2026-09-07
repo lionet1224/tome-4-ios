@@ -1677,7 +1677,7 @@ function _M:displayPlayer(scale, bx, by)
 		pf_encumber[1]:toScreenFull(162, 38, pf_encumber[6], pf_encumber[7], pf_encumber[2], pf_encumber[3], 1, 1, 1, glow / 255)
 	end
 
-	if profile:canMTXN() then
+	if profile:canMTXN() and not require("engine.TouchInput").active() then -- no purchases on iOS
 		pf_mtx[1]:toScreenFull(298 + pf_mtx_x, 6 + pf_mtx_y, pf_mtx[6], pf_mtx[7], pf_mtx[2], pf_mtx[3], 1, 1, 1, 1)
 	end
 
@@ -1705,7 +1705,7 @@ function _M:displayPlayer(scale, bx, by)
 				game.tooltip_x, game.tooltip_y = 1, 1; game:tooltipDisplayAtMap(game.w, game.h, _t"Click to assign stats and talents!")
 				if event == "button" and button == "left" then game.key:triggerVirtual("LEVELUP") end
 			-- MTX
-			elseif bx >= 298 + pf_mtx_x and bx <= 298 + pf_mtx_x + pf_mtx[6] and by >= 6 + pf_mtx_y and by <= 6 + pf_mtx_y + pf_mtx[7] and profile:canMTXN() then
+			elseif bx >= 298 + pf_mtx_x and bx <= 298 + pf_mtx_x + pf_mtx[6] and by >= 6 + pf_mtx_y and by <= 6 + pf_mtx_y + pf_mtx[7] and profile:canMTXN() and not require("engine.TouchInput").active() then
 				game.tooltip_x, game.tooltip_y = 1, 1; game:tooltipDisplayAtMap(game.w, game.h, _t"Show available cosmetic & fun microtransation")
 				if event == "button" and button == "left" then
 					package.loaded["engine.dialogs.microtxn.MTXMain"] = nil

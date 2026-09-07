@@ -10,6 +10,7 @@ local Base = require "engine.ui.Base"
 local Focusable = require "engine.ui.Focusable"
 local Slider = require "engine.ui.Slider"
 local Button = require "engine.ui.Button"
+local GetQuantity = require "engine.dialogs.GetQuantity"
 local K = require "engine.ui.TouchKit"
 
 module(..., package.seeall, class.inherit(GameOptions))
@@ -124,9 +125,10 @@ function _M:init()
 	section("gameplay", _t"Gameplay", _t"Warnings, auto-explore, saving")
 	section("ui", _t"Interface", _t"Look, fonts, HUD, tooltips")
 	section("audio", _t"Audio", _t"Music and effects")
-	section("video", _t"Video", _t"Resolution and shaders")
+	section("video", _t"Video", _t"Frame rate, particles, gamma")
 	section("online", _t"Online", _t"Chat, vault, Discord")
 	section("misc", _t"Misc", _t"Background saves, censor")
+	if require("engine.TouchInput").active() then section("backups", _t"Backups", _t"Back up and restore saves") end
 	-- addon tabs, as the stock dialog collects them
 	local hooks = {}
 	self:triggerHook{"GameOptions:tabs", tab=function(title, fct)
@@ -172,9 +174,53 @@ function _M:listFor(kind)
 	if self.lists[kind] then return self.lists[kind] end
 	local list
 	if kind == "audio" then
-		list = {{name=_t"Audio options", desc=_t"Music and sound effect volumes.", status=function() return _t"open" end, fct=function() game:registerDialog(require("engine.dialogs.AudioOptions").new()) end}}
+		-- the desktop AudioOptions dialog's three controls as rows (same callbacks)
+		local function vol(what, label, desc, field, apply)
+			return {name=label, desc=desc, status=function() return tostring(config.settings.audio[field] or 0).."%" end, fct=function()
+				game:registerDialog(GetQuantity.new(label, _t"From 0 to 100", config.settings.audio[field] or 0, 100, function(v)
+					config.settings.audio[field] = v
+					apply(v)
+					game:audioSaveSettings()
+				end, 0))
+			end}
+		end
+		list = {
+			{name=_t"Enable audio", desc=_t"Music and sound effects on or off.", status=function() return config.settings.audio.enable and _t"enabled" or _t"disabled" end, fct=function()
+				config.settings.audio.enable = not config.settings.audio.enable
+				core.sound.enable(config.settings.audio.enable)
+				game:audioSaveSettings()
+			end},
+			vol("music", _t"Music volume", _t"Background music.", "music_volume", function(v) if game.volumeMusic then game:volumeMusic(v) end end),
+			vol("effects", _t"Effects volume", _t"Combat, spells and interface sounds.", "effects_volume", function(v) if game.volumeSoundEffects then game:volumeSoundEffects(v) end end),
+		}
 	elseif kind == "video" then
-		list = {{name=_t"Video options", desc=_t"Resolution, fullscreen, shaders and frame rate.", status=function() return _t"open" end, fct=function() game:registerDialog(require("engine.dialogs.VideoOptions").new()) end}}
+		-- the desktop VideoOptions entries that mean something on a phone (same callbacks);
+		-- resolution is read-only here, window mode / cursor / shaders are not offered
+		list = {
+			{name=_t"Resolution", desc=_t"Set by the device; rotation switches it.", status=function() return tostring(config.settings.window and config.settings.window.size or "?") end},
+			{name=_t"Frame rate", desc=_t"Frames per second the game asks for. Higher is smoother and uses more battery.", status=function() return tostring(config.settings.display_fps) end, fct=function()
+				game:registerDialog(GetQuantity.new(_t"Frame rate", _t"From 30 to 120", config.settings.display_fps, 120, function(qty)
+					game:saveSettings("display_fps", ("display_fps = %d\n"):format(qty))
+					config.settings.display_fps = qty
+					core.game.setFPS(qty)
+				end, 30))
+			end},
+			{name=_t"Particle density", desc=_t"How many particles effects spawn. Lower it if fights stutter.", status=function() return tostring(config.settings.particles_density).."%" end, fct=function()
+				game:registerDialog(GetQuantity.new(_t"Particle density", _t"From 0 to 100", config.settings.particles_density, 100, function(qty)
+					game:saveSettings("particles_density", ("particles_density = %d\n"):format(qty))
+					config.settings.particles_density = qty
+				end, 0))
+			end},
+			{name=_t"Gamma", desc=_t"Brightness correction, 100 is neutral.", status=function() return tostring(config.settings.gamma_correction) end, fct=function()
+				game:registerDialog(GetQuantity.new(_t"Gamma correction", _t"From 50 to 300", config.settings.gamma_correction, 300, function(qty)
+					game:saveSettings("gamma_correction", ("gamma_correction = %d\n"):format(qty))
+					config.settings.gamma_correction = qty
+					game:setGamma(config.settings.gamma_correction / 100)
+				end, 50))
+			end},
+		}
+	elseif kind == "backups" then
+		list = {{name=_t"Backups", desc=_t"Zip every saved character into a backup you can copy out in the Files app. Restore from the title screen.", status=function() return _t"open" end, fct=function() game:registerDialog(require("engine.dialogs.TouchBackups").new(true)) end}}
 	else
 		local fct = self['generateList'..kind:capitalize()]
 		if fct then

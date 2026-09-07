@@ -547,3 +547,27 @@ of the screen, or `touch_static_bg`) reaches the top of the stack, and `grabToSc
 `Game:display` then draws only the dialogs (HUD cost → 0). The snapshot is dropped when no big sheet is on top.
 The simulator is fill-rate bound (software GL): a big dialog frame costs ~150 ms there and nothing on the phone,
 so compare proportions, not milliseconds. `game.touch_bg_debug = true` draws the capture at half size.
+
+## 38. Robustness and conversion batch (2026-09-07, seven builders)
+
+- **Second simulator**: `tools/touch/sim-b.udid` (ToME Plus B, same type/runtime); `sweep-all.sh` splits the tests
+  in two halves and runs them on A and B in parallel (`UDID` env in sim-run.sh). Two sims share one CPU: the
+  software GL halves each one's frame rate, but tests are mostly wall-clock waits so it still wins.
+- **Crash reporter** (`src/ios_crash.c`): SIGSEGV/BUS/ILL/FPE/ABRT/TRAP → `Documents/te4_crash.txt` with a C
+  backtrace, the last Lua error (`te4_ios_crash_note` from main.c's traceback handler; `core.game.crashNote`)
+  and the tail of te4_log.txt; `pull-log.sh` also pulls it (`<dest>.crash.txt`).
+- **Save backups** (`engine/dialogs/TouchBackups.lua`, from Options and the title menu): zips `save/` into
+  `backups/tome-saves-<date>.zip` (`fs.zipOpen` on the real path); restore mounts the zip (`fs.mount`) and
+  copies files back (title screen only); Files-app sharing (`UIFileSharingEnabled`) exposes Documents.
+- **Memory**: `Game:logMemory` at zone changes (`[MEM]`), full GC after a zone change; `core.game.memoryUsage`
+  is still to be added (RSS).
+- **Touch character sheet** (`TouchCharacterSheet.build` decorates CharacterSheet; chips General/Offense/
+  Defense/Talents/Equipment, bottom sheet), **achievements** (the journal's tab), **UnlockDialog**, **party
+  dialogs** (PartySelect/Order/SendItem), **ShowIngredients**, **Video/Audio rows** in TouchOptions, **GetText**
+  touch prompt; Steam/MTX entries hidden on touch.
+- **Kit batching**: `core.display.drawQuadBatch` + scoped batching inside Flow/Rail (`K.beginBatch/endBatch/flush`).
+- **Lore preload**: `PartyLore.loreImage` cache (12 entries) filled one image per tick after `Game:changeLevel`.
+- **UI text size**: `touch.ui_scale` (0.9/1/1.1) scales every kit font (Options > Touch).
+- **Talent soak** (`tests/talentsoak.lua`, `soak_limit` in touch.cfg): every activated/sustained talent cast
+  by hand and by the routine in a god-mode arena; its 11th talent (T_ACID_SPIT_HYDRA) crashed the app natively
+  in the sim — the first case for the crash reporter.

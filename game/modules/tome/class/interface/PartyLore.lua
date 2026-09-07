@@ -26,6 +26,71 @@ module(..., package.seeall, class.make)
 
 _M.lore_defs = {}
 
+-- iOS port: lore illustrations are decoded and uploaded when a level is entered, so
+-- the popup on pickup does not hitch. A small FIFO cache keyed by file name.
+local lore_images, lore_images_order = {}, {}
+_M.LORE_IMAGE_CACHE_MAX = 12
+
+--- The cached illustration {tex, w, h, tw, th} for data/gfx/lore/<file>, loading it if needed
+function _M.loreImage(file)
+	if not file then return nil end
+	local d = lore_images[file]
+	if d ~= nil then return d or nil end
+	local ok, surf = pcall(core.display.loadImage, "/data/gfx/lore/"..file)
+	if not ok or not surf then lore_images[file] = false return nil end
+	local w, h = surf:getSize()
+	local tex, tw, th = surf:glTexture()
+	d = {tex=tex, w=w, h=h, tw=tw, th=th}
+	lore_images[file] = d
+	lore_images_order[#lore_images_order+1] = file
+	while #lore_images_order > _M.LORE_IMAGE_CACHE_MAX do
+		local old = table.remove(lore_images_order, 1)
+		lore_images[old] = nil
+	end
+	return d
+end
+
+--- The cached illustration without loading (nil when not cached)
+function _M.loreImageCached(file) return file and lore_images[file] or nil end
+
+function _M.loreImageCacheSize() return #lore_images_order end
+
+--- Files of the illustrations of the lore that lies on the current level
+function _M.levelLoreImages()
+	local files, seen = {}, {}
+	if not game or not game.level or not game.level.entities then return files end
+	for _, e in pairs(game.level.entities) do
+		local id = e.lore or e.on_id_lore
+		if type(id) == "string" then
+			local l = _M.lore_defs[id]
+			if l and l.image and not seen[l.image] then seen[l.image] = true files[#files+1] = l.image end
+		end
+	end
+	return files
+end
+
+--- Load them one per timer tick (a big PNG at once would hitch the level load itself)
+function _M.preloadLevelLore()
+	if not game or not game.registerTimer then return end
+	local files = _M.levelLoreImages()
+	local queue = {}
+	for _, f in ipairs(files) do if not lore_images[f] then queue[#queue+1] = f end end
+	_M.preload_queue = queue
+	print("[LORE] preloading", #queue, "illustrations for this level")
+	if #queue == 0 then return end
+	local function step()
+		local f = table.remove(_M.preload_queue, 1)
+		if not f then return end
+		_M.loreImage(f)
+		if #_M.preload_queue > 0 then game:registerTimer(0.05, step) end
+	end
+	game:registerTimer(0.5, step)
+end
+
+class:bindHook("Game:changeLevel", function(self, data)
+	if require("engine.TouchInput").active() then pcall(_M.preloadLevelLore) end
+end)
+
 --- Loads lore
 function _M:loadDefinition(file, env)
 	local f, err = loadfile(file)

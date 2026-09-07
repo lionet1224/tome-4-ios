@@ -17,10 +17,20 @@ local PANE = {24, 26, 32}
 
 -- shared text cache: one texture per (font size, string, colour)
 local fonts = {}
-local function font(size)
-	if not fonts[size] then fonts[size] = core.display.newFont(FontPackage:getFont("default"), size) end
-	return fonts[size]
+-- touch.ui_scale (0.9 / 1 / 1.1) scales every kit font; layouts keep their pixel
+-- boxes, so the range is deliberately narrow
+local function uiScale()
+	local ok, TI = pcall(require, "engine.TouchInput")
+	local v = ok and TI.setting and tonumber(TI.setting("ui_scale")) or 1
+	if not v or v < 0.8 or v > 1.3 then v = 1 end
+	return v
 end
+local function font(size)
+	local sz = math.floor(size * uiScale() + 0.5)
+	if not fonts[sz] then fonts[sz] = core.display.newFont(FontPackage:getFont("default"), sz) end
+	return fonts[sz]
+end
+_M.uiScale = uiScale
 local texts = {}
 local function text(str, size, r, g, b, bold, maxw)
 	str = tostring(str or "")
@@ -36,7 +46,7 @@ local function text(str, size, r, g, b, bold, maxw)
 			str = plain:sub(1, n) .. "..."
 		end
 	end
-	local key = size .. "|" .. r .. "," .. g .. "," .. b .. (bold and "b" or "") .. "|" .. str
+	local key = size .. "@" .. uiScale() .. "|" .. r .. "," .. g .. "," .. b .. (bold and "b" or "") .. "|" .. str
 	local d = texts[key]
 	if not d then
 		local w = f:size((str:gsub("#[^#]*#", ""))) + 6
@@ -48,17 +58,42 @@ local function text(str, size, r, g, b, bold, maxw)
 	if bold then f:setStyle("normal") end
 	return d or nil
 end
+-- Untextured quads are batched: quad()/frame() append to a flat list and
+-- flush() issues one draw (core.display.drawQuadBatch). Anything that draws
+-- something else (text, textures, ring wedges, a scissor change) must flush
+-- first so the draw order stays exactly what the caller wrote.
+local batch, batch_n = {}, 0
+local batched = core.display.drawQuadBatch ~= nil
+-- batching is only on inside code that knows where its ordering boundaries are
+-- (Flow/Rail displays, or a caller between beginBatch() and endBatch()); every
+-- other quad draws immediately, so dialogs mixing kit quads with engine widgets
+-- keep their order
+local batching = false
+local function flush()
+	if batch_n == 0 then return end
+	core.display.drawQuadBatch(batch, batch_n)
+	batch_n = 0
+end
+local function quad(x, y, w, h, c, a)
+	if not (batched and batching) then core.display.drawQuad(x, y, w, h, c[1], c[2], c[3], a or 255) return end
+	local i = batch_n * 8
+	batch[i + 1], batch[i + 2], batch[i + 3], batch[i + 4] = x, y, w, h
+	batch[i + 5], batch[i + 6], batch[i + 7], batch[i + 8] = c[1], c[2], c[3], a or 255
+	batch_n = batch_n + 1
+	if batch_n >= 2048 then flush() end
+end
 local function draw(d, x, y, a)
 	if not d then return 0 end
+	flush()
 	d._tex:toScreenFull(x, y, d.w, d.h, d._tex_w, d._tex_h, 1, 1, 1, a or 1)
 	return d.w
 end
-local function quad(x, y, w, h, c, a) core.display.drawQuad(x, y, w, h, c[1], c[2], c[3], a or 255) end
 local function frame(x, y, w, h, c, t)
 	t = t or 2
 	quad(x, y, w, t, c) quad(x, y + h - t, w, t, c) quad(x, y, t, h, c) quad(x + w - t, y, t, h, c)
 end
 local function circle(cx, cy, r, c, a, ring)
+	flush()
 	if core.display.drawRingWedge then core.display.drawRingWedge(cx, cy, ring or 0, r, 0, 360, c[1], c[2], c[3], math.floor((a or 1) * 255)) end
 end
 -- greedy word wrap into at most n lines; the last line carries the rest (ellipsis by text())
@@ -121,6 +156,8 @@ function Rail:generate()
 	end)
 end
 function Rail:display(x, y, nb_keyframes)
+	local was = batching
+	batching = true
 	for i, s in ipairs(self.steps) do
 		local ry = y + 6 + (i - 1) * (self.row_h + 4)
 		local cur = i == self.cur
@@ -139,6 +176,8 @@ function Rail:display(x, y, nb_keyframes)
 		draw(text(s.name, 16, cur and 234 or 200, cur and 227 or 195, cur and 209 or 180, cur), x + 50, ny, a)
 		if v and v ~= "" then draw(text(v, 12, 142, 136, 120, false, self.w - 58), x + 50, ry + 34, a) end
 	end
+	flush()
+	batching = was
 end
 
 ---------------------------------------------------------------------------
@@ -198,7 +237,10 @@ function Flow:display(x, y, nb_keyframes, screen_x, screen_y)
 	if self.scroll_inertia > 0 then self.scroll_inertia = math.max(self.scroll_inertia - 1, 0)
 	elseif self.scroll_inertia < 0 then self.scroll_inertia = math.min(self.scroll_inertia + 1, 0) end
 	local oy = y - self.scrollbar.pos
+	flush()
 	core.display.glScissor(true, screen_x, screen_y, self.w, self.h)
+	local was = batching
+	batching = true
 	for _, sec in ipairs(self.sections) do
 		if sec.title and sec.ty + 30 - self.scrollbar.pos > 0 and sec.ty - self.scrollbar.pos < self.h then
 			draw(text(sec.title:upper(), 12, 142, 136, 120, true), x + 6, oy + sec.ty + 8)
@@ -214,7 +256,9 @@ function Flow:display(x, y, nb_keyframes, screen_x, screen_y)
 				local ty = iy + 8
 				if it.icon and sec.icon_only then
 					local size = math.min(it.h - 16, sec.icon_size or 40)
+					flush() batching = false
 					pcall(it.icon, x + it.x + (it.w - size) / 2, iy + 4, size)
+					batching = true
 					if it.name then draw(text(it.name, 11, 200, 195, 180, false, it.w - 6), x + it.x + 3, iy + it.h - 16, a) end
 				elseif sec.center then
 					local d = text(it.name, 17, 234, 227, 209, true, it.w - 16)
@@ -228,7 +272,9 @@ function Flow:display(x, y, nb_keyframes, screen_x, screen_y)
 				else
 					if it.icon then
 						local size = math.min(it.h - 16, sec.icon_size or 40)
+						flush() batching = false
 						pcall(it.icon, tx, ty, size)
+						batching = true
 						tx = tx + size + 8
 					end
 					local maxw = x + it.x + it.w - tx - 8
@@ -242,6 +288,7 @@ function Flow:display(x, y, nb_keyframes, screen_x, screen_y)
 			end
 		end
 	end
+	flush()
 	core.display.glScissor(false)
 	if self.scrollbar.max > 0 then
 		-- a slim indicator instead of the engine scrollbar
@@ -250,10 +297,16 @@ function Flow:display(x, y, nb_keyframes, screen_x, screen_y)
 		local by = (self.h - bh) * (self.scrollbar.pos / self.scrollbar.max)
 		quad(x + self.w - 4, y + by, 3, bh, {120, 120, 120}, 120)
 	end
+	flush()
+	batching = was
 end
 
 
 _M.GOLD, _M.CARD, _M.CARD_SEL, _M.PANE = GOLD, CARD, CARD_SEL, PANE
 _M.font, _M.text, _M.draw, _M.quad, _M.frame, _M.circle, _M.wrap, _M.pitch = font, text, draw, quad, frame, circle, wrap, pitch
+_M.flush = flush -- call before drawing anything that is not a kit quad/text, and at the end of a display()
+-- opt-in batching for a caller that only draws kit quads and text between the two calls
+_M.beginBatch = function() batching = batched end
+_M.endBatch = function() flush() batching = false end
 _M.pressed = pressed
 _M.Rail, _M.Flow = Rail, Flow

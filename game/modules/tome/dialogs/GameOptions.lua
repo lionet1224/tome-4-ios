@@ -125,6 +125,7 @@ function _M:generateListTouch()
 	toggle(_t"Auto-act stops when a resource is below", _t"Mana, stamina and the like. 'never' ignores resources.", "auto_res", {0, 25, 50}, {_t"never", "25%", "50%"})
 	toggle(_t"Auto-act dims the screen", _t"While AUTO runs the screen stays on and is dimmed; brightness comes back when it stops.", "auto_dim", {true, false}, {_t"yes", _t"no"})
 	toggle(_t"Auto-act buzzes when it stops", _t"A short vibration when AUTO hands control back to you.", "auto_buzz", {true, false}, {_t"yes", _t"no"})
+	toggle(_t"UI text size", _t"Scales the text of the touch screens. Large may crowd some rows; reopen a screen to see the change.", "ui_scale", {0.9, 1, 1.1}, {_t"small", _t"normal", _t"large"})
 	toggle(_t"Auto-act stops for elites and rares", _t"Stop as soon as a creature above normal rank is in view.", "auto_rare", {true, false}, {_t"yes", _t"no"})
 	toggle(_t"Hold delay", _t"How long the finger must stay still before a wheel opens.", "hold_ms", {120, 160, 220, 300}, {"120 ms", "160 ms", "220 ms", "300 ms"})
 	do -- the touch controls guide, on demand

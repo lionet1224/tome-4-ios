@@ -343,6 +343,12 @@ function _M:openMore()
 	local function key(name, k) list[#list+1] = {name=name, fct=function() game.key:triggerVirtual(k) end} end
 	if p.unused_stats > 0 or p.unused_talents > 0 or p.unused_generics > 0 or p.unused_talents_types > 0 or p.unused_prodigies > 0 then key(_t"Level up!", "LEVELUP") end
 	list[#list+1] = {name=_t"Places", fct=function() game:registerDialog(require("mod.dialogs.TouchPlaces").new()) end}
+	-- Q on the desktop: swap to the other weapon set
+	list[#list+1] = {name=_t"Swap weapons", fct=function() if game.key == game.normal_key then game.key:triggerVirtual("QUICK_SWITCH_WEAPON") end end}
+	-- party control: switch to / order a member (the HUD portraits do the same: tap = switch, hold = orders)
+	local party_ok = false
+	for _, a in ipairs(game.party.m_list or {}) do if a ~= game.player and (game.party:canControl(a) or game.party:canOrder(a)) then party_ok = true break end end
+	if party_ok then list[#list+1] = {name=_t"Party", fct=function() game:registerDialog(require("mod.dialogs.PartySelect").new()) end} end
 	key(_t"Inventory", "SHOW_INVENTORY")
 	key(_t"Character sheet", "SHOW_CHARACTER_SHEET")
 	key(_t"Talents", "USE_TALENTS")

@@ -22,6 +22,9 @@
 #include <stdio.h>
 #ifdef __APPLE__
 #include <TargetConditionals.h>
+#ifdef TE4_IOS
+#include "ios_crash.h"
+#endif
 #endif
 #include <stdlib.h>
 #include <time.h>
@@ -201,10 +204,30 @@ static void add_lua_error(const char *file, int line, const char *func)
 	last_lua_error_tail = cur;
 }
 
+#ifdef TE4_IOS
+static int lua_ios_crash_note(lua_State *L)
+{
+	te4_ios_crash_note(luaL_checkstring(L, 1));
+	return 0;
+}
+#endif
+
 static int traceback (lua_State *L) {
 	lua_Debug ar;
 	int n = 0;
 	printf("Lua Error: %s\n", lua_tostring(L, 1));
+#ifdef TE4_IOS
+	{	/* keep the error and its first frames for the crash report */
+		static char note[2048];
+		int len = snprintf(note, sizeof(note), "%s\n", lua_tostring(L, 1) ? lua_tostring(L, 1) : "?");
+		int m = 0;
+		while (len < (int)sizeof(note) - 1 && m < 12 && lua_getstack(L, m++, &ar)) {
+			lua_getinfo(L, "nSl", &ar);
+			len += snprintf(note + len, sizeof(note) - (size_t)len, "  at %s:%d %s\n", ar.short_src, ar.currentline, ar.name ? ar.name : "");
+		}
+		te4_ios_crash_note(note);
+	}
+#endif
 	while(lua_getstack(L, n++, &ar)) {
 		lua_getinfo(L, "nSl", &ar);
 		printf("\tAt %s:%d %s\n", ar.short_src, ar.currentline, ar.name?ar.name:"");
@@ -1383,6 +1406,16 @@ void boot_lua(int state, bool rebooting, int argc, char *argv[])
 		luaL_openlibs(L);  /* open libraries */
 		luaopen_physfs(L);
 		luaopen_core(L);
+#ifdef TE4_IOS
+		/* core.game.crashNote(str): Lua can leave a note for the crash report */
+		lua_getglobal(L, "core");
+		if (lua_istable(L, -1)) {
+			lua_getfield(L, -1, "game");
+			if (lua_istable(L, -1)) { lua_pushcfunction(L, lua_ios_crash_note); lua_setfield(L, -2, "crashNote"); }
+			lua_pop(L, 1);
+		}
+		lua_pop(L, 1);
+#endif
 		luaopen_fov(L);
 		luaopen_socket_core(L);
 		luaopen_mime_core(L);
@@ -1664,6 +1697,14 @@ int main(int argc, char *argv[])
 			logfile = freopen(logname, "w", stdout);
 			if (logfile) setlinebuf(logfile);
 		}
+	}
+#endif
+#ifdef TE4_IOS
+	if (!is_zygote) {
+		extern const char *te4_ios_documents_path(void);
+		const char *docs = te4_ios_documents_path();
+		te4_ios_install_crash_handler(docs);
+		printf("[IOS] crash handler installed (%s/te4_crash.txt)\n", docs ? docs : "/tmp");
 	}
 #endif
 #ifdef SELFEXE_MACOSX

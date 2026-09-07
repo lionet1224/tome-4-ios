@@ -77,3 +77,11 @@ function _M:generateList(kind)
 	table.sort(list, function(a, b) return a.name < b.name end)
 	self.list = list
 end
+
+-- iOS port: on touch every opener gets the journal's Achievements tab (Earned / Locked
+-- chips, cards with icons, the detail in the bottom sheet) instead of this desktop list
+local desktop_new = _M.new
+function _M.new(...)
+	if require("engine.TouchInput").active() then return require("mod.dialogs.TouchJournal").new("achievements") end
+	return desktop_new(...)
+end

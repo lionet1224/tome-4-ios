@@ -1787,6 +1787,59 @@ static int gl_draw_quad(lua_State *L)
 	return 0;
 }
 
+/* iOS port: many untextured quads in one draw. t = flat table, 8 numbers per
+   quad (x, y, w, h, r, g, b, a with colours 0..255), n = quad count. Mirrors
+   gl_draw_quad's untextured path: white texture bound, per-vertex colours,
+   texcoords set, one GL_QUADS draw (expanded by te4_glDrawArrays). */
+static GLfloat *quad_batch_v = NULL, *quad_batch_c = NULL, *quad_batch_t = NULL;
+static int quad_batch_cap = 0;
+static int gl_draw_quad_batch(lua_State *L)
+{
+	luaL_checktype(L, 1, LUA_TTABLE);
+	int n = luaL_checknumber(L, 2);
+	if (n <= 0) return 0;
+	if (n > quad_batch_cap)
+	{
+		quad_batch_cap = n < 256 ? 256 : n * 2;
+		quad_batch_v = realloc(quad_batch_v, sizeof(GLfloat) * 2 * 4 * quad_batch_cap);
+		quad_batch_c = realloc(quad_batch_c, sizeof(GLfloat) * 4 * 4 * quad_batch_cap);
+		quad_batch_t = realloc(quad_batch_t, sizeof(GLfloat) * 2 * 4 * quad_batch_cap);
+		int i;
+		for (i = 0; i < quad_batch_cap; i++)
+		{
+			GLfloat *tc = quad_batch_t + i * 8;
+			tc[0] = 0; tc[1] = 0;  tc[2] = 0; tc[3] = 1;  tc[4] = 1; tc[5] = 1;  tc[6] = 1; tc[7] = 0;
+		}
+	}
+	int i;
+	for (i = 0; i < n; i++)
+	{
+		float v[8];
+		int k;
+		for (k = 0; k < 8; k++)
+		{
+			lua_rawgeti(L, 1, i * 8 + k + 1);
+			v[k] = (float)lua_tonumber(L, -1);
+			lua_pop(L, 1);
+		}
+		GLfloat x = v[0], y = v[1], w = v[2], h = v[3];
+		GLfloat r = v[4] / 255, g = v[5] / 255, b = v[6] / 255, a = v[7] / 255;
+		GLfloat *vv = quad_batch_v + i * 8;
+		vv[0] = x;     vv[1] = y;
+		vv[2] = x;     vv[3] = y + h;
+		vv[4] = x + w; vv[5] = y + h;
+		vv[6] = x + w; vv[7] = y;
+		GLfloat *cc = quad_batch_c + i * 16;
+		for (k = 0; k < 4; k++) { cc[k*4] = r; cc[k*4+1] = g; cc[k*4+2] = b; cc[k*4+3] = a; }
+	}
+	tfglBindTexture(GL_TEXTURE_2D, gl_tex_white);
+	glColorPointer(4, GL_FLOAT, 0, quad_batch_c);
+	glTexCoordPointer(2, GL_FLOAT, 0, quad_batch_t);
+	glVertexPointer(2, GL_FLOAT, 0, quad_batch_v);
+	glDrawArrays(GL_QUADS, 0, 4 * n);
+	return 0;
+}
+
 static int gl_draw_quad_part(lua_State *L)
 {
 	int x = luaL_checknumber(L, 1);
@@ -3732,6 +3785,7 @@ static const struct luaL_Reg displaylib[] =
 	{"fboSupportsTransparency", gl_fbo_supports_transparency},
 	{"newQuadratic", gl_new_quadratic},
 	{"drawQuad", gl_draw_quad},
+	{"drawQuadBatch", gl_draw_quad_batch},
 	{"drawQuadPart", gl_draw_quad_part},
 	{"drawRingWedge", gl_draw_ring_wedge},
 	{"FBOActive", gl_fbo_is_active},

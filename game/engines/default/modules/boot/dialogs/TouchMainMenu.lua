@@ -98,6 +98,7 @@ function _M:buildCards()
 	else who = _t"Log in to te4.org for DLC and the vault" end
 	secs[#secs+1] = {title=_t"Account", items={
 		{name=_t"Online profile", sub=who, on_tap=function() game:registerDialog(require("mod.dialogs.TouchLogin").new()) end},
+		{name=_t"Backups", sub=_t"Back up and restore your saves", on_tap=function() game:registerDialog(require("engine.dialogs.TouchBackups").new(false)) end},
 	}, cols=1, row_h=64, center=true}
 	self.c_flow:setSections(secs)
 end
@@ -123,8 +124,7 @@ function _M:openOptions()
 		"language",
 		"video",
 		"sound",
-		"steam",
-		"cheatmode",
+		"cheatmode", -- (no Steam entry: nothing behind it on iOS)
 	}
 	game:registerDialog(require("engine.dialogs.GameMenu").new(list))
 end

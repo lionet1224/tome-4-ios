@@ -22,6 +22,7 @@ local Module = require "engine.Module"
 local Dialog = require "engine.ui.Dialog"
 local Button = require "engine.ui.Button"
 local Textbox = require "engine.ui.Textbox"
+local FontPackage = require "engine.FontPackage"
 
 --- Generic popup for getting text
 -- @classmod engine.dialogs.GetText
@@ -33,6 +34,34 @@ function _M:init(title, text, min, max, action, cancel, absolute)
 	self.min = min or 2
 	self.max = max or 25
 	self.absolute = absolute
+
+	-- iOS port: a finger-sized prompt with the keyboard up at once
+	local TI = require "engine.TouchInput"
+	if TI.active() then
+		self.touch = true
+		local sa = TI.safeArea()
+		local W = math.floor((game.w - (sa.l or 0) - (sa.r or 0)) * (TI.portrait() and 0.9 or 0.6))
+		Dialog.init(self, title, W, 190)
+		local bigfont = core.display.newFont(FontPackage:getFont("default"), 22)
+		local c_box = Textbox.new{title=text..": ", text=_t"", chars=math.max(10, math.floor((self.iw - 20) / 16)), max_len=max, fct=function(text) self:okclick() end}
+		self.c_box = c_box
+		local bw = math.floor((self.iw - 12) / 2) - 16
+		local ok = require("engine.ui.Button").new{text=_t"OK", width=bw, font=bigfont, fct=function() self:okclick() end}
+		local cancel = require("engine.ui.Button").new{text=_t"Cancel", width=bw, font=bigfont, fct=function() self:cancelclick() end}
+		self.b_ok, self.b_cancel = ok, cancel
+		self:loadUI{
+			{left=0, top=10, ui=c_box},
+			{left=0, bottom=0, ui=ok},
+			{right=0, bottom=0, ui=cancel},
+		}
+		self:setFocus(c_box)
+		self:setupUI(false, true)
+		self.key:addBinds{
+			ACCEPT = function() self:okclick() end,
+			EXIT = function() if self.cancel then self.cancel() end game:unregisterDialog(self) end,
+		}
+		return
+	end
 
 	Dialog.init(self, title, 320, 110)
 
@@ -52,6 +81,15 @@ function _M:init(title, text, min, max, action, cancel, absolute)
 	self.key:addBinds{
 		EXIT = function() if self.cancel then self.cancel() end game:unregisterDialog(self) end,
 	}
+end
+
+-- iOS port: the keyboard rises with the prompt (the box knows its screen spot after the first draw)
+function _M:firstDisplay()
+	if self.touch and self.c_box and self.c_box.showKeyboard then self.c_box:showKeyboard(true) end
+end
+
+function _M:unload()
+	if self.touch and self.c_box and self.c_box.showKeyboard then self.c_box:showKeyboard(false) end
 end
 
 function _M:setText(text)

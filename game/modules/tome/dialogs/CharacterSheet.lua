@@ -1899,44 +1899,10 @@ local Tabs = require "engine.ui.Tabs"
 local TextzoneList = require "engine.ui.TextzoneList"
 
 function _M:initTouch(actor, start_tab)
-	self.actor = actor
-	self.font = core.display.newFont(FontPackage:getFont("mono_small", "mono"))
-	self.font_w, self.font_h = self.font:size(' ')
-	self.font_h = self.font:lineSkip()
-	self.talent_sorting = config.settings.tome.charsheet_talent_sorting or 1
-	self.equip_set = self.actor.off_weapon_slots and "off" or "main"
-	self.bigfont = core.display.newFont(FontPackage:getFont("default"), 22)
-	self.kind = (start_tab == "defense") and "defence" or (start_tab or "general")
-	Dialog.init(self, ("Character Sheet: %s"):tformat(self.actor:getName()), game.w * 0.96, game.h * 0.96)
-	self.w_desktop = self.w
-
-	local tabs = {
-		{title=_t"General", kind="general"},
-		{title=_t"Attack", kind="attack"},
-		{title=_t"Defense", kind="defence"},
-		{title=_t"Talents", kind="talents"},
-		{title=_t"Equipment", kind="equipment"},
-	}
-	self.c_tabs = Tabs.new{width=self.iw, tabs=tabs, on_change=function(kind) self.kind = kind if self.c_list then self:refreshTouch() end end}
-	local bh = 56
-	local list_h = self.ih - self.c_tabs.h - bh - 24
-	self.list_w = math.floor(self.iw * 0.56)
-	self.c_list = TouchStatList.new{width=self.list_w, height=list_h, scrollbar=true, rows={}, on_select=function(r) self:showTouchDetail(r) end}
-	self.c_info = TextzoneList.new{focus_check=true, scrollbar=true, width=self.iw - self.list_w - 20, height=list_h, dest_area={h=list_h}}
-	self.b_levelup = Button.new{text=_t"Level up", width=170, font=self.bigfont, fct=function() game:unregisterDialog(self) game.key:triggerVirtual("LEVELUP") end}
-	self.b_inven = Button.new{text=_t"Inventory", width=170, font=self.bigfont, fct=function() game:unregisterDialog(self) game.key:triggerVirtual("SHOW_INVENTORY") end}
-	if (actor.unused_stats or 0) > 0 or (actor.unused_talents or 0) > 0 or (actor.unused_generics or 0) > 0 or (actor.unused_talents_types or 0) > 0 then self.b_levelup.glow = 0.6 end
-	self:loadUI{
-		{left=0, top=0, ui=self.c_tabs},
-		{left=0, top=self.c_tabs.h + 8, ui=self.c_list},
-		{left=self.list_w + 20, top=self.c_tabs.h + 8, ui=self.c_info},
-		{right=0, bottom=0, ui=self.b_levelup},
-		{right=self.b_levelup, bottom=0, ui=self.b_inven},
-	}
-	self:setupUI()
-	for _, t in ipairs(tabs) do if t.kind == self.kind then self.c_tabs:select(self.kind) end end
-	self:refreshTouch()
-	self.key:addBinds{ EXIT = function() game:unregisterDialog(self) end }
+	-- iOS port: the mobile-native sheet lives in mod.dialogs.TouchCharacterSheet; it
+	-- builds the widgets on this instance (drawDialog below still supplies the numbers
+	-- through collectTouchLines) so every CharacterSheet.new(actor) call site works
+	return require("mod.dialogs.TouchCharacterSheet").build(self, actor, start_tab)
 end
 
 --- Run the desktop drawing code against a recorder and return its lines

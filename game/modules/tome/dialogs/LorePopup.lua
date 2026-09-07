@@ -155,16 +155,20 @@ function _M:initTouch(l)
 	self.head_h = 64
 
 	-- the illustration, scaled to at most 40% of the width and the pane height
+	-- the illustration comes from PartyLore's texture cache (preloaded on level entry);
+	-- it is drawn by innerDisplayBack rather than an Image ui
 	self.image = nil
 	self.image_w = 0
+	self.image_from_cache = false
 	if l.image then
-		local ok, img = pcall(Image.new, {file="lore/"..l.image, auto_width=true, auto_height=true})
-		if ok and img and img.w and img.w > 0 then
+		local PL = require "mod.class.interface.PartyLore"
+		self.image_from_cache = PL.loreImageCached(l.image) ~= nil
+		local d = PL.loreImage(l.image)
+		if d and d.w and d.w > 0 then
 			local maxw, maxh = math.floor(self.iw * 0.4), self.ih - 16
-			local sc = math.min(1, maxw / img.w, maxh / img.h)
-			img.w, img.h = math.floor(img.w * sc), math.floor(img.h * sc)
-			self.image = img
-			self.image_w = img.w + gap
+			local sc = math.min(1, maxw / d.w, maxh / d.h)
+			self.image = {d=d, w=math.floor(d.w * sc), h=math.floor(d.h * sc)}
+			self.image_w = self.image.w + gap
 		end
 	end
 
@@ -178,7 +182,6 @@ function _M:initTouch(l)
 		{left=self.image_w, top=self.head_h, ui=self.c_text},
 		{left=self.image_w, bottom=0, ui=self.b_ok},
 	}
-	if self.image then table.insert(uis, 1, {left=0, top=math.max(0, math.floor((self.ih - self.image.h) / 2)), ui=self.image}) end
 	self:loadUI(uis)
 	self:setFocus(self.b_ok)
 	self:setupUI(false, false)
@@ -202,7 +205,12 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	x, y = x + self.ix, y + self.iy
 	local tx = x + self.image_w
 	local tw = self.iw - self.image_w
-	if self.image then K.quad(x - 4, y + math.max(0, math.floor((self.ih - self.image.h) / 2)) - 4, self.image.w + 8, self.image.h + 8, {14, 15, 18}) end
+	if self.image then
+		local iy = y + math.max(0, math.floor((self.ih - self.image.h) / 2))
+		K.quad(x - 4, iy - 4, self.image.w + 8, self.image.h + 8, {14, 15, 18})
+		local d = self.image.d
+		d.tex:toScreenFull(x, iy, self.image.w, self.image.h, d.tw * self.image.w / d.w, d.th * self.image.h / d.h)
+	end
 	K.draw(K.text(tostring(self.lore.name or ""), 24, 240, 212, 138, true, tw), tx, y + 6)
 	local cat = self.lore.category and tostring(self.lore.category):gsub("[-_]", " ") or ""
 	if cat ~= "" then K.draw(K.text(cat, 13, 142, 136, 120, false, tw), tx, y + 38) end

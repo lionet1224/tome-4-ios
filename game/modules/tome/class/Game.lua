@@ -1053,7 +1053,16 @@ function _M:changeLevelFailure(lev, zone, params, level, old_zone, old_level)
 	new_level = false
 end
 
+--- iOS port: memory footprint at zone changes (Lua heap, resident levels, native RSS when the binding exists)
+function _M:logMemory(tag)
+	local levels = 0
+	if self.memory_levels then for _ in pairs(self.memory_levels) do levels = levels + 1 end end
+	local rss = core.game.memoryUsage and core.game.memoryUsage() or nil
+	print(("[MEM] %s: lua %.1f MB, resident levels %d%s"):format(tag, collectgarbage("count") / 1024, levels, rss and (", rss %.1f MB"):format(rss / 1048576) or ""))
+end
+
 function _M:changeLevelReal(lev, zone, params)
+	self:logMemory("before zone change -> "..tostring(type(zone) == "table" and zone.short_name or zone).." "..tostring(lev))
 	-- Unlock first!
 	if not params.temporary_zone_shift_back and self.zone and self.zone.temp_shift_zone and zone and zone ~= self.zone.short_name then
 		self:changeLevelReal(1, "useless", {temporary_zone_shift_back=true})
@@ -1449,6 +1458,9 @@ function _M:changeLevelReal(lev, zone, params)
 	self:dieClonesDie()
 
 	self:triggerHook{"Game:changeLevel"}
+	-- iOS port: a full collection now (the old level just went out of scope) keeps the peak down
+	collectgarbage("collect")
+	self:logMemory("after zone change")
 end
 
 function _M:dieClonesDie()

@@ -37,6 +37,7 @@ local orders = {
 }
 
 function _M:init(actor, def)
+	if require("engine.TouchInput").active() then return self:initTouch(actor, def) end
 	self.actor = actor
 	self.def = def
 	self:generateList()
@@ -87,4 +88,50 @@ function _M:generateList()
 	list.chars = chars
 
 	self.list = list
+end
+
+---------------------------------------------------------------------------
+-- iOS port: the orders as cards; tap gives the order exactly as the desktop list did
+---------------------------------------------------------------------------
+function _M:initTouch(actor, def)
+	local K = require "engine.ui.TouchKit"
+	local TI = require "engine.TouchInput"
+	self.actor = actor
+	self.def = def
+	self.touch_args = {actor, def}
+	if not _M.additional_hook_fired then
+		_M.additional_hook_fired = true
+		self:triggerHook{"PartyOrder:define", orders=orders}
+	end
+	self.orders_list = {}
+	for o, _ in pairs(def.orders or {}) do
+		if orders[o] then self.orders_list[#self.orders_list+1] = {name=orders[o][2](actor), order=o, sort=orders[o][1]} end
+	end
+	table.sort(self.orders_list, function(a, b) return a.sort < b.sort end)
+	local sa = TI.safeArea()
+	self.portrait = TI.portrait()
+	local w = math.floor((game.w - sa.l - sa.r) * (self.portrait and 0.94 or 0.7))
+	local rows = math.max(1, #self.orders_list)
+	local h = math.min(math.floor((game.h - sa.t - sa.b) * 0.85), 40 + rows * 72)
+	engine.ui.Dialog.init(self, ("Order: %s"):tformat(actor:getName()), w, h)
+	self.c_flow = K.Flow.new{width=self.iw, height=self.ih}
+	self:loadUI{ {left=0, top=0, ui=self.c_flow} }
+	self:setupUI()
+	self:setFocus(self.c_flow)
+	local items = {}
+	for _, it in ipairs(self.orders_list) do
+		-- "Set behavior [current: x]" -> name "Set behavior", sub "current: x"
+		local name, cur = tostring(it.name):match("^(.-)%s*%[(.-)%]%s*$")
+		items[#items+1] = {name=name or it.name, sub=cur, data=it, on_tap=function() self:use(it) end}
+	end
+	if #items == 0 then items[1] = {name=_t"No orders available", sub=_t"This companion takes no orders."} end
+	self.c_flow:setSections{{title=_t"Orders", items=items, cols=1, row_h=64}}
+	self.key:addBinds{ EXIT = function() game:unregisterDialog(self) end }
+end
+
+function _M:touch_reopen() return _M.new(self.touch_args[1], self.touch_args[2]) end
+
+function _M:innerDisplayBack(x, y, nb_keyframes)
+	if not self.c_flow then return end
+	require("engine.ui.TouchKit").quad(x + self.ix, y + self.iy, self.iw, self.ih, {18, 19, 23})
 end
