@@ -107,7 +107,8 @@ return function(T)
 
 	-- (stats declared below; settle references it)
 	local bad = {}
-	for i, t in ipairs(list) do if i >= from then
+	-- object-granted copies (T_INFUSION:_HEALING_4...) need their item: not player talents
+	for i, t in ipairs(list) do if i >= from and not t.id:find(":", 1, true) then
 		local tid = t.id
 		print("[SOAK] talent", i, tid, t.name)
 		local learned = pcall(function() p:learnTalent(tid, true, 1) end)

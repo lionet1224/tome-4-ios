@@ -27,7 +27,9 @@ LOG="$OUT/console.log"
 xcrun simctl launch --console-pty "$UD" org.te4.tome.dev --flush-stdout > "$LOG" 2>&1 &
 t=0
 FL="$D/Documents/t-engine/4.0/tome/touch-test.log $D/Documents/t-engine/4.0/boot/touch-test.log"
-until grep -qE "SCRIPT\] finished|SCRIPT\] done|script load failed|script must return|Lua Error" "$LOG" 2>/dev/null || cat $FL 2>/dev/null | grep -qE "SCRIPT\] finished|SCRIPT\] done|script error" || [ "$(grep -c 'script started' "$LOG" 2>/dev/null)" -ge 2 ] || [ $t -ge ${SIM_TIMEOUT:-200} ]; do sleep 2; t=$((t+2)); done
+STOP="SCRIPT\] finished|SCRIPT\] done|script load failed|script must return|Lua Error"
+[ -n "${SIM_IGNORE_LUAERR:-}" ] && STOP="SCRIPT\] finished|SCRIPT\] done|script load failed|script must return"   # the soak counts talent errors itself
+until grep -qE "$STOP" "$LOG" 2>/dev/null || cat $FL 2>/dev/null | grep -qE "SCRIPT\] finished|SCRIPT\] done|script error" || [ "$(grep -c 'script started' "$LOG" 2>/dev/null)" -ge 2 ] || [ $t -ge ${SIM_TIMEOUT:-200} ]; do sleep 2; t=$((t+2)); done
 sleep 4
 xcrun simctl terminate "$UD" org.te4.tome.dev 2>/dev/null
 for f in "$D"/Documents/t-engine/4.0/tome/shot-*.png "$D"/Documents/t-engine/4.0/boot/shot-*.png "$D"/Documents/t-engine/4.0/shot-*.png; do [ -f "$f" ] && mv "$f" "$OUT/"; done
