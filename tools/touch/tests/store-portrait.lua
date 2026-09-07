@@ -50,11 +50,17 @@ return function(T)
 	for _, e in ipairs(d.c_list.items) do if e.name_cut then cut = cut + 1 if e.name_color then coloured = coloured + 1 end end end
 	T.log("names cut", cut, "of", #d.c_list.items, "cut with colour", coloured)
 	if cut > coloured then T.log("BAD a cut name lost its colour") end
-	-- the compare card: shown for the selected weapon, compared with what is wielded
+	-- header-only card for the selected weapon; the description compares it with what is wielded
 	local cu = d.ui_by_ui[d.c_card]
-	T.log("card item", tostring(d.c_card.o and d.c_card.o.name), "worn", tostring(d.c_card.worn and d.c_card.worn.name), "rows", #d.c_card.rows, "h", d.c_card.h, "desc h", d.c_desc.h)
+	local marked = d.desc_text and (d.desc_text:find("#00ff00#", 1, true) or d.desc_text:find("#ff0000#", 1, true)) ~= nil
+	T.log("card item", tostring(d.c_card.o and d.c_card.o.name), "worn", tostring(d.c_card.worn and d.c_card.worn.name), "h", d.c_card.h, "desc h", d.c_desc.h, "compared", tostring(d.desc_compared), "delta markup", tostring(marked))
 	if not (d.cur and d.c_card.o == d.cur.object) then T.log("BAD the card does not show the selected item") end
-	if d.cur and d.cur.object:wornInven() and d.actor_actor:getInven(d.cur.object:wornInven()) and #d.actor_actor:getInven(d.cur.object:wornInven()) > 0 and not d.c_card.worn then T.log("BAD the card has no worn counterpart to compare with") end
+	if d.c_card.h ~= 90 then T.log("BAD card is not header-only", d.c_card.h) end
+	local wi = d.cur and d.cur.object:wornInven()
+	local has_worn = wi and d.actor_actor:getInven(wi) and #d.actor_actor:getInven(wi) > 0
+	if has_worn and not d.desc_compared then T.log("BAD description not compared against the worn item") end
+	if has_worn and not marked then T.log("note: no delta markup (identical stats?)") end
+	if d.desc_text and not d.desc_text:find("gold", 1, true) then T.log("BAD price line missing from the description") end
 	if cu and (cu.y < d.iy or cu.y + d.c_card.h > d.iy + d.ih + 1) then T.log("BAD card outside the dialog", cu.y, d.c_card.h) end
 	local du = d.ui_by_ui[d.c_desc]
 	if du and cu and du.y < cu.y + d.c_card.h then T.log("BAD description overlaps the card", du.y, cu.y, d.c_card.h) end

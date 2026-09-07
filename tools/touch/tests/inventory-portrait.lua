@@ -5,7 +5,7 @@
 return function(T)
 	T.wait(1500) T.key("EXIT") T.wait(6000) T.key("EXIT") T.wait(600)
 	local p = game.player
-	for _, t in ipairs{{type="armor", subtype="heavy"}, {type="weapon"}, {type="jewelry"}} do local o = game.zone:makeEntity(game.level, "object", t, nil, true) if o then p:addObject(p:getInven("INVEN"), o) end end
+	for _, t in ipairs{{type="armor", subtype="heavy"}, {type="weapon"}, {type="jewelry"}} do local o = game.zone:makeEntity(game.level, "object", t, nil, true) if o then o:identify(true) end if o then p:addObject(p:getInven("INVEN"), o) end end
 	T.key("SHOW_INVENTORY") T.wait(1200)
 	local d = game.dialogs[#game.dialogs]
 	T.log(("screen %dx%d portrait=%s dialog %dx%d inner %dx%d at %d,%d"):format(game.w, game.h, tostring(d.portrait), d.w, d.h, d.iw, d.ih, d.display_x or -1, d.display_y or -1))
@@ -39,6 +39,22 @@ return function(T)
 		T.log("selected", tostring(d.cur and d.cur.object and d.cur.object.name), "card", tostring(d.c_card.o and d.c_card.o.name), "primary", tostring(d.b_primary.text))
 		if not (d.cur and d.cur.object == d.c_list.items[row].object) then T.log("BAD list tap did not select the row") end
 		if d.c_card.o ~= d.c_list.items[row].object then T.log("BAD card does not show the tapped item") end
+		-- one view: header-only card, the description carries the stats with deltas against the worn item
+		local obj = d.c_list.items[row].object
+		local worn = d:wornFor(obj)
+		local marked = d.desc_text and (d.desc_text:find("#00ff00#", 1, true) or d.desc_text:find("#ff0000#", 1, true)) ~= nil
+		T.log("desc compared", tostring(d.desc_compared), "worn", tostring(worn and worn.name), "delta markup", tostring(marked), "card h", d.c_card.h, "desc h", d.c_desc.h)
+	do
+		local txt = d.desc_text or ""
+		local m1 = txt:find("#00ff00#", 1, true) or txt:find("#ff0000#", 1, true) or txt:find("#LIGHT_GREEN#", 1, true) or txt:find("#LIGHT_RED#", 1, true) or txt:find("%(%+") or txt:find("%(%-")
+		local line = txt:match("[^\n]*Armour:[^\n]*") or txt:match("[^\n]*Armour[^\n]*") or "?"
+		local i = txt:find("Armour:", 1, true) or txt:find("armour", 1, true) or 1
+		T.log("desc around Armour:", (txt:sub(i, i + 260):gsub("\n", " / ")))
+		T.log("compare markup found", tostring(m1 ~= nil), "armour line:", line:sub(1, 120))
+	end
+		if worn and not d.desc_compared then T.log("BAD description not compared against the worn item") end
+		if d.c_card.h ~= 90 then T.log("BAD card is not header-only", d.c_card.h) end
+		if worn and not marked then T.log("note: no delta markup (identical stats?)") end
 	else T.log("no armour row") end
 	T.shot("inv-portrait")
 	-- the worn grid: between the chips and the list, cells inside the dialog

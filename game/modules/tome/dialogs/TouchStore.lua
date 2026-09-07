@@ -166,8 +166,25 @@ end
 function _M:selectEntry(e)
 	self.cur = e
 	self:showCard(e.object)
-	local ok, d = pcall(self.desc, self.mode, e.object)
-	if ok and d then self.c_desc:erase() self.c_desc:switchItem(d, d) end
+	-- the stock store description has no comparison: rebuild it as the price line
+	-- plus the desktop's ctrl comparison against what is worn in that slot
+	local o = e.object
+	self.desc_compared, self.desc_text = false, nil
+	local ok, d = pcall(function()
+		local price = self.descprice and self.descprice(self.mode, o) or nil
+		local money = self.actor_actor and self.actor_actor.money or 0
+		local ds = tstring{}
+		if price then
+			ds:add({"font", "bold"}, {"color", "GOLD"}, ((self.mode == "buy" and _t"Buy for: %0.2f gold (You have %0.2f gold)" or _t"Sell for: %0.2f gold (You have %0.2f gold)"):format(price, money)), {"font", "normal"}, {"color", "LAST"}, true, true)
+		end
+		local cmp = o:wornInven() and self.actor_actor and self.actor_actor:getInven(o:wornInven()) or nil
+		if cmp and #cmp == 0 then cmp = nil end
+		ds:merge(o:getDesc({do_color=true}, cmp, nil, self.actor_actor))
+		self.desc_compared = cmp ~= nil
+		return ds
+	end)
+	if not ok or not d then ok, d = pcall(self.desc, self.mode, o) end
+	if ok and d then self.c_desc:erase() self.c_desc:switchItem(d, d) self.desc_text = type(d) == "table" and d.toString and d:toString() or tostring(d) end
 	if self.on_select then pcall(self.on_select, e) end
 	self:updateButtons()
 end

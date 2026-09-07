@@ -27,6 +27,8 @@ _M.REPEAT_EVERY_MS = 220
 _M.BTN = 86
 _M.CARD_W, _M.CARD_H = 68, 78
 _M.STRIP_H = 96
+-- context pills beside AUTO: "Descend" (on a transition tile) and "Wait" (enemies in view)
+_M.CTX_W, _M.CTX_H = 150, 44
 
 local DIRS = {[-1]={[-1]=7, [0]=4, [1]=1}, [0]={[-1]=8, [0]=5, [1]=2}, [1]={[-1]=9, [0]=6, [1]=3}}
 
@@ -213,6 +215,10 @@ function _M:layout()
 		local strip_y = dock_y - _M.ACT_STRIP_H - 8 - _M.STRIP_H
 		r.strip = {x=sa.l + 12, y=strip_y, w=w - sa.l - sa.r - 24, h=_M.STRIP_H}
 		r.band_y = strip_y - 8
+		-- context pills (Descend / Wait) beside AUTO towards the middle of the dock row
+		local cx = left and (auto_x + bw + 12) or (auto_x - 12 - _M.CTX_W)
+		r.ctx_lo = {x=cx, y=dock_bottom - _M.CTX_H, w=_M.CTX_W, h=_M.CTX_H}
+		r.ctx_hi = {x=cx, y=r.ctx_lo.y - 8 - _M.CTX_H, w=_M.CTX_W, h=_M.CTX_H}
 	else
 		r.band_y = nil
 		-- Skills just past AUTO, More above it, the drawer filling the rest of the bottom edge
@@ -228,6 +234,11 @@ function _M:layout()
 		else
 			r.strip = {x=sa.l + 120, y=sy, w=sk_x - 12 - (sa.l + 120), h=_M.STRIP_H}
 		end
+		-- context pills past Skills; above the drawer when it is open (it fills that edge)
+		local cx = left and (sk_x + fs + 12) or (sk_x - 12 - _M.CTX_W)
+		local bottom = self.drawer_open and (sy - 8) or dock_bottom
+		r.ctx_lo = {x=cx, y=bottom - _M.CTX_H, w=_M.CTX_W, h=_M.CTX_H}
+		r.ctx_hi = {x=cx, y=r.ctx_lo.y - 8 - _M.CTX_H, w=_M.CTX_W, h=_M.CTX_H}
 	end
 	return r
 end
@@ -261,6 +272,7 @@ function _M:hudHit(x, y)
 	if inRect(r.strip, x, y) and self:stripShown() then return true end
 	if inRect(r.more, x, y) or inRect(r.skills, x, y) or inRect(r.act, x, y) or inRect(r.auto, x, y) then return true end
 	if self:levelUpPending() and inRect(r.levelup, x, y) then return true end
+	if inRect(r.ctx_exit, x, y) or inRect(r.ctx_wait, x, y) then return true end
 	-- the routine strip above Act (it grows away from the screen edge)
 	if r.act and y >= r.act.y - _M.ACT_STRIP_H and y < r.act.y then
 		if r.hand == "left" then
@@ -381,6 +393,59 @@ function _M:displayLevelUp()
 	frame(r.x, r.y, r.w, r.h, 210, 170, 74, math.floor(255 * (down and 1 or pulse)), 2)
 	self:label(_t"LEVEL UP", r.x + r.w / 2, r.y + r.h / 2, 0.62, 1, 0.9, 0.55, 1)
 	self:zone("touch_levelup", r, function(button) if button == "left" then game.key:triggerVirtual("LEVELUP") end end)
+end
+
+---------------------------------------------------------------------------
+-- context pills: Descend / Ascend / Enter / Leave on a transition tile, Wait
+-- while enemies are in view (Jordan: "instead of having me click myself")
+---------------------------------------------------------------------------
+
+--- The label for the transition the player stands on, or nil
+function _M:exitLabel()
+	local p = game.player
+	if not p or not game.level or not p.x then return nil end
+	local g = game.level.map(p.x, p.y, Map.TERRAIN)
+	if not g or not (g.change_level or g.change_zone) then return nil end
+	if g.change_zone then
+		local zn = tostring(g.change_zone)
+		local here = tostring(game.zone and game.zone.short_name or "")
+		if zn:find("wilderness") or here:find("^town") then return _t"Leave" end
+		return _t"Enter"
+	end
+	if (g.change_level or 0) > 0 then return _t"Descend" end
+	if (g.change_level or 0) < 0 then return _t"Ascend" end
+	return _t"Enter"
+end
+
+function _M:displayCtxPill(name, rect, txt, fct)
+	local down = K.pressed(rect.x, rect.y, rect.w, rect.h)
+	quad(rect.x, rect.y, rect.w, rect.h, down and 80 or 60, down and 62 or 46, down and 22 or 16, 235)
+	frame(rect.x, rect.y, rect.w, rect.h, 210, 170, 74, 255, 2)
+	self:label(txt, rect.x + rect.w / 2, rect.y + rect.h / 2, 0.7, 1, 0.9, 0.55, 1)
+	self:zone(name, rect, function(button) if button == "left" then fct() end end)
+end
+
+function _M:displayCtx()
+	local r = self.rects
+	if not r.ctx_lo then r.ctx_exit, r.ctx_wait = nil, nil return end
+	local exit_txt = self:exitLabel()
+	local wait_on = #self:enemies() > 0
+	self.ctx_exit_label = exit_txt
+	-- one pill takes the lower slot; both stack, the transition on top
+	if exit_txt and wait_on then r.ctx_exit, r.ctx_wait = r.ctx_hi, r.ctx_lo
+	elseif exit_txt then r.ctx_exit, r.ctx_wait = r.ctx_lo, nil
+	elseif wait_on then r.ctx_exit, r.ctx_wait = nil, r.ctx_lo
+	else r.ctx_exit, r.ctx_wait = nil, nil end
+	if r.ctx_exit then
+		self:displayCtxPill("touch_ctx_exit", r.ctx_exit, exit_txt, function()
+			if game.key == game.normal_key then print("[TOUCH] context pill:", exit_txt) game.key:triggerVirtual("CHANGE_LEVEL") end
+		end)
+	else self:dropZone("touch_ctx_exit") end
+	if r.ctx_wait then
+		self:displayCtxPill("touch_ctx_wait", r.ctx_wait, _t"Wait", function()
+			if game.key == game.normal_key then print("[TOUCH] context pill: wait") game.key:triggerVirtual("MOVE_STAY") end
+		end)
+	else self:dropZone("touch_ctx_wait") end
 end
 
 ---------------------------------------------------------------------------
@@ -708,8 +773,10 @@ function _M:display()
 	self:displayStepPreview()
 	self:displaySkills()
 	self:displayMore()
+	self:displayCtx()
 	self:displayStrip()
 	-- what the test harness reads
+	self.uiset.touch_ctx_rects = {exit=self.rects.ctx_exit, wait=self.rects.ctx_wait, exit_label=self.ctx_exit_label}
 	self.uiset.touch_skills_rect = self.rects.skills
 	self.uiset.touch_more_rect = self.rects.more
 	self.uiset.touch_strip_rects = self.strip_rects

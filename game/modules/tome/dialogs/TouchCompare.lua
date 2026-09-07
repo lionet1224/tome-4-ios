@@ -17,15 +17,6 @@ module(..., package.seeall, class.inherit(Dialog))
 -- the compare card: item header + stat table (new | worn)
 ------------------------------------------------------------------------
 local Card = class.inherit(Base, Focusable){}
-local STATS = {
-	{k="dam", n=_t"Damage", get=function(o) return o.combat and o.combat.dam end},
-	{k="apr", n=_t"Armour pen.", get=function(o) return o.combat and o.combat.apr end},
-	{k="atk", n=_t"Accuracy", get=function(o) return o.combat and o.combat.atk end},
-	{k="crit", n=_t"Crit chance", get=function(o) return o.combat and o.combat.physcrit end, unit="%"},
-	{k="armor", n=_t"Armour", get=function(o) return o.wielder and o.wielder.combat_armor end},
-	{k="def", n=_t"Defence", get=function(o) return o.wielder and o.wielder.combat_def end},
-	{k="enc", n=_t"Weight", get=function(o) return o.encumber end, lower_better=true},
-}
 function Card:init(t)
 	self.w, self.h = t.width, t.height
 	self.actor = t.actor
@@ -50,22 +41,14 @@ function Card:text(font, str, r, g, b)
 	return d
 end
 function Card:set(o, worn, kind)
+	-- header only: icon, name, type, "replaces X". The stats (with the deltas the
+	-- desktop shows on ctrl) live in the description below, not in a second table.
 	self.o, self.worn, self.kind = o, worn, kind
 	self.texts = {}
 	self.rows = {}
-	if not o then return end
-	for _, st in ipairs(STATS) do
-		local a = st.get(o)
-		local b = worn and st.get(worn) or nil
-		if a or b then
-			local dir = nil
-			if a and b and a ~= b then dir = (a > b) and "up" or "down" if st.lower_better then dir = dir == "up" and "down" or "up" end end
-			self.rows[#self.rows+1] = {n=st.n, a=a and (("%s%s"):format(math.floor(a * 10) / 10, st.unit or "")) or "-", b=b and (("%s%s"):format(math.floor(b * 10) / 10, st.unit or "")) or "-", dir=dir}
-		end
-	end
 end
 function Card:contentHeight()
-	return 70 + (#self.rows > 0 and (28 + #self.rows * 32 + 8) or 0)
+	return 70
 end
 function Card:display(x, y, nb_keyframes, screen_x, screen_y)
 	self.last_sx, self.last_sy = screen_x or x, screen_y or y

@@ -2307,7 +2307,8 @@ function _M:getDesc(name_param, compare_with, never_compare, use_actor)
 		desc:add(_t".", {"color","LAST"}, true)
 	end
 
-	if could_compare and not never_compare then desc:add(true, {"font","italic"}, {"color","GOLD"}, _t"Press <control> to compare", {"color","LAST"}, {"font","normal"}) end
+	-- iOS port: the touch item views always compare, so the desktop hint is noise there
+	if could_compare and not never_compare and not require("engine.TouchInput").active() then desc:add(true, {"font","italic"}, {"color","GOLD"}, _t"Press <control> to compare", {"color","LAST"}, {"font","normal"}) end
 
 	return desc
 end

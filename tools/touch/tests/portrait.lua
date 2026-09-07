@@ -54,6 +54,9 @@ return function(T)
 		local map, p = game.level and game.level.map, game.player
 		if map and p then local sx, sy = map:getTileToScreen(p.x, p.y) T.log(("%s player %d,%d view %s,%s screen %s,%s"):format(tag, p.x, p.y, map.mx, map.my, sx, sy)) end
 	end
+	do local c = game.uiset.touch_ctx_rects or {}
+		for _, k in ipairs{"exit", "wait"} do local q = c[k] if q then T.log(("ctx %s x=%d y=%d w=%d h=%d"):format(k, q.x, q.y, q.w, q.h)) end end
+	end
 	where("hud")
 	T.shot("hud")
 	T.wait(2500)
