@@ -9,7 +9,7 @@ return function(T)
 			if menuUp() then break end
 			local d = game.dialogs[#game.dialogs]
 			T.log("closing", tostring(d and d.__CLASSNAME))
-			if d and tostring(d.__CLASSNAME):find("FirstRun") then game:unregisterDialog(d) elseif d then T.key("EXIT") end
+			if d and tostring(d.__CLASSNAME):find("FirstRun") then d:doLater() elseif d then T.key("EXIT") end -- "Maybe later" goes on to the title menu
 			T.waitFor(menuUp, 20000)
 		end
 		-- the save list is scanned in the background: wait for the first card
