@@ -54,6 +54,8 @@ return function(T)
 	end
 
 	local stats = {manual_ok=0, manual_refused=0, manual_error=0, auto_ok=0, auto_refused=0, auto_error=0, zone=0}
+	-- projectiles (Fireflash...) only land when game time passes: let a few turns go by
+	local function passTurns(n) for _ = 1, n or 3 do p.energy.value = 0 game.paused = false T.wait(120) end end
 	local function refill()
 		p.life = p.max_life
 		for _, res in ipairs(p.resources_def or {}) do
@@ -119,7 +121,7 @@ return function(T)
 		T.wait(150)
 		-- the aim may have opened: settle confirms it, so count only afterwards
 		if not settle() then T.log("ZONE CHANGED by", tid) stats.zone = stats.zone + 1 T.log("finished") return end
-		T.wait(100)
+		passTurns(3)
 		local mtouch = touched()
 		local mres
 		if not ok then mres = "ERROR "..tostring(res):sub(1, 80) stats.manual_error = stats.manual_error + 1 bad[#bad+1] = tid.." manual: "..mres
@@ -130,7 +132,7 @@ return function(T)
 		local ok2, res2, why2 = pcall(p.actDo, p, {kind="talent", tid=tid, target=area and "best_aoe" or "nearest", if_unusable="approach"})
 		T.wait(150)
 		if not settle() then T.log("ZONE CHANGED by", tid) stats.zone = stats.zone + 1 T.log("finished") return end
-		T.wait(100)
+		passTurns(3)
 		local atouch = touched()
 		local ares
 		if not ok2 then ares = "ERROR "..tostring(res2):sub(1, 80) stats.auto_error = stats.auto_error + 1 bad[#bad+1] = tid.." auto: "..ares

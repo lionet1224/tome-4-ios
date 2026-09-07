@@ -104,7 +104,12 @@ function _M:cast(tid, target, allow_manual)
 	if not aims then print("[TOUCH] cast (no target)", t.name) p:useTalent(t.id) return true end
 	-- self-centred talents (range 0, with or without a radius): they go off around you;
 	-- aiming them at the selected enemy left them doing nothing (the soak found this)
-	if tg and (tg.type == "self" or (tg.range and tg.range == 0)) then print("[TOUCH] cast self", t.name) p:useTalent(t.id, nil, nil, nil, p) return true end
+	local range = p:getTalentRange(t) or 0
+	-- breaths, Fan of Knives...: range 0 but a cone/beam that still needs a direction, its
+	-- reach being the radius (aimed at yourself, the cone covered nobody)
+	local directional = tg and (tg.type == "cone" or tg.type == "beam" or tg.type == "widebeam" or tg.type == "wall")
+	if tg and (tg.type == "self" or (range == 0 and not directional)) then print("[TOUCH] cast self", t.name) p:useTalent(t.id, nil, nil, nil, p) return true end
+	local reach = (range == 0 and directional) and (p:getTalentRadius(t) or tg.radius or 1) or range
 	if not target then
 		if allow_manual then print("[TOUCH] cast manual", t.name) p:useTalent(t.id) return true end
 		game.logPlayer(p, "%s: no enemy in view. Hold the button to aim by hand.", t.name)
@@ -113,7 +118,7 @@ function _M:cast(tid, target, allow_manual)
 	local d = core.fov.distance(p.x, p.y, target.x, target.y)
 	-- out of range or sight for this target: let the game's own aiming decide instead of refusing
 	-- (some talents, Disengage among them, aim at a spot rather than the creature)
-	if d > p:getTalentRange(t) or not p:hasLOS(target.x, target.y) then
+	if d > reach or not p:hasLOS(target.x, target.y) then
 		print("[TOUCH] cast -> manual aim (range/LOS)", t.name)
 		p:useTalent(t.id)
 		return true

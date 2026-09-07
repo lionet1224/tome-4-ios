@@ -1626,14 +1626,17 @@ function _M:actDo(step)
 		-- chosen enemy is inside its reach; it used to be refused as "out of range"
 		if (self:getTalentRange(t) or 0) == 0 and ok and type(tg) == "table" and (tg.radius or 0) >= 1 then
 			local reach = self:getTalentRadius(t) or tg.radius or 1
+			-- a cone or beam (breaths, Fan of Knives) is aimed at the enemy, a circle at yourself
+			local directional = tg.type == "cone" or tg.type == "beam" or tg.type == "widebeam" or tg.type == "wall"
 			-- any enemy inside the circle counts, not only the selected one
 			local inside = nil
 			if core.fov.distance(self.x, self.y, tgt.x, tgt.y) <= reach then inside = tgt end
 			if not inside then for _, e in ipairs(self:actEnemies()) do
-				if core.fov.distance(self.x, self.y, e.x, e.y) <= reach then inside = e break end
+				if e.d <= reach then inside = e.a break end
 			end end
 			if inside then
-				print("[ACT] talent around me", t.name, inside.name) self:useTalent(t.id, nil, nil, nil, self) return true
+				print("[ACT] talent around me", t.name, inside.name, directional and "(aimed)" or "")
+				self:useTalent(t.id, nil, nil, nil, directional and inside or self) return true
 			end
 			return false, _t"nobody in reach", tgt
 		end
