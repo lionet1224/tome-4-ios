@@ -354,6 +354,7 @@ end
 
 function _M.tick()
 	_M.frames = (_M.frames or 0) + 1 -- frame counter (tests measure fps with it)
+	if _M.active() and type(game) == "table" and game.level then pcall(require("engine.FrameProfiler").frame) end
 	_M.checkKeyboard()
 	if not _M._orientation_applied and _M.active() then _M.applyOrientation() end
 	local t = _M.t
