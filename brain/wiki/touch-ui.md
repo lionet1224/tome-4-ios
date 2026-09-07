@@ -491,3 +491,15 @@ Tests: `portrait.lua` (band numbers), `stripscroll.lua`, `band.lua`.
   Test `exittap` (removes hostiles first; the walk stops with "interesting terrain" on arrival, then CHANGE_LEVEL).
 - Rod of Recall crash on the phone could not be reproduced in the sim (`recall.lua` passes); the device log is
   overwritten at each launch — pull it before relaunching.
+
+## 33. Save warning, app icon (2026-09-07)
+
+- **"Savefile loading WARNING" on every load**: the save held `engine.ui.Button` / `engine.ui.Dialog` objects
+  (setfenv / "table index is nil" on load). Source: `player.running_prev` (PlayerExplore keeps the last run,
+  whose table carries the "Running..." popup dialog) is not in `Actor._no_save_fields`. Added it, plus the
+  touch transients (`act_preview`, `touch_target`, `touch_enter`, `auto_act`, ...). Old saves warn once more
+  (the objects are already inside); the next save is clean. Tests `saveload.lua` + `sim-load.sh loadzoom.lua`
+  (the boot menu may have FirstRun / the account sheet on top; the test closes them).
+- **App icon**: `tools/ios/icons/make-icon.sh` crops the lantern adventurer from
+  `data/gfx/background/tome3.png` (760² at 580,180) into AppIcon<size>.png; both bundles copy them and list
+  them under `CFBundleIcons/CFBundlePrimaryIcon/CFBundleIconFiles` (no asset catalog in the Xcode project).

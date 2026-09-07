@@ -74,6 +74,16 @@ _M._no_save_fields.regenResourcesFast = true
 -- Dont store resting or running
 _M._no_save_fields.running = true
 _M._no_save_fields.resting = true
+-- iOS port: running_prev keeps the last run (with its "Running..." popup dialog):
+-- it was serialised into saves, whose Button/Dialog objects then failed to load
+-- ("Savefile loading WARNING" on every load). Transient touch state likewise.
+_M._no_save_fields.running_prev = true
+_M._no_save_fields.act_preview = true
+_M._no_save_fields.act_preview_key = true
+_M._no_save_fields.touch_target = true
+_M._no_save_fields.touch_enter = true
+_M._no_save_fields.auto_act = true
+_M._no_save_fields.auto_start_level = true
 
 -- No need to save __project_source either, it's a turn by turn thing
 _M._no_save_fields.__project_source = true

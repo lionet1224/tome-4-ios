@@ -102,6 +102,29 @@ cat > "$APP/Info.plist" <<'EOF'
 	<key>CFBundleIdentifier</key><string>org.te4.tome.dev</string>
 	<key>CFBundleName</key><string>ToME</string>
 	<key>CFBundleDisplayName</key><string>Tales of Maj'Eyal</string>
+	<key>CFBundleIcons</key>
+	<dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array>
+				<string>AppIcon20</string>
+				<string>AppIcon29</string>
+				<string>AppIcon40</string>
+				<string>AppIcon58</string>
+				<string>AppIcon60</string>
+				<string>AppIcon76</string>
+				<string>AppIcon80</string>
+				<string>AppIcon87</string>
+				<string>AppIcon120</string>
+				<string>AppIcon152</string>
+				<string>AppIcon167</string>
+				<string>AppIcon180</string>
+				<string>AppIcon1024</string>
+			</array>
+			<key>UIPrerenderedIcon</key><true/>
+		</dict>
+	</dict>
 	<key>CFBundleVersion</key><string>1</string>
 	<key>CFBundleShortVersionString</key><string>1.7.2</string>
 	<key>CFBundlePackageType</key><string>APPL</string>
@@ -123,6 +146,7 @@ EOF
 # game data (rsync keeps rebuilds fast; ~1GB first time)
 rsync -a --delete "$ROOT/bootstrap" "$APP/"
 rsync -a --delete "$ROOT/game" "$APP/"
+cp -f "$ROOT/tools/ios/icons"/AppIcon*.png "$APP/"   # app icon files (CFBundleIconFiles)
 
 echo "OK: $APP"
 du -sh "$APP"

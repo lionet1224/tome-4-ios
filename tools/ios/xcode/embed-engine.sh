@@ -8,4 +8,5 @@ APP="$TARGET_BUILD_DIR/$WRAPPER_NAME"
 cp -f "$SRC/t-engine" "$APP/$EXECUTABLE_NAME"
 rsync -a --delete "$SRC/bootstrap" "$APP/"
 rsync -a --delete "$SRC/game" "$APP/"
+cp -f "$SRCROOT/../icons"/AppIcon*.png "$APP/"   # app icon files (CFBundleIconFiles)
 echo "embedded engine + data into $APP"

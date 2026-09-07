@@ -6,6 +6,29 @@
 	<key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleName</key><string>ToME</string>
 	<key>CFBundleDisplayName</key><string>Tales of Maj'Eyal</string>
+	<key>CFBundleIcons</key>
+	<dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array>
+				<string>AppIcon20</string>
+				<string>AppIcon29</string>
+				<string>AppIcon40</string>
+				<string>AppIcon58</string>
+				<string>AppIcon60</string>
+				<string>AppIcon76</string>
+				<string>AppIcon80</string>
+				<string>AppIcon87</string>
+				<string>AppIcon120</string>
+				<string>AppIcon152</string>
+				<string>AppIcon167</string>
+				<string>AppIcon180</string>
+				<string>AppIcon1024</string>
+			</array>
+			<key>UIPrerenderedIcon</key><true/>
+		</dict>
+	</dict>
 	<key>CFBundleVersion</key><string>1</string>
 	<key>CFBundleShortVersionString</key><string>1.7.2</string>
 	<key>CFBundlePackageType</key><string>APPL</string>
