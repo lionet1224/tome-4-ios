@@ -1775,10 +1775,12 @@ function _M:autoActTick()
 	if not game.paused and game.tick then
 		local t0 = os.clock()
 		local n = 0
+		-- 60 % of a frame for the world, so the display keeps its rate (was a fixed 20 ms at 30 fps)
+		local budget = 0.6 / (config.settings.display_fps or 30)
 		repeat
 			local ok = pcall(game.tick, game)
 			n = n + 1
-		until not ok or game.paused or n >= 12 or (os.clock() - t0) > 0.02
+		until not ok or game.paused or n >= 12 or (os.clock() - t0) > budget
 	end
 	-- the run/rest progress popups are not "a dialog" for us: while one is up
 	-- (or a run/rest is active) just wait; anything else needs the player

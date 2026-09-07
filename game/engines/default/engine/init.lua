@@ -201,6 +201,8 @@ profile:start()
 savefile_pipe = engine.SavefilePipe.new()
 
 -- Setup FPS
+-- iOS port: phones run at 60 (the engine default is 30); the option can only raise it
+if __IOS__ then config.settings.display_fps = math.max(config.settings.display_fps or 30, 60) end
 core.game.setFPS(config.settings.display_fps)
 
 if config.settings.disable_discord then core.discord = nil end

@@ -743,6 +743,8 @@ end
 function _M:setFlyingText(fl)
 	self.flyers = fl
 	function self.flyers:add(x, y, duration, xvel, yvel, str, color, bigfont)
+		-- iOS port: no floating hit text while AUTO plays (Jordan: visual noise)
+		if game.player and game.player.auto_act and require("engine.TouchInput").active() then return nil end
 		local slowness = (config.settings.tome.flyers_fade_time or 10)/10
 		return FlyingText.add(fl, x, y, duration*slowness, xvel/slowness, yvel/slowness, str, color, bigfont)
 	end
