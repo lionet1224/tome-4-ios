@@ -920,7 +920,7 @@ function _M:createDisplayTouch()
 	-- category points are one shared pool spent on the category headers: a plain
 	-- label at the top, not a button (Jordan: a per-pane note "would appear like it
 	-- was not a shared resource")
-	self.b_types = Textzone.new{auto_width=true, auto_height=true, font=core.display.newFont(FontPackage:getFont("default"), 20), text=("#GOLD#%s#LAST#"):format(self:pointLabel("types", self.actor.unused_talents_types))}
+	self.b_types = Textzone.new{auto_width=true, auto_height=true, font=core.display.newFont(FontPackage:getFont("default"), 24), text=("#GOLD#%s#LAST#"):format(self:pointLabel("types", self.actor.unused_talents_types))}
 	local desc_fct = function(item) local ret = self:getTalentDesc(item) self.c_desc:erase() self.c_desc:switchItem(ret, ret) return ret end
 	local stat_fct = function(item) local ret = self:getStatDesc(item) self.c_desc:erase() self.c_desc:switchItem(ret, ret) return ret end
 	local can_add = function(item)
@@ -974,7 +974,7 @@ function _M:createDisplayTouch()
 			{left=0, top=0, ui=self.b_stat},
 			{left=self.b_stat, top=0, ui=self.b_class},
 			{left=0, top=row2, ui=self.b_generic},
-			{left=self.b_generic, top=row2, ui=self.b_types},
+			{left=self.b_generic, top=row2 + math.floor((self.b_generic.h - self.b_types.h) / 2), ui=self.b_types},
 			{left=0, top=self.top_h, ui=self.c_stat},
 			{left=4, top=self.top_h + pane_h + 8, ui=self.c_desc},
 			{right=0, bottom=0, ui=self.b_prodigies},
@@ -985,7 +985,7 @@ function _M:createDisplayTouch()
 		{left=0, top=0, ui=self.b_stat},
 		{left=self.b_stat, top=0, ui=self.b_class},
 		{left=self.b_class, top=0, ui=self.b_generic},
-		{left=self.b_generic, top=0, ui=self.b_types},
+		{left=self.b_generic, top=math.floor((self.b_generic.h - self.b_types.h) / 2), ui=self.b_types},
 		{left=0, top=self.b_stat, ui=align},
 		{left=0, top=align, ui=self.c_stat},
 		{left=self.c_stat, top=align, ui=vsep},
