@@ -16,6 +16,7 @@ return function(T)
 		T.log("names cut", cut, "cut with colour", coloured)
 		if cut > coloured then T.log("BAD a cut name lost its colour") end
 	end
+	T.waitFor(function() return d.c_list.last_screen_x ~= nil end, 5000) -- the list must have drawn once
 	local lx, ly = d.c_list.last_screen_x + 120, d.c_list.last_screen_y + (row - 1) * d.c_list.row_h + 30 - (d.c_list.scrollbar and d.c_list.scrollbar.pos or 0)
 	T.tap(lx, ly) T.wait(500) T.shot("inv-compare")
 	-- drag it onto its slot

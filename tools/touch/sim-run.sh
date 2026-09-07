@@ -14,6 +14,8 @@ D=$(xcrun simctl get_app_container "$UD" org.te4.tome.dev data)
 NAME="touch-test.lua"
 cp "$SCRIPT" "$D/Documents/t-engine/4.0/$NAME"
 EXTRA="${TOUCH_EXTRA:-}"   # e.g. TOUCH_EXTRA=', orientation="portrait", hand="left"'
+# the simulator keeps whatever orientation the last run left it in: pin landscape unless the test asks
+case "$EXTRA" in *orientation*) ;; *) EXTRA="$EXTRA, orientation=\"landscape\"";; esac
 if [ "$EARLY" = "boot" ]; then printf 'touch = {show_island=true, script="/%s", script_boot=true%s}\n' "$NAME" "$EXTRA" > "$D/Documents/t-engine/4.0/settings/touch.cfg"
 elif [ -n "$EARLY" ]; then printf 'touch = {show_island=true, script="/%s", script_early=true%s}\n' "$NAME" "$EXTRA" > "$D/Documents/t-engine/4.0/settings/touch.cfg"
 else printf 'touch = {show_island=true, script="/%s"%s}\n' "$NAME" "$EXTRA" > "$D/Documents/t-engine/4.0/settings/touch.cfg"; fi
