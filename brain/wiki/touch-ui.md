@@ -503,3 +503,12 @@ Tests: `portrait.lua` (band numbers), `stripscroll.lua`, `band.lua`.
 - **App icon**: `tools/ios/icons/make-icon.sh` crops the lantern adventurer from
   `data/gfx/background/tome3.png` (760² at 580,180) into AppIcon<size>.png; both bundles copy them and list
   them under `CFBundleIcons/CFBundlePrimaryIcon/CFBundleIconFiles` (no asset catalog in the Xcode project).
+
+## 34. Taps under the message log walked to the view origin (2026-09-07)
+
+Phone log: `[TOUCH] tap 486,897` → `walk: to 14,-5` = exactly `map.mx, map.my`. The floating log's stock
+`onMouse` handler forwards a non-link tap to the "playmap" zone with **`core.mouse.get()`** — the SDL mouse,
+stale on a touch device — so `getMouseTile` got ~(0,0) and resolved to the view's top-left tile. Same in the
+chat log's handler and two other HUD delegates. `TouchInput.pointer()` (set by `click()`/`motion()`) replaces
+`core.mouse.get()` in Minimalist. Reproduced with `tests/logtap.lua` (portrait: the log covers y 821–1021 of
+the map). Tests that reveal a level must set `has_seens` as well as `remembers`, or A* trusts unseen walls.
