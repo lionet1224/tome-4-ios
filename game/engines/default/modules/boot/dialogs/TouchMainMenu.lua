@@ -20,6 +20,7 @@ local GOLD = K.GOLD
 function _M:init()
 	local w = math.min(600, math.floor(game.w * 0.6))
 	local h = math.min(560, math.floor(game.h * 0.94))
+	self.no_close_box = true -- the title menu cannot be dismissed: no X
 	Dialog.init(self, _t"Tales of Maj'Eyal", w, h)
 	self.__showup = false
 	self.__main_menu = true

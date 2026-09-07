@@ -1456,10 +1456,19 @@ function _M:actRoutines()
 		if mh and mh.archery and self.T_SHOOT and self:knowTalent(self.T_SHOOT) then
 			steps = {{kind="talent", tid=self.T_SHOOT, target="nearest", if_unusable="approach"}, {kind="back", target="nearest", if_unusable="skip"}}
 		else
-			steps = {{kind="bump", target="nearest", if_unusable="skip"}, {kind="approach", target="nearest", if_unusable="skip"}}
+			-- melee closes in by itself, like a ranged step out of range does
+			steps = {{kind="bump", target="nearest", if_unusable="approach"}}
 		end
 		self.act_routines = {{name=_t"Basic", steps=steps, pos=1}}
 		self.act_active = 1
+	end
+	-- older routines had bump = "skip it" and a separate Approach step (Jordan: "do the
+	-- same for melee instead of having to add a movement")
+	if not self.act_bump_approach then
+		self.act_bump_approach = true
+		for _, r in ipairs(self.act_routines) do
+			for _, st in ipairs(r.steps or {}) do if st.kind == "bump" and st.if_unusable == "skip" then st.if_unusable = "approach" end end
+		end
 	end
 	return self.act_routines
 end

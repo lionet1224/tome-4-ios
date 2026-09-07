@@ -18,7 +18,7 @@ local font, text, draw, quad, frame, wrap = K.font, K.text, K.draw, K.quad, K.fr
 local Flow = K.Flow
 
 local BUILTINS = {
-	{kind="bump", glyph="BUMP", desc=_t"Attack the target with your weapons by moving into it. Skipped when nothing is adjacent unless you tell it to step in."},
+	{kind="bump", glyph="BUMP", desc=_t"Attack the target with your weapons by moving into it. Steps in when the target is not adjacent."},
 	{kind="approach", glyph="MOVE", desc=_t"Take one step toward the target. Useful after a ranged step so the routine closes the distance."},
 	{kind="back", glyph="BACK", desc=_t"Take one step away from the enemies around you. Archers and casters put this after their attack."},
 	{kind="wait", glyph="WAIT", desc=_t"Pass one turn. Lets cooldowns tick or enemies come to you."},
@@ -335,7 +335,7 @@ function _M:pickerEntries()
 	local a = self.actor
 	local acts, tal, items = {}, {}, {}
 	for _, b in ipairs(BUILTINS) do
-		acts[#acts+1] = {name=mod.class.Player.ACT_KIND_NAMES[b.kind] or b.kind, sub=K.pitch(b.desc), step={kind=b.kind, target=(b.kind ~= "wait") and "nearest" or nil, if_unusable="skip"}}
+		acts[#acts+1] = {name=mod.class.Player.ACT_KIND_NAMES[b.kind] or b.kind, sub=K.pitch(b.desc), step={kind=b.kind, target=(b.kind ~= "wait") and "nearest" or nil, if_unusable=(b.kind == "bump") and "approach" or "skip"}}
 	end
 	-- hidden talents still count when they are innate (Shoot) or sit on a hotkey
 	local on_hotkey = {}
