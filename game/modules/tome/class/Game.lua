@@ -2761,17 +2761,11 @@ function _M:setupMouse(reset)
 		-- while enemies are in view = no walking (drag to step instead)
 		if require("engine.TouchInput").active() and button == "left" and not xrel and not yrel and event == "button" and self.key == self.normal_key and self.player and self.uiset.touch_manual and self.zone and not self.zone.wilderness then
 			local a = self.level.map(tmx, tmy, Map.ACTOR)
-			self.player.touch_enter = nil
 			if a and a ~= self.player and self.player:canSee(a) and self.player:reactionToward(a) < 0 then
 				self.uiset.touch_manual:setTarget(a)
 				return
 			end
-			-- a tapped exit (stairs, town gate) is taken on arrival: see Player:runStopped
-			local g = self.level.map(tmx, tmy, Map.TERRAIN)
-			if g and g.change_level and not (tmx == self.player.x and tmy == self.player.y) and (self.zone.wilderness or #self.player:actEnemies() == 0) then
-				self.player.touch_enter = {x=tmx, y=tmy}
-				print("[TOUCH] exit tapped: walk there and take it")
-			end
+			-- (a tapped exit is only walked to; tapping yourself on it takes it — Jordan's choice)
 			-- (not on the world map: encounters sit in view for miles and the run logic already halts when one closes in)
 			if not (tmx == self.player.x and tmy == self.player.y) and not (self.zone and self.zone.wilderness) and #self.player:actEnemies() > 0 then
 				self.uiset.touch_manual:setTarget(nil)

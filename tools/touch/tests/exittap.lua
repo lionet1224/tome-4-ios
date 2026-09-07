@@ -42,9 +42,17 @@ return function(T)
 	local orig = p.runStop
 	p.runStop = function(self, msg, ...) stops[#stops+1] = tostring(msg) return orig(self, msg, ...) end
 	T.tap(sx, sy)
+	T.waitFor(function() return not p.running and p.x == best.x and p.y == best.y end, 40000)
+	T.wait(800)
+	T.log("run stops:", table.concat(stops, " | "), "at stairs", tostring(p.x == best.x and p.y == best.y), "level still", tostring(game.level.level == lvl0))
+	if not (p.x == best.x and p.y == best.y) then T.log("BAD did not walk to the tapped stairs") end
+	if game.level.level ~= lvl0 or game.zone.short_name ~= zone0 then T.log("BAD took the stairs without a second tap") end
+	-- the second tap, on yourself, takes them
+	map:centerViewAround(p.x, p.y) T.wait(300)
+	local px, py = map:getTileToScreen(p.x, p.y, true)
+	T.tap(px, py)
 	T.waitFor(function() return game.level.level ~= lvl0 or game.zone.short_name ~= zone0 end, 40000)
-	T.log("level", zone0, lvl0, "->", game.zone.short_name, game.level.level, "player", p.x, p.y, "touch_enter", tostring(p.touch_enter))
-	T.log("run stops:", table.concat(stops, " | "))
-	if game.level.level == lvl0 and game.zone.short_name == zone0 then T.log("BAD did not take the tapped stairs") end
+	T.log("after self tap: level", zone0, lvl0, "->", game.zone.short_name, game.level.level)
+	if game.level.level == lvl0 and game.zone.short_name == zone0 then T.log("BAD self tap on the stairs did not take them") end
 	T.log("finished")
 end

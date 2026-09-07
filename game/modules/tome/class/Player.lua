@@ -1337,15 +1337,7 @@ end
 function _M:runStopped()
 	game.level.map.clean_fov = true
 	self:playerFOV()
-	-- iOS port: a tapped exit is taken on arrival (tapping the stairs meant "go down")
-	local e = self.touch_enter
-	if e then
-		self.touch_enter = nil
-		if self.x == e.x and self.y == e.y and game.key == game.normal_key then
-			local g = game.level.map(e.x, e.y, Map.TERRAIN)
-			if g and g.change_level then print("[TOUCH] arrived at the tapped exit -> take it") game:onTickEnd(function() game.key:triggerVirtual("CHANGE_LEVEL") end) end
-		end
-	end
+
 	local spotted = spotHostiles(self)
 	if #spotted > 0 then
 		for _, node in ipairs(spotted) do
@@ -1695,7 +1687,20 @@ function _M:actStep()
 end
 
 --- Auto-act: keep running the routine (and exploring) until something needs you
-function _M:autoActStart()
+function _M:autoActStart(force)
+	-- a stop condition holds right now: ask before running into it (Jordan: "show a
+	-- dialog asking if you really want to auto even though <reason>"); the
+	-- override lasts for this fight, then the usual stops apply again
+	if not force then
+		local why, kind = self:autoActBlocker()
+		if why and kind then
+			local Dialog = require "engine.ui.Dialog"
+			Dialog:yesnoPopup(_t"Auto", ("Auto would stop at once: %s.\nContinue anyway until this fight is over?"):format(why), function(ret)
+				if ret then self.auto_override = kind self:autoActStart(true) end
+			end, _t"Continue", _t"Cancel")
+			return
+		end
+	end
 	self.auto_act = true
 	self.auto_start_level = self.level
 	self.auto_idle = 0
@@ -1724,6 +1729,7 @@ local quiet_stops = {["you touched the screen"]=true, ["stopped"]=true}
 function _M:autoActStop(why)
 	if not self.auto_act then return end
 	self.auto_act = nil
+	self.auto_override = nil
 	if why then game.logPlayer(self, "#GOLD#Auto-act stopped:#LAST# %s", why) end
 	print("[AUTO] stop", why or "")
 	if self.running then self:runStop(why) end
@@ -1743,19 +1749,19 @@ function _M:autoActBlocker()
 	-- low life / resources only matter with enemies about: with none in view the
 	-- routine's explore step rests first and carries on (Jordan: "it should")
 	local danger = #self:actEnemies() > 0
-	if danger and self.max_life and self.life / self.max_life * 100 < life_pct then return ("life below %d%%"):format(life_pct) end
+	if danger and self.max_life and self.life / self.max_life * 100 < life_pct then return ("life below %d%%"):format(life_pct), "life" end
 	if danger and res_pct > 0 then
 		for _, res in ipairs(self.resources_def) do
 			if not res.invert_values and not res.switch_direction and (not res.talent or self:knowTalent(res.talent)) then
 				local max = self["max_"..res.short_name]
 				local v = self[res.short_name]
-				if max and max > 0 and v and v / max * 100 < res_pct then return ("%s below %d%%"):format(res.name, res_pct) end
+				if max and max > 0 and v and v / max * 100 < res_pct then return ("%s below %d%%"):format(res.name, res_pct), "resource" end
 			end
 		end
 	end
 	if TI.setting("auto_rare") ~= false then
 		for _, e in ipairs(self:actEnemies()) do
-			if (e.a.rank or 2) > 2 then return ("%s spotted"):format(e.a.name) end
+			if (e.a.rank or 2) > 2 then return ("%s spotted"):format(e.a.name), "rank" end
 		end
 	end
 	return nil
@@ -1799,8 +1805,9 @@ function _M:autoActTick()
 	local now = core.game.getTime()
 	if now - (self.auto_last or 0) < 200 then return end
 	self.auto_last = now
-	local why = self:autoActBlocker()
-	if why then self:autoActStop(why) return end
+	if self.auto_override and #self:actEnemies() == 0 then self.auto_override = nil print("[AUTO] override over (no enemies in view)") end
+	local why, kind = self:autoActBlocker()
+	if why and not (kind and kind == self.auto_override) then self:autoActStop(why) return end
 	if self.level > (self.auto_start_level or self.level) then self:autoActStop("level up!") return end
 	self.act_nothing, self.act_last_ok = nil, nil
 	self:actStep()

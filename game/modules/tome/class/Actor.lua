@@ -81,7 +81,7 @@ _M._no_save_fields.running_prev = true
 _M._no_save_fields.act_preview = true
 _M._no_save_fields.act_preview_key = true
 _M._no_save_fields.touch_target = true
-_M._no_save_fields.touch_enter = true
+_M._no_save_fields.auto_override = true
 _M._no_save_fields.auto_act = true
 _M._no_save_fields.auto_start_level = true
 
