@@ -2450,7 +2450,7 @@ end
 function _M:setupMouse(mouse)
 	-- Log tooltips
 	self.logdisplay:onMouse(function(item, sub_es, button, event, x, y, xrel, yrel, bx, by)
-		local mx, my = core.mouse.get()
+		local mx, my = require("engine.TouchInput").pointer() -- the touch point on iOS (core.mouse.get() is the stale SDL mouse: taps on the log walked to the view origin)
 		if ((not item or not sub_es or #sub_es == 0) and (not item or not item.url)) or (item and item.faded == 0) then game.mouse:delegate(button, mx, my, xrel, yrel, nil, nil, event, "playmap") return end
 
 		local tooltips = {}
@@ -2474,7 +2474,7 @@ function _M:setupMouse(mouse)
 
 	-- Chat tooltips
 	profile.chat:onMouse(function(user, item, button, event, x, y, xrel, yrel, bx, by)
-		local mx, my = core.mouse.get()
+		local mx, my = require("engine.TouchInput").pointer() -- the touch point on iOS (core.mouse.get() is the stale SDL mouse: taps on the log walked to the view origin)
 		if not item or not user or item.faded == 0 then game.mouse:delegate(button, mx, my, xrel, yrel, nil, nil, event, "playmap") return end
 
 		local str = tstring{{"color","GOLD"}, {"font","bold"}, user.name, {"color","LAST"}, {"font","normal"}, true}

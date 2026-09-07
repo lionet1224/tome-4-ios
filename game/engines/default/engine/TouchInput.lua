@@ -71,8 +71,15 @@ local function emit(fct)
 	_M.injecting = false
 	if not ok then error(err) end
 end
-local function motion(button, x, y, xrel, yrel) emit(function(m) m:receiveMouseMotion(button, x, y, xrel or 0, yrel or 0) end) end
+local function motion(button, x, y, xrel, yrel) _M.pointer_x, _M.pointer_y = x, y emit(function(m) m:receiveMouseMotion(button, x, y, xrel or 0, yrel or 0) end) end
+--- The point the current touch is at: HUD handlers that forward a tap to the map
+-- must use this instead of core.mouse.get(), which is the (stale) SDL mouse
+function _M.pointer()
+	if _M.active() and _M.pointer_x then return _M.pointer_x, _M.pointer_y end
+	return core.mouse.get()
+end
 local function click(button, x, y)
+	_M.pointer_x, _M.pointer_y = x, y
 	emit(function(m)
 		m:receiveMouseMotion("none", x, y, 0, 0)
 		m:receiveMouse(button, x, y, false)
