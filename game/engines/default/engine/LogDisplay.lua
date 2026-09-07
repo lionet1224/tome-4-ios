@@ -83,7 +83,7 @@ function _M:resize(x, y, w, h)
 	self.mouse = Mouse.new()
 	self.mouse.delegate_offset_x = self.display_x
 	self.mouse.delegate_offset_y = self.display_y
-	self.mouse:registerZone(0, 0, self.w, self.h, function(button, x, y, xrel, yrel, bx, by, event) self:mouseEvent(button, x, y, xrel, yrel, bx, by, event) end)
+	self.mouse:registerZone(0, 0, self.w, self.h, function(button, x, y, xrel, yrel, bx, by, event) return self:mouseEvent(button, x, y, xrel, yrel, bx, by, event) end)
 end
 
 --- Returns a clone of the full log
@@ -199,6 +199,17 @@ function _M:onMouse(fct)
 end
 
 function _M:mouseEvent(button, x, y, xrel, yrel, bx, by, event)
+	-- iOS port: the log floats over the map; a tap on it belongs to the map (an
+	-- enemy under the log could not be selected), links excepted
+	if (event == "button" or event == "button-down") and require("engine.TouchInput").active() then
+		local citem
+		for i = 1, #(self.dlist or {}) do
+			local item = self.dlist[i]
+			if item.dh and by >= item.dh - self.mouse.delegate_offset_y then citem = item break end
+		end
+		if citem and citem.url and button == "left" and event == "button" then util.browserOpenUrl(citem.url, {is_external=true}) return true end
+		return false
+	end
 	if button == "wheelup" then self:scrollUp(1)
 	elseif button == "wheeldown" then self:scrollUp(-1)
 	else

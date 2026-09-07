@@ -342,9 +342,10 @@ function _M:pickerEntries()
 	for _, hk in pairs(a.hotkey or {}) do if hk[1] == "talent" then on_hotkey[hk[2]] = true end end
 	for tid, lvl in pairs(a.talents) do
 		local t = a:getTalentFromId(tid)
-		if t and t.mode == "activated" and (not t.hide or t.innate or on_hotkey[tid]) then
+		if t and (t.mode == "activated" or t.mode == "sustained") and (not t.hide or t.innate or on_hotkey[tid]) then
 			local status
-			if a:isTalentCoolingDown(t) then status = (_t"cooling down %d"):format(a:isTalentCoolingDown(t)) else status = _t"ready" end
+			if t.mode == "sustained" then status = a:isTalentActive(tid) and _t"sustain · active (step skips)" or _t"sustain · turns it on"
+			elseif a:isTalentCoolingDown(t) then status = (_t"cooling down %d"):format(a:isTalentCoolingDown(t)) else status = _t"ready" end
 			tal[#tal+1] = {name=t.name, sub=status, t=t, step={kind="talent", tid=tid, target="nearest", if_unusable="approach"}}
 		end
 	end

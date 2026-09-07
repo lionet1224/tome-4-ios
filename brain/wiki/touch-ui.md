@@ -473,3 +473,21 @@ Tests: `portrait.lua` (band numbers), `stripscroll.lua`, `band.lua`.
 - **Tooltip after a tap**: `click()` emits a motion before the button events, which made the map show the
   tapped tile's tooltip with nothing to move the pointer away (tapping yourself to rest left your own sheet
   up). `click()` now calls `clearTooltip("tap")`. Test `taptooltip.lua`.
+
+## 32. Nine-item batch from the phone (2026-09-07)
+
+- AUTO: low life/resources stop it only with enemies in view; with none the explore step rests first
+  (`autoActBlocker` `danger`). A level gained since `autoActStart` stops it ("level up!"). Tests `autolow`,
+  `autolevel`.
+- Item names: `TouchItemList` cut long names to a markup-stripped string → white; the cut now keeps
+  `getDisplayColor()`'s code (`e.name_color`). Shop rows use the same list. Test in `store-portrait`/`inventory`.
+- Gear comparison in the shop: the inventory's Card (NEW/WORN table) is exported as `TouchCompare.Card` and sits
+  above the store description in both orientations (portrait sheet 440).
+- Level-up "Category" is a gold label (`Textzone`), not a button: one shared pool spent on category headers.
+- Routine picker lists sustains ("turns it on"); the step is skipped when the sustain is already active.
+- Strip header target in portrait: taps on the map bottom went to the **message log's mouse zone** (it floats
+  over the map) — `LogDisplay:mouseEvent` returns false for touch taps (links excepted), so the map gets them.
+- Tapping an exit tile from afar walks there and takes it (`player.touch_enter`, consumed in `runStopped`).
+  Test `exittap` (removes hostiles first; the walk stops with "interesting terrain" on arrival, then CHANGE_LEVEL).
+- Rod of Recall crash on the phone could not be reproduced in the sim (`recall.lua` passes); the device log is
+  overwritten at each launch — pull it before relaunching.

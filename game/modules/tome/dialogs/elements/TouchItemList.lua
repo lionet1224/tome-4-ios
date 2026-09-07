@@ -154,10 +154,16 @@ function _M:setItems(items)
 		e.verdict = v
 		if v then avail = avail - self.font:size(v == "better" and _t"likely better" or v == "worse" and _t"worse" or _t"empty slot") - 12 end
 		local plain = name:gsub("#[^#]*#", "")
+		-- the rarity colour of the whole name (getName's own markup is per-part; a
+		-- cut name loses it, so it is re-applied from the display colour)
+		local okc, _, code = pcall(o.getDisplayColor, o)
+		e.name_color = (okc and type(code) == "string") and code or nil
+		e.name_cut = false
 		if self.font:size(plain) > avail then
 			local cut = plain
 			while #cut > 4 and self.font:size(cut.."...") > avail do cut = cut:sub(1, -4) end
-			name = cut.."..."
+			name = (e.name_color or "")..cut.."..."
+			e.name_cut = true
 		end
 		e.text_name = self:text(name, 255, 255, 255)
 		e.text_sub = self:text(e.sub or subtitle(o), 170, 165, 150)

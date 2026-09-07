@@ -692,7 +692,7 @@ function _M:createDisplay()
 							self.actor.unused_talents_types = self.actor.unused_talents_types - 1
 							self.actor.max_inscriptions = self.actor.max_inscriptions + 1
 							self.actor.inscriptions_slots_added = self.actor.inscriptions_slots_added + 1
-							self.b_types.text = self:pointLabel("types", self.actor.unused_talents_types)
+							self.b_types.text = (self.b_types.auto_width and "#GOLD#%s#LAST#" or "%s"):format(self:pointLabel("types", self.actor.unused_talents_types))
 							self.b_types:generate()
 						end end)
 					else
@@ -917,6 +917,10 @@ function _M:createDisplayTouch()
 		bottom_h = bottom_h + (self.c_hide_unknown and self.c_hide_unknown.h + 6 or 0)
 		pane_h = self.ih - self.top_h - 8 - sheet_h - 8 - bottom_h
 	end
+	-- category points are one shared pool spent on the category headers: a plain
+	-- label at the top, not a button (Jordan: a per-pane note "would appear like it
+	-- was not a shared resource")
+	self.b_types = Textzone.new{auto_width=true, auto_height=true, font=core.display.newFont(FontPackage:getFont("default"), 20), text=("#GOLD#%s#LAST#"):format(self:pointLabel("types", self.actor.unused_talents_types))}
 	local desc_fct = function(item) local ret = self:getTalentDesc(item) self.c_desc:erase() self.c_desc:switchItem(ret, ret) return ret end
 	local stat_fct = function(item) local ret = self:getStatDesc(item) self.c_desc:erase() self.c_desc:switchItem(ret, ret) return ret end
 	local can_add = function(item)
@@ -1261,7 +1265,7 @@ function _M:onUseTalent(item, inc)
 	self.b_class:generate()
 	self.b_generic.text = self:pointLabel("generic", self.actor.unused_generics)
 	self.b_generic:generate()
-	self.b_types.text = self:pointLabel("types", self.actor.unused_talents_types)
+	self.b_types.text = (self.b_types.auto_width and "#GOLD#%s#LAST#" or "%s"):format(self:pointLabel("types", self.actor.unused_talents_types))
 	self.b_types:generate()
 end
 

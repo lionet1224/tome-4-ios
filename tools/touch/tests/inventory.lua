@@ -10,6 +10,12 @@ return function(T)
 	local row
 	for i, e in ipairs(d.c_list.items) do if e.object.type == "armor" and e.object:wornInven() then row = i break end end
 	T.log("armour row", tostring(row))
+	do -- rarity colour survives a cut name (log only unless a cut name has none)
+		local cut, coloured = 0, 0
+		for _, e in ipairs(d.c_list.items) do if e.name_cut then cut = cut + 1 if e.name_color then coloured = coloured + 1 end end end
+		T.log("names cut", cut, "cut with colour", coloured)
+		if cut > coloured then T.log("BAD a cut name lost its colour") end
+	end
 	local lx, ly = d.c_list.last_screen_x + 120, d.c_list.last_screen_y + (row - 1) * d.c_list.row_h + 30 - (d.c_list.scrollbar and d.c_list.scrollbar.pos or 0)
 	T.tap(lx, ly) T.wait(500) T.shot("inv-compare")
 	-- drag it onto its slot

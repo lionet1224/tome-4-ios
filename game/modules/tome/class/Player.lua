@@ -1336,6 +1336,15 @@ end
 function _M:runStopped()
 	game.level.map.clean_fov = true
 	self:playerFOV()
+	-- iOS port: a tapped exit is taken on arrival (tapping the stairs meant "go down")
+	local e = self.touch_enter
+	if e then
+		self.touch_enter = nil
+		if self.x == e.x and self.y == e.y and game.key == game.normal_key then
+			local g = game.level.map(e.x, e.y, Map.TERRAIN)
+			if g and g.change_level then print("[TOUCH] arrived at the tapped exit -> take it") game:onTickEnd(function() game.key:triggerVirtual("CHANGE_LEVEL") end) end
+		end
+	end
 	local spotted = spotHostiles(self)
 	if #spotted > 0 then
 		for _, node in ipairs(spotted) do
@@ -1585,6 +1594,10 @@ function _M:actDo(step)
 		if not t then return false, _t"unknown talent" end
 		if self:isTalentCoolingDown(t) then return false, _t"cooling down" end
 		if not self:preUseTalent(t, true, true) then return false, _t"not usable" end
+		if t.mode == "sustained" then
+			if self:isTalentActive(t.id) then return false, _t"already active" end
+			print("[ACT] sustain on", t.name) self:useTalent(t.id) return true
+		end
 		local ok, tg = pcall(self.getTalentTarget, self, t)
 		-- archery shots (Kneecapper and the other called shots) declare no target table but still
 		-- aim: treat any talent with a range or requires_target as targeted so the routine's rule applies
@@ -1683,6 +1696,7 @@ end
 --- Auto-act: keep running the routine (and exploring) until something needs you
 function _M:autoActStart()
 	self.auto_act = true
+	self.auto_start_level = self.level
 	self.auto_idle = 0
 	self.auto_last = 0
 	game.logPlayer(self, "#GOLD#Auto-act on.#LAST# Tap anywhere to stop.")
@@ -1725,8 +1739,11 @@ function _M:autoActBlocker()
 	local TI = require "engine.TouchInput"
 	local life_pct = tonumber(TI.setting("auto_life")) or 50
 	local res_pct = tonumber(TI.setting("auto_res")) or 25
-	if self.max_life and self.life / self.max_life * 100 < life_pct then return ("life below %d%%"):format(life_pct) end
-	if res_pct > 0 then
+	-- low life / resources only matter with enemies about: with none in view the
+	-- routine's explore step rests first and carries on (Jordan: "it should")
+	local danger = #self:actEnemies() > 0
+	if danger and self.max_life and self.life / self.max_life * 100 < life_pct then return ("life below %d%%"):format(life_pct) end
+	if danger and res_pct > 0 then
 		for _, res in ipairs(self.resources_def) do
 			if not res.invert_values and not res.switch_direction and (not res.talent or self:knowTalent(res.talent)) then
 				local max = self["max_"..res.short_name]
@@ -1783,6 +1800,7 @@ function _M:autoActTick()
 	self.auto_last = now
 	local why = self:autoActBlocker()
 	if why then self:autoActStop(why) return end
+	if self.level > (self.auto_start_level or self.level) then self:autoActStop("level up!") return end
 	self.act_nothing, self.act_last_ok = nil, nil
 	self:actStep()
 	if self.act_nothing then self:autoActStop("nothing in the routine can be done") return end

@@ -9,6 +9,7 @@ local Tabs = require "engine.ui.Tabs"
 local TextzoneList = require "engine.ui.TextzoneList"
 local FontPackage = require "engine.FontPackage"
 local TouchItemList = require "mod.dialogs.elements.TouchItemList"
+local Card = require("mod.dialogs.TouchCompare").Card
 
 module(..., package.seeall, class.inherit(Dialog))
 
@@ -48,24 +49,30 @@ function _M:purseLine()
 end
 
 function _M:build()
-	self.c_tabs = Tabs.new{width=self.iw, tabs={{title=_t"Buy", kind="buy"}, {title=_t"Sell", kind="sell"}}, on_change=function(kind) self.mode = kind self.cur = nil if self.c_list then self.c_desc:erase() self:refresh() end end}
+	self.c_tabs = Tabs.new{width=self.iw, tabs={{title=_t"Buy", kind="buy"}, {title=_t"Sell", kind="sell"}}, on_change=function(kind) self.mode = kind self.cur = nil if self.c_list then self:showCard(nil) self.c_desc:erase() self:refresh() end end}
 	local bh = 56
 	if self.portrait then
 		-- portrait: Buy / Sell tabs on top, the list fills the width, the description
 		-- and the action button are a bottom sheet
-		self.sheet_h = 400
+		self.sheet_h = 440
 		self.sheet_y = self.ih - self.sheet_h
 		self.list_w = self.iw
 		local list_h = self.sheet_y - self.c_tabs.h - 16 - 24 -- 24: the purse line under the tabs
 		self.c_list = TouchItemList.new{width=self.iw, height=list_h, actor=self.actor_actor, scrollbar=true, items={},
 			on_select=function(e) self:selectEntry(e) end, on_use=function(e) self:primary() end}
-		local dh = self.sheet_h - bh - 16
-		self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.iw - 16, height=dh, dest_area={h=dh}}
+		-- the compare card (item header + NEW / WORN table) above the description
+		self.card_w = self.iw - 16
+		self.card_x, self.card_y = 8, self.sheet_y + 8
+		self.desc_bottom = bh + 16
+		self.c_card = Card.new{width=self.card_w, height=90, actor=self.actor_actor}
+		local dh = self.sheet_h - 8 - 90 - 6 - self.desc_bottom
+		self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.card_w, height=dh, dest_area={h=dh}}
 		self.b_primary = Button.new{text=_t"Select an item", width=300, font=self.bigfont, fct=function() self:primary() end}
 		self.uis_def = {
 			{left=0, top=0, ui=self.c_tabs},
 			{left=0, top=self.c_tabs.h + 32, ui=self.c_list},
-			{left=8, top=self.sheet_y + 8, ui=self.c_desc},
+			{left=self.card_x, top=self.card_y, ui=self.c_card},
+			{left=self.card_x, top=self.card_y + 90 + 6, ui=self.c_desc},
 			{right=0, bottom=0, ui=self.b_primary},
 		}
 		return
@@ -74,14 +81,66 @@ function _M:build()
 	self.list_w = math.floor(self.iw * 0.56)
 	self.c_list = TouchItemList.new{width=self.list_w, height=list_h, actor=self.actor_actor, scrollbar=true, items={},
 		on_select=function(e) self:selectEntry(e) end, on_use=function(e) self:primary() end}
-	self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.iw - self.list_w - 20, height=list_h, dest_area={h=list_h}}
+	-- the compare card (item header + NEW / WORN table) above the description
+	self.card_w = self.iw - self.list_w - 20
+	self.card_x, self.card_y = self.list_w + 20, self.c_tabs.h + 8
+	self.desc_bottom = bh + 16
+	self.c_card = Card.new{width=self.card_w, height=90, actor=self.actor_actor}
+	local dh = list_h - 90 - 6
+	self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.card_w, height=dh, dest_area={h=dh}}
 	self.b_primary = Button.new{text=_t"Select an item", width=300, font=self.bigfont, fct=function() self:primary() end}
 	self.uis_def = {
 		{left=0, top=0, ui=self.c_tabs},
 		{left=0, top=self.c_tabs.h + 8, ui=self.c_list},
-		{left=self.list_w + 20, top=self.c_tabs.h + 8, ui=self.c_desc},
+		{left=self.card_x, top=self.card_y, ui=self.c_card},
+		{left=self.card_x, top=self.card_y + 90 + 6, ui=self.c_desc},
 		{right=0, bottom=0, ui=self.b_primary},
 	}
+end
+
+--- What the actor wears where this item would go (nil when nothing / not equipment)
+function _M:wornFor(o)
+	local wi = o and o.wornInven and o:wornInven()
+	local inv = wi and self.actor_actor and self.actor_actor:getInven(wi)
+	if not inv then return nil end
+	for _, w in ipairs(inv) do if w ~= o then return w end end
+	return nil
+end
+
+function _M:kindOf(o)
+	local parts = {}
+	if o.type then parts[#parts+1] = tostring(o.type) end
+	if o.subtype and o.subtype ~= o.type then parts[#parts+1] = tostring(o.subtype) end
+	return table.concat(parts, " · ")
+end
+
+--- The card grows with its stat rows; the description takes what is left
+-- (a TextzoneList cannot change height: it is rebuilt in place)
+function _M:fitDesc()
+	local h = self.c_card.o and math.max(90, self.c_card:contentHeight()) or 90
+	if self.c_card.h == h and self.c_desc_h_fit == h then return end
+	self.c_card.h = h
+	local top = self.card_y + h + 6
+	local dh
+	if self.portrait then dh = math.max(60, self.sheet_y + self.sheet_h - top - self.desc_bottom)
+	else dh = math.max(60, self.ih - top - self.desc_bottom) end
+	local old = self.c_desc
+	self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.card_w, height=dh, dest_area={h=dh}}
+	local entry = self.ui_by_ui[old]
+	if entry then
+		entry.ui = self.c_desc
+		entry.y = self.iy + top
+		self.ui_by_ui[old] = nil
+		self.ui_by_ui[self.c_desc] = entry
+	end
+	self.c_desc_h_fit = h
+end
+
+--- Fill the compare card for an object (nil clears it) and re-fit the description
+function _M:showCard(o)
+	if not self.c_card then return end
+	if o then self.c_card:set(o, self:wornFor(o), self:kindOf(o)) else self.c_card:set(nil) end
+	self:fitDesc()
 end
 
 function _M:refresh()
@@ -99,13 +158,14 @@ function _M:refresh()
 	if self.cur then
 		local found = false
 		for i, e in ipairs(items) do if e.object == self.cur.object then found = true self.c_list:select(i, true) self.cur = e end end
-		if not found then self.cur = nil self.c_desc:erase() end
+		if not found then self.cur = nil self:showCard(nil) self.c_desc:erase() end
 	end
 	self:updateButtons()
 end
 
 function _M:selectEntry(e)
 	self.cur = e
+	self:showCard(e.object)
 	local ok, d = pcall(self.desc, self.mode, e.object)
 	if ok and d then self.c_desc:erase() self.c_desc:switchItem(d, d) end
 	if self.on_select then pcall(self.on_select, e) end

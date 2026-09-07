@@ -15,6 +15,12 @@ return function(T)
 	p.money = (p.money or 0) + 500
 	st:interact(p, "Test shop")
 	T.wait(800)
+	-- a lore / quest popup may land on top of the shop: dismiss it
+	for _ = 1, 3 do
+		local top = game.dialogs[#game.dialogs]
+		if top and top.c_tabs then break end
+		if top then T.log("dismissing", tostring(top.__CLASSNAME)) T.key("EXIT") T.wait(500) end
+	end
 	local d = game.dialogs[#game.dialogs]
 	T.log("stocked", stocked, "dialog", tostring(d and d.__CLASSNAME), "mode", tostring(d and d.mode))
 	if not (d and d.c_list and d.c_tabs) then T.log("BAD no touch store dialog") T.log("finished") return end
@@ -39,6 +45,19 @@ return function(T)
 	T.tap(lx, ly) T.wait(500)
 	T.log("selected", tostring(d.cur and d.cur.object and d.cur.object.name), "button", tostring(d.b_primary.text))
 	if not d.cur then T.log("BAD tap did not select a row") end
+	-- rarity colour survives a cut name
+	local cut, coloured = 0, 0
+	for _, e in ipairs(d.c_list.items) do if e.name_cut then cut = cut + 1 if e.name_color then coloured = coloured + 1 end end end
+	T.log("names cut", cut, "of", #d.c_list.items, "cut with colour", coloured)
+	if cut > coloured then T.log("BAD a cut name lost its colour") end
+	-- the compare card: shown for the selected weapon, compared with what is wielded
+	local cu = d.ui_by_ui[d.c_card]
+	T.log("card item", tostring(d.c_card.o and d.c_card.o.name), "worn", tostring(d.c_card.worn and d.c_card.worn.name), "rows", #d.c_card.rows, "h", d.c_card.h, "desc h", d.c_desc.h)
+	if not (d.cur and d.c_card.o == d.cur.object) then T.log("BAD the card does not show the selected item") end
+	if d.cur and d.cur.object:wornInven() and d.actor_actor:getInven(d.cur.object:wornInven()) and #d.actor_actor:getInven(d.cur.object:wornInven()) > 0 and not d.c_card.worn then T.log("BAD the card has no worn counterpart to compare with") end
+	if cu and (cu.y < d.iy or cu.y + d.c_card.h > d.iy + d.ih + 1) then T.log("BAD card outside the dialog", cu.y, d.c_card.h) end
+	local du = d.ui_by_ui[d.c_desc]
+	if du and cu and du.y < cu.y + d.c_card.h then T.log("BAD description overlaps the card", du.y, cu.y, d.c_card.h) end
 	T.shot("store-portrait")
 	-- Sell tab
 	local tu = d.ui_by_ui[d.c_tabs]
