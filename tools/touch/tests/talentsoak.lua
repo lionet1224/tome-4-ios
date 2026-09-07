@@ -98,12 +98,16 @@ return function(T)
 	end
 	table.sort(list, function(a, b) return a.id < b.id end)
 	local limit = tonumber(config.settings.touch.soak_limit or 0)
+	local from = tonumber(config.settings.touch.soak_from or 1)
+	-- plane-shifting talents (Fearscape...) must not carry the arena away: refuse level changes
+	local blockedLevel = 0
+	game.changeLevel = function(self, ...) blockedLevel = blockedLevel + 1 T.log("blocked changeLevel") end
 	if limit > 0 and #list > limit then local l2 = {} for i = 1, limit do l2[i] = list[i] end list = l2 end
 	T.log("talents to exercise:", #list)
 
 	-- (stats declared below; settle references it)
 	local bad = {}
-	for i, t in ipairs(list) do
+	for i, t in ipairs(list) do if i >= from then
 		local tid = t.id
 		print("[SOAK] talent", i, tid, t.name)
 		local learned = pcall(function() p:learnTalent(tid, true, 1) end)
@@ -149,7 +153,8 @@ return function(T)
 		-- sustains: turn them off again so they do not stack up
 		if t.mode == "sustained" and p:isTalentActive(tid) then pcall(p.forceUseTalent, p, tid, {ignore_energy=true}) end
 		pcall(p.unlearnTalentFull, p, tid)
-	end
+	end end
+	if blockedLevel > 0 then T.log("blocked level changes:", blockedLevel) end
 	T.log(("SUMMARY manual ok %d refused %d error %d | auto ok %d refused %d error %d | area talents %d, %d covered fewer than 2 targets | %d action errors on confirm"):format(stats.manual_ok, stats.manual_refused, stats.manual_error, stats.auto_ok, stats.auto_refused, stats.auto_error, stats.area or 0, stats.area_bad or 0, stats.confirm_error or 0))
 	for _, b in ipairs(bad) do T.log("BAD", b) end
 	T.log("finished")

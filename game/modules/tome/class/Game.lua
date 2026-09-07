@@ -2004,8 +2004,11 @@ function _M:display(nb_keyframes)
 	do
 		local TI = require("engine.TouchInput")
 		local top = self.dialogs[#self.dialogs]
+		-- every dialog freezes the game beneath it except the run/rest progress popups,
+		-- under which the world keeps moving (a sealed-door popup was as janky as a sheet)
+		local function live(d) local t = d.title and tostring(d.title) or "" return t:find("Running") or t:find("Resting") end
 		local big = TI.active() and top and not top.__hidden and top.w and top.h
-			and (top.touch_static_bg or (top.touch_static_bg == nil and top.w * top.h >= 0.45 * self.w * self.h))
+			and (top.touch_static_bg or (top.touch_static_bg == nil and not live(top)))
 		if big and core.display.grabScreen then
 			-- freeze the game: render it once more, copy the screen into a texture, and blit
 			-- that texture under the dialogs on every following frame (FBOs are off in this port)

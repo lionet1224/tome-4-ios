@@ -1454,7 +1454,7 @@ function _M:actRoutines()
 		local steps
 		local mh = self:getInven("MAINHAND") and self:getInven("MAINHAND")[1]
 		if mh and mh.archery and self.T_SHOOT and self:knowTalent(self.T_SHOOT) then
-			steps = {{kind="talent", tid=self.T_SHOOT, target="nearest", if_unusable="approach"}, {kind="back", target="nearest", if_unusable="skip"}}
+			steps = {{kind="talent", tid=self.T_SHOOT, target="nearest", if_unusable="approach"}}
 		else
 			-- melee closes in by itself, like a ranged step out of range does
 			steps = {{kind="bump", target="nearest", if_unusable="approach"}}
@@ -1468,6 +1468,19 @@ function _M:actRoutines()
 		self.act_bump_approach = true
 		for _, r in ipairs(self.act_routines) do
 			for _, st in ipairs(r.steps or {}) do if st.kind == "bump" and st.if_unusable == "skip" then st.if_unusable = "approach" end end
+		end
+	end
+	-- steps close in by themselves now: the explicit Approach steps (and the default
+	-- archer's Step back) are dead weight (Jordan: "we don't need that")
+	if not self.act_no_move_steps then
+		self.act_no_move_steps = true
+		for _, r in ipairs(self.act_routines) do
+			local kept = {}
+			for _, st in ipairs(r.steps or {}) do
+				local drop = st.kind == "approach" or (r.name == _t"Basic" and st.kind == "back")
+				if not drop then kept[#kept+1] = st end
+			end
+			if #kept > 0 then r.steps = kept r.pos = 1 end
 		end
 	end
 	return self.act_routines
@@ -1613,8 +1626,14 @@ function _M:actDo(step)
 		-- chosen enemy is inside its reach; it used to be refused as "out of range"
 		if (self:getTalentRange(t) or 0) == 0 and ok and type(tg) == "table" and (tg.radius or 0) >= 1 then
 			local reach = self:getTalentRadius(t) or tg.radius or 1
-			if core.fov.distance(self.x, self.y, tgt.x, tgt.y) <= reach then
-				print("[ACT] talent around me", t.name, tgt.name) self:useTalent(t.id, nil, nil, nil, self) return true
+			-- any enemy inside the circle counts, not only the selected one
+			local inside = nil
+			if core.fov.distance(self.x, self.y, tgt.x, tgt.y) <= reach then inside = tgt end
+			if not inside then for _, e in ipairs(self:actEnemies()) do
+				if core.fov.distance(self.x, self.y, e.x, e.y) <= reach then inside = e break end
+			end end
+			if inside then
+				print("[ACT] talent around me", t.name, inside.name) self:useTalent(t.id, nil, nil, nil, self) return true
 			end
 			return false, _t"nobody in reach", tgt
 		end
