@@ -96,11 +96,17 @@ return function(T)
 	-- the talents: every activated or sustained one that is not NPC-only
 	local list = {}
 	for tid, t in pairs(Actor.talents_def) do
-		if (t.mode == "activated" or t.mode == "sustained") and not (t.type and t.type[1]:find("^other/npcs")) then list[#list+1] = t end
+		-- inscription slots (Rune of the Rift 1..6) need their inscription: "unknown inscription" without it
+		if (t.mode == "activated" or t.mode == "sustained") and not (t.type and (t.type[1]:find("^other/npcs") or t.type[1]:find("^inscriptions/"))) then list[#list+1] = t end
 	end
 	table.sort(list, function(a, b) return a.id < b.id end)
 	local limit = tonumber(config.settings.touch.soak_limit or 0)
+	-- soak_from: an index, or a talent id to resume at (indices shift when the list changes)
 	local from = tonumber(config.settings.touch.soak_from or 1)
+	if not from and type(config.settings.touch.soak_from) == "string" then
+		for i, t in ipairs(list) do if t.id == config.settings.touch.soak_from then from = i break end end
+	end
+	from = from or 1
 	-- plane-shifting talents (Fearscape...) must not carry the arena away: refuse level changes
 	local blockedLevel = 0
 	game.changeLevel = function(self, ...) blockedLevel = blockedLevel + 1 T.log("blocked changeLevel") end
@@ -112,7 +118,7 @@ return function(T)
 	-- object-granted copies (T_INFUSION:_HEALING_4...) need their item: not player talents
 	-- Fearscape builds its own zone and swaps game.level directly (no changeLevel to block)
 	-- Paradox Clone rebuilds the game state; Rime Wraith's summon loops forever against targets that never die
-	local skip = {T_DEMON_PLANE=true, T_PARADOX_CLONE=true, T_RIME_WRAITH=true}
+	local skip = {T_DEMON_PLANE=true, T_PARADOX_CLONE=true, T_RIME_WRAITH=true, T_SEE_THE_THREADS=true}
 	for i, t in ipairs(list) do if i >= from and not t.id:find(":", 1, true) and not skip[t.id] then
 		local tid = t.id
 		print("[SOAK] talent", i, tid, t.name)
