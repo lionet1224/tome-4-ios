@@ -5,7 +5,7 @@ return function(T)
 	local p, map = game.player, game.level.map
 	local Astar = require "engine.Astar"
 	-- the nearest reachable down stairs; reveal the level so the tap is a normal path
-	for x = 0, map.w - 1 do for y = 0, map.h - 1 do map.remembers(x, y, true) end end
+	for x = 0, map.w - 1 do for y = 0, map.h - 1 do map.remembers(x, y, true) map.has_seens(x, y, true) end end
 	local best, bd
 	for x = 0, map.w - 1 do for y = 0, map.h - 1 do
 		local g = map(x, y, Map.TERRAIN)

@@ -6,7 +6,7 @@ return function(T)
 	for _, e in pairs(game.level.entities) do
 		if e.__is_actor and e ~= p and e.x and p:reactionToward(e) < 0 then map:remove(e.x, e.y, Map.ACTOR) game.level:removeEntity(e) end
 	end
-	for x = 0, map.w - 1 do for y = 0, map.h - 1 do map.remembers(x, y, true) end end
+	for x = 0, map.w - 1 do for y = 0, map.h - 1 do map.remembers(x, y, true) map.has_seens(x, y, true) end end
 	local function free(x, y) return map:isBound(x, y) and not map:checkEntity(x, y, Map.TERRAIN, "block_move") and not map(x, y, Map.ACTOR) end
 	-- stand where 8 rows below is free, near the middle
 	local placed

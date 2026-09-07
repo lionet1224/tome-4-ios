@@ -17,7 +17,7 @@ return function(T)
 		if done then break end
 	end
 	p:playerFOV()
-	for x = 0, map.w - 1 do for y = 0, map.h - 1 do map.remembers(x, y, true) end end
+	for x = 0, map.w - 1 do for y = 0, map.h - 1 do map.remembers(x, y, true) map.has_seens(x, y, true) end end
 	local function trial(tag)
 		map:centerViewAround(p.x, p.y) T.wait(500)
 		local target
