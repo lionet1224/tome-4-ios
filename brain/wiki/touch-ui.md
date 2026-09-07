@@ -573,3 +573,11 @@ so compare proportions, not milliseconds. `game.touch_bg_debug = true` draws the
   ≥ 2; chronomancy anomalies informational). Two apparent "native crashes" were the runner's 200-iteration time
   limit killing the app (`SIM_TIMEOUT` env raises it; the full soak needs ~4000). Talents that hand control to
   another body (Ambuscade) are taken back in `settle()`.
+
+## 39. No movement in default routines, freeze under every dialog, soak resume (2026-09-07)
+
+- **Defaults**: `Player:actRoutines` gives melee `{bump, if_unusable=approach}` and archers `{Shoot, if_unusable=approach}` only. The `act_no_move_steps` flag strips explicit Approach steps from every saved routine and Step back from the stock "Basic" (Jordan: "Default routines all include some movement. We don't need that"). Test `nomove.lua` covers both the defaults and the migration.
+- **Static background under every dialog**: `Game:display` now freezes the game beneath any dialog except those titled "Running"/"Resting" (the only ones where the world moves underneath). The 45 % area rule is gone: the sealed-door `simplePopup` was as janky on the phone as a full sheet. `touch_static_bg=false` still opts a dialog out. Test `freezepopup.lua`.
+- **Self-centred circles in AUTO**: `actDo` casts a range-0 radius talent on the player when *any* enemy in view is inside the radius, not just the selected one (soak finding: Circle of Warding etc. "nobody in reach" while the adjacent clump sat inside).
+- **Soak hardening**: `talentsoak.lua` replaces `game.changeLevel` with a counter (Fearscape teleported the arena away at talent 298) and honours `soak_from=<n>` in touch.cfg to resume. `sweep-all.sh` accepts `SWEEP_SHARD=i/n` with `SWEEP_SINGLE=1` so two shards can start on different simulators at different times.
+- Known harness noise in test logs: a character-vault save inside the script coroutine prints `forceRedraw`/"cannot resume running coroutine" tracebacks (bumpapproach); not a game error.

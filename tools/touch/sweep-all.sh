@@ -9,8 +9,13 @@ export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 A="${UDID_A:-94E8BD6E-7084-4F64-8116-2AEC560DFCFC}"
 B="${UDID_B:-$(cat "$ROOT/tools/touch/sim-b.udid" 2>/dev/null)}"
 [ -n "$SWEEP_SINGLE" ] && B=""   # SWEEP_SINGLE=1: leave the second simulator alone
-tests=()
-for t in "$ROOT"/tools/touch/tests/*.lua; do n=$(basename "$t" .lua); case "$n" in mainmenu|loadzoom|stepdiag|settings|grab|fps) continue;; esac; tests+=("$t"); done
+# SWEEP_SHARD=i/n with SWEEP_SINGLE: run only every n-th test starting at i (two shards
+# started at different times on different simulators cover the whole list between them)
+shard_i=0; shard_n=1
+if [ -n "$SWEEP_SHARD" ]; then shard_i="${SWEEP_SHARD%/*}"; shard_n="${SWEEP_SHARD#*/}"; fi
+tests=(); k=0
+for t in "$ROOT"/tools/touch/tests/*.lua; do n=$(basename "$t" .lua); case "$n" in mainmenu|loadzoom|stepdiag|settings|grab|fps) continue;; esac
+	if (( k % shard_n == shard_i )); then tests+=("$t"); fi; k=$((k+1)); done
 run_half() { # $1 = udid, $2.. = tests
 	local ud="$1"; shift
 	for t in "$@"; do
