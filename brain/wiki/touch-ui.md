@@ -525,3 +525,13 @@ the map). Tests that reveal a level must set `has_seens` as well as `remembers`,
 - **AUTO**: tapping it while a blocker holds asks (yes/no long popup, 85 % width); Continue sets `auto_override`
   = that blocker kind until no enemies are in view. Tapped exits are only walked to (no auto-enter). No floating
   hit text while AUTO runs; iOS requests 60 fps; AUTO's tick budget = 60 % of a frame.
+
+## 36. Load character screen (2026-09-07)
+
+Jordan: "very desktop feeling". Rebuilt `boot/dialogs/TouchLoadGame.lua` from the approved mock: full-screen sheet
+(no close box), Back + title + "N saved"; **hero card** for the newest save (cur.png letterboxed 150 px, name,
+"Level · race class · zone", pills: difficulty / permadeath / Alive-Dead / played-ago / warnings, Continue + "…");
+rows ("Other characters", "Fallen" for dead ones) in a Flow; **long-press** (TouchInput.on_hold → `saveAt` in screen
+space via the Flow's `last_screen_x/y`) or "…" opens a bottom **actions sheet** (Load / Details / Delete with confirm).
+The two compatibility checkboxes are footer buttons (a drawn link under a dialog-level zone never receives left
+taps: the Dialog's own zone consumes them). Test `loadgame.lua` (boot mode, both orientations).
