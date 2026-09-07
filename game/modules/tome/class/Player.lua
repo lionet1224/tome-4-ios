@@ -1286,6 +1286,7 @@ end
 --- Move with the mouse
 -- We just feed our spotHostile to the interface mouseMove
 function _M:mouseMove(tmx, tmy, force_move)
+	if require("engine.TouchInput").active() then print(("[TOUCH] walk: from %s,%s to %s,%s (zone %s, view %s,%s zoom %s)"):format(tostring(self.x), tostring(self.y), tostring(tmx), tostring(tmy), tostring(game.zone and game.zone.short_name), tostring(game.level and game.level.map.mx), tostring(game.level and game.level.map.my), tostring(game.level and game.level.map.zoom))) end
 	local astar_check = function(x, y)
 		-- Dont do traps
 		local trap = game.level.map(x, y, Map.TRAP)
