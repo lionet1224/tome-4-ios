@@ -25,7 +25,12 @@ return function(T)
 		T.log("after step-off: at", p.x, p.y, "tile", tostring(g and g.name), "change_level", tostring(g and g.change_level), "change_zone", tostring(g and g.change_zone), "rects", tostring(game.uiset.touch_ctx_rects and game.uiset.touch_ctx_rects.exit_label))
 	end
 	T.log("idle: exit", tostring(ctx().exit ~= nil), "wait", tostring(ctx().wait ~= nil), "enemies", #p:actEnemies())
-	if ctx().exit or ctx().wait then T.log("BAD pills shown with nothing to do") end
+	do
+		local g0 = map(p.x, p.y, Map.TERRAIN)
+		local on_exit = g0 and (g0.change_level or g0.change_zone)
+		if not on_exit and (game.uiset.touch_ctx_rects.exit or game.uiset.touch_ctx_rects.wait) then T.log("BAD pills shown with nothing to do") end
+		if on_exit and not game.uiset.touch_ctx_rects.exit then T.log("BAD standing on an exit without the pill") end
+	end
 	-- onto the nearest down stairs
 	local best, bd
 	for x = 0, map.w - 1 do for y = 0, map.h - 1 do

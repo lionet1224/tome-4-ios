@@ -512,3 +512,16 @@ stale on a touch device — so `getMouseTile` got ~(0,0) and resolved to the vie
 chat log's handler and two other HUD delegates. `TouchInput.pointer()` (set by `click()`/`motion()`) replaces
 `core.mouse.get()` in Minimalist. Reproduced with `tests/logtap.lua` (portrait: the log covers y 821–1021 of
 the map). Tests that reveal a level must set `has_seens` as well as `remembers`, or A* trusts unseen walls.
+
+## 35. Compare description, context pills, AUTO override (2026-09-07)
+
+- **Item comparison** = the game's ctrl-comparison: `o:getDesc({do_color=true}, actor:getInven(o:wornInven()), nil, actor)`
+  rendered in the scrollable description (deltas as `#LIGHT_GREEN#+4#LAST#` etc.); the Card is header-only (90 px);
+  the "Press <control> to compare" hint is skipped on touch. Unidentified items show no stats and no deltas —
+  tests must `o:identify(true)`.
+- **Context pills** beside AUTO (`TouchManual`, `CTX_W/H` 150×44, slots `ctx_lo/ctx_hi`): "Descend / Ascend /
+  Enter / Leave" on a transition tile (tap = CHANGE_LEVEL; the self-tap still works) and "Wait" with enemies in
+  view (MOVE_STAY). Portrait left hand: x 270, y 1279 (lower) / 1227 (upper). Test `ctxpills.lua`.
+- **AUTO**: tapping it while a blocker holds asks (yes/no long popup, 85 % width); Continue sets `auto_override`
+  = that blocker kind until no enemies are in view. Tapped exits are only walked to (no auto-enter). No floating
+  hit text while AUTO runs; iOS requests 60 fps; AUTO's tick budget = 60 % of a frame.
