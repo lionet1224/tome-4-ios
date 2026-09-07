@@ -13,12 +13,20 @@ return function(T)
 	end
 	if not npc then T.log("no npc") T.log("finished") return end
 	p:playerFOV() T.wait(400)
+	if #p:actEnemies() == 0 then
+		-- not in view (dark, wall): put it right next to us
+		for _, d in ipairs{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} do
+			if free(p.x + d[1], p.y + d[2]) then npc:move(p.x + d[1], p.y + d[2], true) break end
+		end
+		p:playerFOV() T.wait(400)
+	end
 	p.life = math.floor(p.max_life * 0.4)
 	T.log("enemies in view", #p:actEnemies(), "blocker:", tostring(p:autoActBlocker()))
 	p:autoActStart() T.wait(600)
 	local d = game.dialogs[#game.dialogs]
 	T.log("dialog:", tostring(d and d.title), "auto_act", tostring(p.auto_act))
 	if not (d and tostring(d.title) == _t"Auto") then T.log("BAD no confirmation dialog") T.log("finished") return end
+	T.shot("auto-confirm")
 	-- Continue (the popup's own button; ACCEPT is not bound on it)
 	local pressed = false
 	for _, u in ipairs(d.uis or {}) do if u.ui and u.ui.text == _t"Continue" and u.ui.fct then u.ui.fct() pressed = true break end end

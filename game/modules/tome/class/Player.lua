@@ -1695,7 +1695,8 @@ function _M:autoActStart(force)
 		local why, kind = self:autoActBlocker()
 		if why and kind then
 			local Dialog = require "engine.ui.Dialog"
-			Dialog:yesnoPopup(_t"Auto", ("Auto would stop at once: %s.\nContinue anyway until this fight is over?"):format(why), function(ret)
+			-- the wrapping variant: the plain popup cut the sentence off on the phone
+			Dialog:yesnoLongPopup(_t"Auto", ("Auto would stop at once: %s.\n\nContinue anyway until this fight is over?"):format(why), math.floor(game.w * 0.85), function(ret)
 				if ret then self.auto_override = kind self:autoActStart(true) end
 			end, _t"Continue", _t"Cancel")
 			return
