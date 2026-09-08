@@ -6,7 +6,10 @@ return function(T)
 	p.has_transmo = 1
 	-- a chest item of a worn kind: a body armour when one is worn, else a weapon
 	local worn = p:getInven("BODY") and p:getInven("BODY")[1]
-	local filter = worn and {type="armor", subtype=worn.subtype} or {type="weapon"}
+	-- a weapon of another kind than the one wielded: its description must carry the deltas
+	local mh = p:getInven("MAINHAND") and p:getInven("MAINHAND")[1]
+	worn = mh or worn
+	local filter = mh and {type="weapon", subtype="battleaxe"} or (worn and {type="armor", subtype=worn.subtype} or {type="weapon"})
 	local o = game.zone:makeEntity(game.level, "object", filter, nil, true)
 	if not o then T.log("no object") T.log("finished") return end
 	o:identify(true)
@@ -29,6 +32,10 @@ return function(T)
 	local card = d.c_card
 	T.log("selected", tostring(d.cur and d.cur.object == o), "desc_compared", tostring(d.desc_compared), "card rows", card and card.rows and #card.rows or -1, "card worn", card and card.worn and card.worn:getName{do_color=false} or "nil")
 	if worn and not d.desc_compared then T.log("BAD no comparison for the chest item") end
+	local txt = d.desc_text or ""
+	local deltas = txt:find("#00ff00#") or txt:find("#ff0000#") or txt:find("%(%+") or txt:find("%(%-")
+	T.log("delta markup in the description", tostring(deltas ~= nil))
+	if worn and not deltas then T.log("BAD the description carries no comparison deltas") end
 	if worn and card and card.worn ~= worn then T.log("BAD card does not compare against the worn item") end
 	T.key("EXIT") T.wait(300)
 	T.log("finished")

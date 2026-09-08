@@ -52,7 +52,7 @@ function _M:select(item)
 		self.cur_item = item
 		if not item.desc or item.ctrl_state ~= core.key.modState("ctrl") then
 			item.ctrl_state = core.key.modState("ctrl")
-			item.desc = item.object:getDesc({do_color=true}, self.actor:getInven(item.object:wornInven()))
+			item.desc = item.object:getDesc({do_color=true, force_compare=true}, self.actor:getInven(item.object:wornInven()))
 			self.c_desc:createItem(item, item.desc)
 		end
 		self.c_desc:switchItem(item, item.desc)
@@ -173,7 +173,7 @@ function _M:showDesc(e)
 	self.cur_item = e
 	local desc
 	if e and e.object then
-		local ok, d = pcall(e.object.getDesc, e.object, {do_color=true}, self.actor and self.actor:getInven(e.object:wornInven()) or nil)
+		local ok, d = pcall(e.object.getDesc, e.object, {do_color=true, force_compare=true}, self.actor and self.actor:getInven(e.object:wornInven()) or nil)
 		desc = ok and d or tostring(e.object.name)
 	else
 		desc = _t"Tap an item to take it. Hold one to read about it first."

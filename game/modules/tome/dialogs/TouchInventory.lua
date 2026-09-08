@@ -560,7 +560,7 @@ function _M:showCurrent()
 		-- the desktop's ctrl comparison: every stat with its delta against what is worn
 		local cmp = (not e.worn) and o:wornInven() and self.actor:getInven(o:wornInven()) or nil
 		if cmp and #cmp == 0 then cmp = nil end
-		local ok, d = pcall(o.getDesc, o, {do_color=true}, cmp, nil, self.actor)
+		local ok, d = pcall(o.getDesc, o, {do_color=true, force_compare=true}, cmp, nil, self.actor)
 		if ok and d then
 			self.c_desc:switchItem(d, d)
 			self.desc_compared = cmp ~= nil

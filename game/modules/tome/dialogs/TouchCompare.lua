@@ -130,7 +130,7 @@ function _M:init(actor, o, worn, on_wear)
 
 	-- the candidate, with the engine's own diffs against what is worn
 	self.c_left = TextzoneList.new{focus_check=true, scrollbar=true, width=colw, height=list_h, dest_area={h=list_h}}
-	local ok, d = pcall(o.getDesc, o, {do_color=true}, inven, nil, actor)
+	local ok, d = pcall(o.getDesc, o, {do_color=true, force_compare=true}, inven, nil, actor)
 	if ok and d then self.c_left:switchItem(d, d) end
 	self.c_right = TextzoneList.new{focus_check=true, scrollbar=true, width=colw, height=list_h, dest_area={h=list_h}}
 	if #worn > 0 then

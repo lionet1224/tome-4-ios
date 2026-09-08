@@ -179,7 +179,7 @@ function _M:selectEntry(e)
 		end
 		local cmp = o:wornInven() and self.actor_actor and self.actor_actor:getInven(o:wornInven()) or nil
 		if cmp and #cmp == 0 then cmp = nil end
-		ds:merge(o:getDesc({do_color=true}, cmp, nil, self.actor_actor))
+		ds:merge(o:getDesc({do_color=true, force_compare=true}, cmp, nil, self.actor_actor))
 		self.desc_compared = cmp ~= nil
 		return ds
 	end)
