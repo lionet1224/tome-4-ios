@@ -1944,9 +1944,13 @@ int main(int argc, char *argv[])
 				switch(event.user.code)
 				{
 				case 0:
-					if (isActive && !ios_in_background) {
-						current_redraw_type = redraw_type_normal;
-						on_redraw();
+					if (isActive) {
+						/* iOS: skip the draw while backgrounded, but always clear the pending flag
+						   or the display timer never asks for another frame after resuming */
+						if (!ios_in_background) {
+							current_redraw_type = redraw_type_normal;
+							on_redraw();
+						}
 						SDL_mutexP(renderingLock);
 						redraw_pending = 0;
 						SDL_mutexV(renderingLock);

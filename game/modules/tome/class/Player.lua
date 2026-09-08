@@ -1929,6 +1929,9 @@ function _M:autoActBlocker()
 	-- low life / resources only matter with enemies about: with none in view the
 	-- routine's explore step rests first and carries on (Jordan: "it should")
 	local danger = #self:actEnemies() > 0
+	-- drowning: the run stops itself at three quarters of your air, but AUTO used to start
+	-- the next exploration at once and kept you under (Jordan: "auto in water suffocates you")
+	if self.air_regen and self.air_regen < 0 and self.max_air and self.air < 0.75 * self.max_air then return _t"losing breath", "air" end
 	if danger and self.max_life and self.life / self.max_life * 100 < life_pct then return ("life below %d%%"):format(life_pct), "life" end
 	if danger and res_pct > 0 then
 		for _, res in ipairs(self.resources_def) do

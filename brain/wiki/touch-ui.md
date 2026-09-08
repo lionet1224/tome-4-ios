@@ -645,3 +645,11 @@ Keep distance and Swap weapons (Approach/Step back legacy only), "Class routine"
 routines-editor, acttemplates (every template talent must be in its class's trees; the 1.7 renamed ids bit once:
 T_STUNNING_BLOW_ASSAULT, T_WARSHOUT_BERSERKER, T_DEATH_DANCE_ASSAULT, T_CHRONO_TIME_SHIELD).
 Runner trap: never leave `( … ) &` subshells behind when a command times out; two runners on one simulator hang each other.
+
+## 48. AUTO under water; resume after background (2026-09-08)
+
+- `autoActBlocker` stops AUTO with "losing breath" (kind "air") when `air_regen < 0` and air is under 75 %: the stock run
+  stopped itself at that point but AUTO restarted the exploration every tick until the player drowned. Test `autoair.lua`.
+- §44's background gate had a hole: the redraw event handler skipped `redraw_pending = 0` along with the draw, so after
+  resuming the display timer never asked for another frame ("the game stops working if I background and come back").
+  The flag is now always cleared; only `on_redraw` is skipped while backgrounded.
