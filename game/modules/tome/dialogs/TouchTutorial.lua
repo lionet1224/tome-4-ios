@@ -73,7 +73,7 @@ _M.PAGES = {
 		paras = {
 			_t"Act does the next step of your routine: a melee bump, a shot, a skill. Steps close in on the enemy by themselves, so a routine needs no walking steps.",
 			_t"AUTO keeps acting and exploring on its own until something needs you: low life, a low resource, an elite in view, a level up, or a window. If a stop rule already holds it asks first, then ignores that rule for the fight.",
-			_t"Hold Act for its menu: restart the routine, skip a step, switch or edit routines. The strip above Act shows the routine; tap a box to jump to that step.",
+			_t"A routine is a priority list: each tap does the first step that applies. A step can carry a When chip (adjacent, 2+ enemies, life low, no enemies in view...) and sustains are kept on. Hold Act for the menu: switch or edit routines, or reset to your class routine.",
 		},
 		draw = function(self, x, y, w, h, t)
 			local px, py, pw, ph = x + 10, y + 20, w - 20, h - 40

@@ -629,3 +629,19 @@ game state), T_RIME_WRAITH (summon loops against immortal targets), T_SHERTUL_FO
 range-0 cones aimed at the player, actEnemies record fields, projectiles counted before landing. Everything else flagged
 by the soak was the talent's own requirement (alchemist gems in the quiver, wards, souls, a bow, traps and walls that
 touch nobody) and is identical in both paths. Verdict: the two cast paths agree for every talent.
+
+## 47. Routines second draft built (2026-09-08)
+
+From the audit (`routines-audit.md`): routines are now **priority lists** (`r.mode`, "cycle" kept as an option; existing
+routines migrate to priority), steps carry one **condition** (`step.cond` ∈ adjacent, not_adjacent, group, life, resource,
+target_life, no_enemies, pets_low with `step.pct`), sustains are **keep on** steps (already active → refused without a
+turn; `step.off` turns one off), new kinds `distance` (range N, replaces Step back) and `swap` (QUICK_SWITCH_WEAPON).
+`Player:actCondOK`, `actStep` (`try(step)`: cond → actDo → step in / wait / skip), out-of-combat steps (`no_enemies`) run
+before exploring, `actNextStep` feeds the Act preview. `mod.class.ActTemplates` holds 27 class routines (audit examples
+verbatim), `default(player)` filters to known talents, `reset(player)` replaces the active routine; `Player:actRoutines`
+uses it on first creation. Editor (`TouchRoutines`): Mode chip + hint, When chip + pct/on-off/range chip, picker offers
+Keep distance and Swap weapons (Approach/Step back legacy only), "Class routine" rail entry. `pets_low` uses the game's
+`checkMaxSummon` global for Summoners, else max_summons or "none alive". Tests: routines-priority, routines-conds,
+routines-editor, acttemplates (every template talent must be in its class's trees; the 1.7 renamed ids bit once:
+T_STUNNING_BLOW_ASSAULT, T_WARSHOUT_BERSERKER, T_DEATH_DANCE_ASSAULT, T_CHRONO_TIME_SHIELD).
+Runner trap: never leave `( … ) &` subshells behind when a command times out; two runners on one simulator hang each other.

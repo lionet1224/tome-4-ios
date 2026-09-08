@@ -19,12 +19,39 @@ local Flow = K.Flow
 
 local BUILTINS = {
 	{kind="bump", glyph="BUMP", desc=_t"Attack the target with your weapons by moving into it. Steps in when the target is not adjacent."},
-	{kind="approach", glyph="MOVE", desc=_t"Take one step toward the target. Useful after a ranged step so the routine closes the distance."},
-	{kind="back", glyph="BACK", desc=_t"Take one step away from the enemies around you. Archers and casters put this after their attack."},
+	{kind="distance", glyph="DIST", desc=_t"Step away while an enemy is closer than the range. Archers and casters put this first so they keep their distance."},
+	{kind="swap", glyph="SWAP", desc=_t"Swap to your other weapon set (the desktop Q key). Archers switch bow and sling with it; Temporal Wardens do not need it, their talents swap by themselves."},
 	{kind="wait", glyph="WAIT", desc=_t"Pass one turn. Lets cooldowns tick or enemies come to you."},
+}
+-- kinds older routines may still hold: shown, no longer offered
+local LEGACY = {
+	{kind="approach", glyph="MOVE", desc=_t"Take one step toward the target. Steps close in by themselves now; this step is no longer offered."},
+	{kind="back", glyph="BACK", desc=_t"Take one step away from the enemies around you. Keep distance replaces it."},
 }
 local UNUSABLE = {{"skip", _t"Skip"}, {"wait", _t"Wait"}, {"approach", _t"Step in"}}
 local UNUSABLE_NAMES = {skip=_t"skip it", wait=_t"wait a turn", approach=_t"step in"}
+
+-- step conditions (the Player constants when present, these otherwise)
+local COND_FALLBACK = {"adjacent", "not_adjacent", "group", "life", "resource", "target_life", "no_enemies", "pets_low"}
+local COND_NAMES_FALLBACK = {adjacent=_t"adjacent", not_adjacent=_t"not adjacent", group=_t"2+ enemies", life=_t"life < %d%%", resource=_t"resource < %d%%", target_life=_t"target < %d%%", no_enemies=_t"no enemies in view", pets_low=_t"pets below cap"}
+local PCT_DEFAULT_FALLBACK = {life=50, resource=30, target_life=25}
+local PCT_STEPS = {25, 50, 75}
+local RANGES = {2, 3, 4, 5}
+local function condList() return mod.class.Player.ACT_CONDS or COND_FALLBACK end
+local function condNames() return mod.class.Player.ACT_COND_NAMES or COND_NAMES_FALLBACK end
+local function pctDefaults() return mod.class.Player.ACT_COND_DEFAULT_PCT or PCT_DEFAULT_FALLBACK end
+local function hasPct(cond) return pctDefaults()[cond] ~= nil end
+local function condLabel(st)
+	if not st or not st.cond then return nil end
+	local n = condNames()[st.cond] or st.cond
+	if hasPct(st.cond) then
+		local pct = st.pct or pctDefaults()[st.cond]
+		if n:find("%%d") then return n:format(pct) end
+		return ("%s %d%%"):format(n, pct)
+	end
+	return n
+end
+local MODE_HINTS = {priority=_t"each tap does the first step that applies", cycle=_t"each tap does the next step"}
 
 function _M:init(actor)
 	self.actor = actor
@@ -42,14 +69,16 @@ function _M:init(actor)
 	if self.portrait then
 		self.rail_w, self.detail_w, self.content_w = self.iw, self.iw, self.iw
 		self.rail_h = 140                       -- chips (rows of three, scrolls past two rows)
-		self.top_h = self.rail_h + 8 + bh + 8 + bh + 8
-		self.sheet_h = 80 + 150 + 3 * (bh + 8) + 8
+		self.hint_h = 22                        -- the mode hint line under the routine buttons
+		self.top_h = self.rail_h + 8 + bh + 8 + bh + 8 + bh + 8 + self.hint_h
+		self.sheet_h = 80 + 150 + 4 * (bh + 8) + 8
 		self.sheet_y = self.ih - self.sheet_h
 		self.c_rail = Flow.new{width=self.iw, height=self.rail_h}
 		-- Button adds 16 px of frame to the requested width
 		local half = math.floor((self.iw - 6) / 2) - 16
-		local third = math.floor((half + 16 - 12) / 3) - 16
+		local third = math.floor((self.iw - 12) / 3) - 16
 		self.b_cool = Button.new{text=_t"Cooldowns: skip", width=half, font=font(17), fct=function() local r = self:routine() if r then r.skip_cooldown = (r.skip_cooldown == false) and true or false self.actor.changed = true self:refresh(true) end end}
+		self.b_mode = Button.new{text=_t"Mode: priority", width=half, font=font(17), fct=function() self:toggleMode() end}
 		self.b_use = Button.new{text=_t"Use this routine", width=self.iw - 16, font=self.bigfont, fct=function() self:useRoutine() end}
 		self.b_rename = Button.new{text=_t"Rename", width=third, font=font(17), fct=function() self:renameRoutine() end}
 		self.b_copy = Button.new{text=_t"Copy", width=third, font=font(17), fct=function() self:copyRoutine() end}
@@ -63,6 +92,13 @@ function _M:init(actor)
 		self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.iw - 16, height=desc_h, dest_area={h=desc_h}}
 		self.b_target = Button.new{text=_t"Target", width=self.iw - 16, font=font(19), fct=function() self:pickTarget() end}
 		local seg = math.floor((self.iw - 12) / 3) - 16
+		-- the When row: the condition chip (two thirds) and its companion (a threshold,
+		-- keep on / turn off for a sustain, the range of Keep distance)
+		local two = 2 * seg + 6
+		self.b_when = Button.new{text=_t"When: always", width=two, font=font(17), fct=function() self:cycleCond() end}
+		self.b_pct = Button.new{text="50%", width=seg, font=font(17), fct=function() self:cyclePct() end}
+		self.b_onoff = Button.new{text=_t"keep on", width=seg, font=font(17), fct=function() self:toggleOff() end}
+		self.b_range = Button.new{text=_t"range 3", width=seg, font=font(17), fct=function() self:cycleRange() end}
 		self.b_unusable = {}
 		for i, u in ipairs(UNUSABLE) do
 			local key = u[1]
@@ -72,32 +108,40 @@ function _M:init(actor)
 		self.b_down = Button.new{text=_t"Down", width=seg, font=font(17), fct=function() self:moveStep(1) end}
 		self.b_remove = Button.new{text=_t"Remove", width=seg, font=font(17), fct=function() self:removeStep() end}
 		local row2 = self.rail_h + 8 + bh + 8
+		local row3 = row2 + bh + 8
 		self:loadUI{
 			{left=0, top=0, ui=self.c_rail},
 			{left=0, top=self.rail_h + 8, ui=self.b_use},
 			{left=0, top=row2, ui=self.b_cool},
-			{left=half + 6, top=row2, ui=self.b_rename},
-			{left=half + 6 + third + 6, top=row2, ui=self.b_copy},
-			{left=half + 6 + 2 * (third + 6), top=row2, ui=self.b_delete},
+			{left=half + 6 + 16, top=row2, ui=self.b_mode},
+			{left=0, top=row3, ui=self.b_rename},
+			{left=third + 6 + 16, top=row3, ui=self.b_copy},
+			{left=2 * (third + 6 + 16), top=row3, ui=self.b_delete},
 			{left=0, top=self.top_h, ui=self.c_flow},
 			{left=0, top=self.top_h + flow_h + 8, ui=self.b_add},
 			{left=0, top=self.top_h + flow_h + 8, ui=self.b_cancel},
 			{left=8, top=self.desc_y, ui=self.c_desc},
-			{left=0, bottom=(bh + 8) * 2, ui=self.b_target},
+			{left=0, bottom=(bh + 8) * 3, ui=self.b_target},
+			{left=0, bottom=(bh + 8) * 2, ui=self.b_when},
+			{left=two + 6 + 16 * 2, bottom=(bh + 8) * 2, ui=self.b_pct},
+			{left=two + 6 + 16 * 2, bottom=(bh + 8) * 2, ui=self.b_onoff},
+			{left=two + 6 + 16 * 2, bottom=(bh + 8) * 2, ui=self.b_range},
 			{left=0, bottom=bh + 8, ui=self.b_unusable[1]},
-			{left=seg + 6, bottom=bh + 8, ui=self.b_unusable[2]},
-			{left=2 * (seg + 6), bottom=bh + 8, ui=self.b_unusable[3]},
+			{left=seg + 6 + 16, bottom=bh + 8, ui=self.b_unusable[2]},
+			{left=2 * (seg + 6 + 16), bottom=bh + 8, ui=self.b_unusable[3]},
 			{left=0, bottom=0, ui=self.b_up},
-			{left=seg + 6, bottom=0, ui=self.b_down},
-			{left=2 * (seg + 6), bottom=0, ui=self.b_remove},
+			{left=seg + 6 + 16, bottom=0, ui=self.b_down},
+			{left=2 * (seg + 6 + 16), bottom=0, ui=self.b_remove},
 		}
 		self:setupUI()
 	else
 	self.rail_w, self.detail_w = 250, 380
 	self.content_w = self.iw - self.rail_w - self.detail_w - 2 * gap
-	-- rail: routine cards over four buttons
-	self.c_rail = Flow.new{width=self.rail_w, height=self.ih - bh * 3 - 24}
+	-- rail: routine cards over five buttons (the mode button gets a two-line hint above it)
+	self.hint_h = 40
+	self.c_rail = Flow.new{width=self.rail_w, height=self.ih - bh * 4 - 32 - self.hint_h}
 	self.b_cool = Button.new{text=_t"Cooldowns: skip", width=self.rail_w, font=font(17), fct=function() local r = self:routine() if r then r.skip_cooldown = (r.skip_cooldown == false) and true or false self.actor.changed = true self:refresh(true) end end}
+	self.b_mode = Button.new{text=_t"Mode: priority", width=self.rail_w, font=font(17), fct=function() self:toggleMode() end}
 	local third = math.floor((self.rail_w - 12) / 3)
 	self.b_use = Button.new{text=_t"Use this routine", width=self.rail_w, font=self.bigfont, fct=function() self:useRoutine() end}
 	self.b_rename = Button.new{text=_t"Rename", width=third, font=font(17), fct=function() self:renameRoutine() end}
@@ -109,11 +153,16 @@ function _M:init(actor)
 	self.b_cancel = Button.new{text=_t"Cancel", width=self.content_w, font=self.bigfont, fct=function() self:closePicker() end}
 	-- detail: description over the step controls
 	self.desc_y = 96
-	local rows = bh * 3 + 24
+	local rows = bh * 4 + 32
 	local desc_h = self.ih - self.desc_y - rows - 8
 	self.c_desc = TextzoneList.new{focus_check=true, scrollbar=true, width=self.detail_w - 16, height=desc_h, dest_area={h=desc_h}}
 	self.b_target = Button.new{text=_t"Target", width=self.detail_w, font=font(19), fct=function() self:pickTarget() end}
 	local seg = math.floor((self.detail_w - 12) / 3)
+	local two = 2 * seg + 6
+	self.b_when = Button.new{text=_t"When: always", width=two, font=font(17), fct=function() self:cycleCond() end}
+	self.b_pct = Button.new{text="50%", width=seg, font=font(17), fct=function() self:cyclePct() end}
+	self.b_onoff = Button.new{text=_t"keep on", width=seg, font=font(17), fct=function() self:toggleOff() end}
+	self.b_range = Button.new{text=_t"range 3", width=seg, font=font(17), fct=function() self:cycleRange() end}
 	self.b_unusable = {}
 	for i, u in ipairs(UNUSABLE) do
 		local key = u[1]
@@ -129,6 +178,7 @@ function _M:init(actor)
 		{left=0, top=0, ui=self.c_rail},
 		{left=0, bottom=bh + 8, ui=self.b_use},
 		{left=0, bottom=2 * (bh + 8), ui=self.b_cool},
+		{left=0, bottom=3 * (bh + 8), ui=self.b_mode},
 		{left=0, bottom=0, ui=self.b_rename},
 		{left=third + 6, bottom=0, ui=self.b_copy},
 		{left=2 * (third + 6), bottom=0, ui=self.b_delete},
@@ -136,7 +186,11 @@ function _M:init(actor)
 		{left=cx, bottom=0, ui=self.b_add},
 		{left=cx, bottom=0, ui=self.b_cancel},
 		{left=dx + 8, top=self.desc_y, ui=self.c_desc},
-		{left=dx, bottom=(bh + 8) * 2, ui=self.b_target},
+		{left=dx, bottom=(bh + 8) * 3, ui=self.b_target},
+		{left=dx, bottom=(bh + 8) * 2, ui=self.b_when},
+		{left=dx + two + 6, bottom=(bh + 8) * 2, ui=self.b_pct},
+		{left=dx + two + 6, bottom=(bh + 8) * 2, ui=self.b_onoff},
+		{left=dx + two + 6, bottom=(bh + 8) * 2, ui=self.b_range},
 		{left=dx, bottom=bh + 8, ui=self.b_unusable[1]},
 		{left=dx + seg + 6, bottom=bh + 8, ui=self.b_unusable[2]},
 		{left=dx + 2 * (seg + 6), bottom=bh + 8, ui=self.b_unusable[3]},
@@ -146,7 +200,7 @@ function _M:init(actor)
 	}
 	self:setupUI()
 	end
-	self.parkable = {self.b_add, self.b_cancel, self.b_target, self.b_unusable[1], self.b_unusable[2], self.b_unusable[3], self.b_up, self.b_down, self.b_remove}
+	self.parkable = {self.b_add, self.b_cancel, self.b_target, self.b_when, self.b_pct, self.b_onoff, self.b_range, self.b_unusable[1], self.b_unusable[2], self.b_unusable[3], self.b_up, self.b_down, self.b_remove}
 	for _, b in ipairs(self.parkable) do
 		local u = self.ui_by_ui[b]
 		u.home_x, u.home_y = u.x, u.y
@@ -191,7 +245,8 @@ end
 -- the targeting rules a step may use (same sets the stock editor cycles through)
 function _M:rulesFor(st)
 	local P = mod.class.Player
-	if not st or st.kind == "wait" then return {} end
+	if not st or st.kind == "wait" or st.kind == "swap" then return {} end
+	if self:isSustain(st) then return {} end
 	if st.kind == "item" then return {"manual", "self"} end
 	if st.kind == "talent" then return P.ACT_TARGETS end
 	return {"nearest", "attacker", "weakest", "strongest", "marked"}
@@ -199,21 +254,32 @@ end
 
 function _M:targetName(st)
 	local P = mod.class.Player
-	if not st or st.kind == "wait" then return nil end
+	if not st or st.kind == "wait" or st.kind == "swap" then return nil end
 	local rule = st.target or "nearest"
 	return P.ACT_TARGET_NAMES[rule] or rule
 end
 
 function _M:builtin(kind)
 	for _, b in ipairs(BUILTINS) do if b.kind == kind then return b end end
+	for _, b in ipairs(LEGACY) do if b.kind == kind then return b end end
+end
+
+function _M:isSustain(st)
+	if not st or st.kind ~= "talent" then return false end
+	local t = self.actor:getTalentFromId(st.tid)
+	return t and t.mode == "sustained" or false
 end
 
 -- what a step card shows under its name
 function _M:stepSub(st)
 	local parts = {}
+	local cl = condLabel(st)
+	if cl then parts[#parts+1] = (_t"when %s"):format(cl) end
+	if self:isSustain(st) then parts[#parts+1] = st.off and _t"turn off" or _t"keep on" end
+	if st.kind == "distance" then parts[#parts+1] = (_t"range %d"):format(st.range or 3) end
 	local tn = self:targetName(st)
-	if tn then parts[#parts+1] = (_t"target: %s"):format(tn) end
-	if st.kind ~= "wait" then parts[#parts+1] = (_t"if unusable: %s"):format(UNUSABLE_NAMES[st.if_unusable or "skip"] or st.if_unusable) end
+	if tn and not self:isSustain(st) and st.kind ~= "swap" then parts[#parts+1] = (_t"target: %s"):format(tn) end
+	if st.kind ~= "wait" and st.kind ~= "swap" then parts[#parts+1] = (_t"if unusable: %s"):format(UNUSABLE_NAMES[st.if_unusable or "skip"] or st.if_unusable) end
 	return table.concat(parts, "  ·  ")
 end
 
@@ -263,10 +329,12 @@ end
 function _M:refresh(keep_scroll)
 	if not self.built then return end
 	local a = self.actor
-	do -- routine-level option: skip talents on cooldown without spending a turn (default on)
+	do -- routine-level options: skip talents on cooldown without spending a turn (default on); priority or cycle
 		local r = self:routine()
 		local nt = (r and r.skip_cooldown == false) and _t"Cooldowns: follow step rule" or _t"Cooldowns: skip"
 		if self.b_cool.text ~= nt then self.b_cool.text = nt self.b_cool:generate() end
+		local mode = (r and r.mode == "cycle") and _t"Mode: cycle" or _t"Mode: priority"
+		if self.b_mode.text ~= mode then self.b_mode.text = mode self.b_mode:generate() end
 	end
 	-- rail
 	local items = {}
@@ -276,6 +344,9 @@ function _M:refresh(keep_scroll)
 			on_tap=function() self.edit_idx = i self.sel_step = nil self.mode = "steps" self:refresh() end}
 	end
 	items[#items+1] = {name=_t"New routine", sub=_t"Start empty", on_tap=function() self:newRoutine() end}
+	if self:classTemplate() then
+		items[#items+1] = {name=_t"Class routine", sub=_t"Reset to the class default", on_tap=function() self:resetToClass() end}
+	end
 	if self.portrait then
 		-- chips in rows of three across the top (the Flow scrolls past two rows)
 		self.c_rail:setSections{{items=items, cols=math.min(3, #items), row_h=56, center=true}}
@@ -307,12 +378,26 @@ function _M:refresh(keep_scroll)
 	self:place(self.b_cancel, self.mode == "picker")
 	local show = st ~= nil and self.mode ~= "picker"
 	self:place(self.b_target, show and #self:rulesFor(st) > 0)
-	for i = 1, 3 do self:place(self.b_unusable[i], show and st.kind ~= "wait") end
+	for i = 1, 3 do self:place(self.b_unusable[i], show and st.kind ~= "wait" and st.kind ~= "swap") end
 	self:place(self.b_up, show) self:place(self.b_down, show) self:place(self.b_remove, show)
+	-- the When row: every step may carry a condition; the companion chip depends on the step
+	self:place(self.b_when, show)
+	local sustain = show and self:isSustain(st)
+	self:place(self.b_pct, show and st.cond and hasPct(st.cond) or false)
+	self:place(self.b_onoff, sustain and not (st.cond and hasPct(st.cond)))
+	self:place(self.b_range, show and st.kind == "distance" and not (st.cond and hasPct(st.cond)))
 	if st then
 		local tn = self:targetName(st)
 		local label = tn and (_t"Target: %s"):format(tn) or _t"Target"
 		if self.b_target.text ~= label then self.b_target.text = label self.b_target:generate() end
+		local wl = st.cond and (_t"When: %s"):format(condLabel(st)) or _t"When: always"
+		if self.b_when.text ~= wl then self.b_when.text = wl self.b_when:generate() end
+		local pl = ("%d%%"):format(st.pct or (st.cond and pctDefaults()[st.cond]) or 50)
+		if self.b_pct.text ~= pl then self.b_pct.text = pl self.b_pct:generate() end
+		local ol = st.off and _t"turn off" or _t"keep on"
+		if self.b_onoff.text ~= ol then self.b_onoff.text = ol self.b_onoff:generate() end
+		local rl = (_t"range %d"):format(st.range or 3)
+		if self.b_range.text ~= rl then self.b_range.text = rl self.b_range:generate() end
 	end
 	a.act_preview_key = nil
 end
@@ -335,7 +420,11 @@ function _M:pickerEntries()
 	local a = self.actor
 	local acts, tal, items = {}, {}, {}
 	for _, b in ipairs(BUILTINS) do
-		acts[#acts+1] = {name=mod.class.Player.ACT_KIND_NAMES[b.kind] or b.kind, sub=K.pitch(b.desc), step={kind=b.kind, target=(b.kind ~= "wait") and "nearest" or nil, if_unusable=(b.kind == "bump") and "approach" or "skip"}}
+		local KN = mod.class.Player.ACT_KIND_NAMES or {}
+		local fallback = {distance=_t"Keep distance", swap=_t"Swap weapons", bump=_t"Bump attack", wait=_t"Wait a turn"}
+		local step = {kind=b.kind, target=(b.kind ~= "wait" and b.kind ~= "swap") and "nearest" or nil, if_unusable=(b.kind == "bump") and "approach" or "skip"}
+		if b.kind == "distance" then step.range = 3 end
+		acts[#acts+1] = {name=KN[b.kind] or fallback[b.kind] or b.kind, sub=K.pitch(b.desc), step=step}
 	end
 	-- hidden talents still count when they are innate (Shoot) or sit on a hotkey
 	local on_hotkey = {}
@@ -344,7 +433,7 @@ function _M:pickerEntries()
 		local t = a:getTalentFromId(tid)
 		if t and (t.mode == "activated" or t.mode == "sustained") and (not t.hide or t.innate or on_hotkey[tid]) then
 			local status
-			if t.mode == "sustained" then status = a:isTalentActive(tid) and _t"sustain · active (step skips)" or _t"sustain · turns it on"
+			if t.mode == "sustained" then status = a:isTalentActive(tid) and _t"sustain · keep on (active now)" or _t"sustain · keep on"
 			elseif a:isTalentCoolingDown(t) then status = (_t"cooling down %d"):format(a:isTalentCoolingDown(t)) else status = _t"ready" end
 			tal[#tal+1] = {name=t.name, sub=status, t=t, step={kind="talent", tid=tid, target="nearest", if_unusable="approach"}}
 		end
@@ -427,9 +516,96 @@ function _M:pickTarget()
 	end)
 end
 
+-- the When chip walks: always → each condition → always
+function _M:cycleCond()
+	local st = self:step()
+	if not st then return end
+	local list = condList()
+	local idx = 0
+	for i, c in ipairs(list) do if c == st.cond then idx = i end end
+	local nxt = list[idx + 1]
+	st.cond = nxt
+	if nxt and hasPct(nxt) then st.pct = st.pct or pctDefaults()[nxt] end
+	if not nxt then st.pct = nil end
+	self:routine().pos = 1
+	self.actor.changed = true
+	self:refresh(true)
+end
+
+function _M:cyclePct()
+	local st = self:step()
+	if not st or not st.cond or not hasPct(st.cond) then return end
+	local cur = st.pct or pctDefaults()[st.cond]
+	local idx = 0
+	for i, v in ipairs(PCT_STEPS) do if v == cur then idx = i end end
+	st.pct = PCT_STEPS[idx % #PCT_STEPS + 1]
+	self.actor.changed = true
+	self:refresh(true)
+end
+
+function _M:toggleOff()
+	local st = self:step()
+	if not st or not self:isSustain(st) then return end
+	st.off = (not st.off) and true or nil
+	self:routine().pos = 1
+	self.actor.changed = true
+	self:refresh(true)
+end
+
+function _M:cycleRange()
+	local st = self:step()
+	if not st or st.kind ~= "distance" then return end
+	local cur = st.range or 3
+	local idx = 0
+	for i, v in ipairs(RANGES) do if v == cur then idx = i end end
+	st.range = RANGES[idx % #RANGES + 1]
+	self.actor.changed = true
+	self:refresh(true)
+end
+
+function _M:toggleMode()
+	local r = self:routine()
+	if not r then return end
+	r.mode = (r.mode == "cycle") and "priority" or "cycle"
+	r.pos = 1
+	self.actor.changed = true
+	self:refresh(true)
+end
+
+function _M:modeHint()
+	local r = self:routine()
+	return MODE_HINTS[(r and r.mode == "cycle") and "cycle" or "priority"]
+end
+
+-- the class template module (builder T): nil when it is missing or has nothing for this class
+function _M:classTemplate()
+	local ok, AT = pcall(require, "mod.class.ActTemplates")
+	if not ok or type(AT) ~= "table" or not AT.default then return nil end
+	local ok2, r = pcall(AT.default, self.actor)
+	if ok2 and r then return AT end
+	return nil
+end
+
+function _M:resetToClass()
+	local AT = self:classTemplate()
+	if not AT or not AT.reset then return end
+	Dialog:yesnoPopup(_t"Class routine", _t"Replace the current routine with the class default?", function(ret)
+		if not ret then return end
+		local ok, err = pcall(AT.reset, self.actor)
+		if not ok then print("[ACT] class routine reset failed", tostring(err)) end
+		self.actor:actRoutines()
+		self.edit_idx = self.actor.act_active or 1
+		self.sel_step = nil
+		self.mode = "steps"
+		self.actor.changed = true
+		self:showDetail()
+		self:refresh()
+	end, _t"Replace", _t"Keep")
+end
+
 function _M:setUnusable(key)
 	local st = self:step()
-	if not st or st.kind == "wait" then return end
+	if not st or st.kind == "wait" or st.kind == "swap" then return end
 	st.if_unusable = key
 	self:routine().pos = 1
 	self:refresh(true)
@@ -469,7 +645,7 @@ end
 
 function _M:newRoutine()
 	local rs = self.actor.act_routines
-	rs[#rs+1] = {name=("Routine %d"):format(#rs + 1), steps={}, pos=1}
+	rs[#rs+1] = {name=("Routine %d"):format(#rs + 1), steps={}, pos=1, mode="priority"}
 	self.edit_idx = #rs
 	self.sel_step = nil
 	self.mode = "steps"
@@ -480,7 +656,7 @@ end
 function _M:copyRoutine()
 	local rs = self.actor.act_routines
 	local r = self:routine()
-	rs[#rs+1] = {name=r.name .. " 2", steps=table.clone(r.steps, true), pos=1}
+	rs[#rs+1] = {name=r.name .. " 2", steps=table.clone(r.steps, true), pos=1, mode=r.mode, skip_cooldown=r.skip_cooldown}
 	self.edit_idx = #rs
 	self.sel_step = nil
 	self:showDetail()
@@ -515,6 +691,7 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	x, y = x + self.ix, y + self.iy
 	if self.portrait then return self:innerDisplayBackPortrait(x, y) end
 	quad(x, y, self.rail_w, self.ih, PANE)
+	self:drawModeHint(x, y)
 	local cx = x + self.rail_w + 12
 	quad(cx, y, self.content_w, self.ih, {18, 19, 23})
 	local dx = cx + self.content_w + 12
@@ -536,8 +713,20 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	local tx = dx + 12 + sz + 20
 	local maxw = self.detail_w - (tx - dx) - 12
 	draw(text(("%d.  %s"):format(self.sel_step, self.actor:actStepName(st)), 20, 240, 212, 138, true, maxw), tx, y + 16)
-	local kind = st.kind == "talent" and _t"talent" or st.kind == "item" and _t"item" or _t"action"
+	local kind = st.kind == "talent" and (self:isSustain(st) and _t"sustain" or _t"talent") or st.kind == "item" and _t"item" or _t"action"
 	draw(text(kind, 13, 142, 136, 120, false, maxw), tx, y + 46)
+end
+
+-- the one-line hint under the mode button (landscape: above it in the rail)
+function _M:drawModeHint(x, y)
+	local e = self.ui_by_ui[self.b_mode]
+	if not e then return end
+	if self.portrait then
+		draw(text(self:modeHint(), 13, 142, 136, 120, false, self.iw - 16), x + 8, y + self.top_h - self.hint_h + 2)
+	else
+		-- entry positions already include the inner offset; x/y here are the inner origin
+		draw(text(self:modeHint(), 13, 142, 136, 120, false, self.rail_w - 16), x + 8, (y - self.iy) + e.y - self.hint_h + 4)
+	end
 end
 
 -- portrait: top strip (chips + routine buttons), steps in the middle, the
@@ -545,6 +734,7 @@ end
 function _M:innerDisplayBackPortrait(x, y)
 	quad(x, y, self.iw, self.top_h - 4, PANE)
 	quad(x, y + self.top_h - 4, self.iw, self.sheet_y - self.top_h, {18, 19, 23})
+	self:drawModeHint(x, y)
 	local sy = y + self.sheet_y
 	quad(x, sy, self.iw, self.sheet_h, PANE)
 	quad(x, sy, self.iw, 2, {60, 63, 72})
@@ -565,7 +755,7 @@ function _M:innerDisplayBackPortrait(x, y)
 	local tx = x + 12 + sz + 20
 	local maxw = self.iw - (tx - x) - 12
 	draw(text(("%d.  %s"):format(self.sel_step, self.actor:actStepName(st)), 20, 240, 212, 138, true, maxw), tx, sy + 16)
-	local kind = st.kind == "talent" and _t"talent" or st.kind == "item" and _t"item" or _t"action"
+	local kind = st.kind == "talent" and (self:isSustain(st) and _t"sustain" or _t"talent") or st.kind == "item" and _t"item" or _t"action"
 	draw(text(kind, 13, 142, 136, 120, false, maxw), tx, sy + 46)
 end
 
@@ -583,9 +773,14 @@ function _M:touch_reopen()
 end
 
 function _M:innerDisplay(x, y, nb_keyframes)
-	-- gold frame on the current "if unusable" choice
+	-- gold frame on the current "if unusable" choice, and on the When chip while a condition is set
 	local st = self:step()
-	if not st or self.mode == "picker" or st.kind == "wait" then return end
+	if not st or self.mode == "picker" then return end
+	if st.cond then
+		local e = self.ui_by_ui[self.b_when]
+		if e and e.x > -1000 then frame(x + e.x - 2, y + e.y - 2, self.b_when.w + 4, self.b_when.h + 4, GOLD, 2) end
+	end
+	if st.kind == "wait" or st.kind == "swap" then return end
 	local cur = st.if_unusable or "skip"
 	for i, u in ipairs(UNUSABLE) do
 		if u[1] == cur then
