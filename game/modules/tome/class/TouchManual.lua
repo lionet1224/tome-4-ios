@@ -116,6 +116,9 @@ function _M:cast(tid, target, allow_manual)
 	local directional = tg and (tg.type == "cone" or tg.type == "beam" or tg.type == "widebeam" or tg.type == "wall")
 	if tg and (tg.type == "self" or (range == 0 and not directional)) then print("[TOUCH] cast self", t.name) p:useTalent(t.id, nil, nil, nil, p) return true end
 	local reach = (range == 0 and directional) and (p:getTalentRadius(t) or tg.radius or 1) or range
+	-- a talent that aims at a spot rather than a creature (Blink rune: nolock): never send it at
+	-- the selected enemy, let the player pick the square (Jordan: "blinks me to a target")
+	if tg and tg.nolock then print("[TOUCH] cast -> aim a spot", t.name) p:useTalent(t.id) return true end
 	if not target then
 		if allow_manual then print("[TOUCH] cast manual", t.name) p:useTalent(t.id) return true end
 		game.logPlayer(p, "%s: no enemy in view. Hold the button to aim by hand.", t.name)

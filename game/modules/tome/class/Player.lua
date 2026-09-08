@@ -1725,6 +1725,8 @@ function _M:actDo(step)
 		-- aim: treat any talent with a range or requires_target as targeted so the routine's rule applies
 		local aims = (ok and tg) or t.requires_target or (self:getTalentRange(t) or 0) > 0
 		if not aims then print("[ACT] talent (no target)", t.name) self:useTalent(t.id) return true end
+		-- a spot-aimed talent (Blink rune) makes no sense at an enemy's square: only by hand
+		if ok and type(tg) == "table" and tg.nolock and step.target ~= "manual" and step.target ~= "self" then return false, _t"aims at a spot (set aim by hand)" end
 		local tgt = self:actResolveTarget(step, t)
 		if tgt == "manual" then print("[ACT] talent manual", t.name) self:useTalent(t.id) return true end
 		if tgt == self then print("[ACT] talent self", t.name) self:useTalent(t.id, nil, nil, nil, self) return true end
