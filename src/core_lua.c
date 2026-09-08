@@ -562,6 +562,13 @@ static int lua_set_fps(lua_State *L)
 	setupDisplayTimer(freq);
 	return 0;
 }
+extern void ios_wake_idle(void);
+static int lua_wake_idle(lua_State *L)
+{
+	ios_wake_idle();
+	return 0;
+}
+
 static int lua_forbid_idle_mode(lua_State *L)
 {
 	forbid_idle_mode = lua_toboolean(L, 1);
@@ -681,6 +688,7 @@ static const struct luaL_Reg gamelib[] =
 	{"setRealtime", lua_set_realtime},
 	{"setFPS", lua_set_fps},
 	{"forbidIdleMode", lua_forbid_idle_mode},
+	{"wakeIdle", lua_wake_idle},
 	{"requestNextTick", lua_force_next_tick},
 	{"checkError", lua_check_error},
 	{"resetLocale", lua_reset_locale},

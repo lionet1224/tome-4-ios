@@ -366,8 +366,13 @@ static int ios_lifecycle_watch(void *userdata, SDL_Event *event)
 /* iOS port: drop to a low frame rate after a few seconds without input */
 static Uint32 ios_last_input = 0;
 static int ios_idle = 0;
-#define IOS_IDLE_MS 4000
+#define IOS_IDLE_MS 8000
 #define IOS_IDLE_FPS 10
+/* the game wakes the display itself when it changes something without input (a dialog
+   opening after a long load: the birth screen used to come up at the idle 10 fps) */
+void ios_wake_idle(void) { ios_last_input = SDL_GetTicks(); if (ios_idle) { ios_idle = 0; handleIdleTransition(0); } }
+#else
+void ios_wake_idle(void) {}
 #endif
 
 bool on_event(SDL_Event *event)

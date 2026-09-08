@@ -428,6 +428,8 @@ end
 -- @param[type=Dialog] d
 function _M:registerDialog(d)
 	if d.__refuse_dialog then return end
+	-- iOS port: a screen that opens without a touch (after a load) must not come up at the idle frame rate
+	if core.game.wakeIdle then core.game.wakeIdle() end
 	table.insert(self.dialogs, d)
 	self.dialogs[d] = #self.dialogs
 	d.__stack_id = #self.dialogs
@@ -477,6 +479,7 @@ end
 --- Undisplay a dialog, removing its own keyhandler if needed
 -- @param[type=Dialog] d
 function _M:unregisterDialog(d)
+	if core.game.wakeIdle then core.game.wakeIdle() end
 	if not self.dialogs[d] then return end
 	table.remove(self.dialogs, self.dialogs[d])
 	self.dialogs[d] = nil
