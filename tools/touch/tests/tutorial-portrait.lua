@@ -32,6 +32,10 @@ return function(T)
 	T.log("after Next: page", d.page)
 	if d.page ~= 2 then T.log("BAD Next did not turn the page") end
 	T.shot("tutorial-portrait-2")
+	-- every page gets a shot (the illustrations are hand drawn), then back to page 2
+	for i = 3, 5 do T.tap(btn(d.b_next)) T.wait(300) T.shot("tutorial-portrait-" .. i) end
+	for i = 3, 5 do T.tap(btn(d.b_back)) T.wait(200) end
+	T.log("back on page", d.page)
 	-- a horizontal swipe on the illustration (top pane in portrait) turns pages
 	local ix, iy = d.display_x + d.ix + d.ill_w / 2, d.display_y + d.iy + d.ill_h / 2
 	T.swipe(ix - 60, iy, ix + 80, iy, 120) T.wait(600)
