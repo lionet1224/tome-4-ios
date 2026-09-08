@@ -34,7 +34,16 @@ local Module = require "engine.Module"
 module(..., package.seeall, class.inherit(Dialog))
 
 function _M:init()
-	Dialog.init(self, _t"Main Menu", 250, 400, 450, 50)
+	-- iOS port: the desktop spot (450 px from the left) is off a portrait screen; centre it
+	local TI = require "engine.TouchInput"
+	local w, h = 250, 400
+	local x, y = 450, 50
+	if TI.active() then
+		w = math.min(math.max(w, math.floor(game.w * 0.6)), game.w - 24)
+		h = math.min(h, game.h - 24)
+		x, y = math.floor((game.w - w) / 2), math.floor((game.h - h) / 2)
+	end
+	Dialog.init(self, _t"Main Menu", w, h, x, y)
 	self.__showup = false
 	self.__main_menu = true
 	self.absolute = true
@@ -248,13 +257,21 @@ function _M:updateUI()
 	self.key:addBind("USERCHAT_TALK", function() profile.chat:talkBox(nil, true) end)
 
 	self:setFocus(self.c_list)
+	-- iOS port: opened from the touch title screen's "More": centred after the resize,
+	-- closable with the back gesture / close box, rebuilt on rotation
+	if require("engine.TouchInput").active() then
+		self.display_x = math.floor((game.w - self.w) / 2)
+		self.display_y = math.floor((game.h - self.h) / 2)
+		self.key:addBinds{EXIT=function() game:unregisterDialog(self) end}
+		self.touch_reopen = function() return _M.new() end
+	end
 end
 
 function _M:uiLogin(uis)
 	if core.steam then return self:uiLoginSteam(uis) end
 
 	local str = Textzone.new{auto_width=true, auto_height=true, text=_t"#GOLD#Online Profile"}
-	local bt = Button.new{text=_t"Login", width=50, fct=function() self:login() end}
+	local bt = Button.new{text=_t"Login", width=require("engine.TouchInput").active() and 110 or 50, fct=function() self:login() end}
 	local btr = Button.new{text=_t"Register", fct=function() self:register() end}
 	self.c_login = Textbox.new{title=_t"Username: ", text="", chars=16, max_len=200, fct=function(text) self:login() end}
 	self.c_pass = Textbox.new{title=_t"Password: ", size_title=self.c_login.title, text="", chars=16, max_len=200, hide=true, fct=function(text) self:login() end}
