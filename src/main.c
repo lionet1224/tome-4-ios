@@ -133,6 +133,8 @@ lua_err_type *last_lua_error_head = NULL, *last_lua_error_tail = NULL;
 SDL_mutex *renderingLock;
 SDL_mutex *realtimeLock;
 int redraw_pending = 0;
+/* iOS: no GL while backgrounded (the driver traps on the next draw after resuming) */
+int ios_in_background = 0;
 int realtime_pending = 0;
 
 /*
@@ -357,8 +359,8 @@ static void call_game_method(const char *name)
 }
 static int ios_lifecycle_watch(void *userdata, SDL_Event *event)
 {
-	if (event->type == SDL_APP_WILLENTERBACKGROUND) { printf("[IOS] will enter background\n"); call_game_method("onBackground"); }
-	else if (event->type == SDL_APP_DIDENTERFOREGROUND) { printf("[IOS] did enter foreground\n"); call_game_method("onForeground"); }
+	if (event->type == SDL_APP_WILLENTERBACKGROUND) { printf("[IOS] will enter background\n"); ios_in_background = 1; call_game_method("onBackground"); }
+	else if (event->type == SDL_APP_DIDENTERFOREGROUND) { printf("[IOS] did enter foreground\n"); ios_in_background = 0; call_game_method("onForeground"); }
 	return 1;
 }
 /* iOS port: drop to a low frame rate after a few seconds without input */
@@ -874,7 +876,7 @@ void redraw_now(redraw_type_t rtype)
 	}
 
 	current_redraw_type = rtype;
-	on_redraw();
+	if (!ios_in_background) on_redraw();
 
 	if (changed_gamma)
 	{
@@ -1937,7 +1939,7 @@ int main(int argc, char *argv[])
 				switch(event.user.code)
 				{
 				case 0:
-					if (isActive) {
+					if (isActive && !ios_in_background) {
 						current_redraw_type = redraw_type_normal;
 						on_redraw();
 						SDL_mutexP(renderingLock);

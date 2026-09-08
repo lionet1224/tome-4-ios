@@ -607,3 +607,9 @@ Jordan asked what would improve the frame rate during AUTO and then said "do the
 ## 43. Keyboard on the birth screen (2026-09-08)
 
 "The new character menu stutters when it opens": `Textbox:on_focus` showed the keyboard for an auto-focused box whenever any finger-down happened in the last 800 ms, and the tap on "New character" qualified, so the iOS keyboard slid up (with the text-input-rect view shift) as the heavy screen appeared. Now the tap must land inside the box itself (`TouchInput.last_down_x/y` against the box's last screen rect); an auto-focused box waits for its own tap. The simulator profile of the open birth screen showed no image loads and an ordinary per-frame cost, which is what pointed away from the dialog itself.
+
+## 44. Background GL crash, menu backdrop cost (2026-09-08)
+
+- **Crash**: the phone's `te4_crash.txt` (SIGTRAP inside AGXMetal/AppleMetalGLRenderer from `on_redraw`) came right after "[IOS] did enter foreground": the engine kept redrawing at the 10 fps idle rate while backgrounded, and the GL driver trapped on the first draw after resuming. `main.c` now sets `ios_in_background` on `SDL_APP_WILLENTERBACKGROUND`, clears it on `SDL_APP_DIDENTERFOREGROUND`, and both `on_redraw` call sites (the loop and `forceRedraw`) skip while it is set.
+- **Main menu backdrop**: the boot module's decorative fight (`GameEnergyBased.init(…, 100, 100)`: every creature acts every tick) cost 13-23 ms of AI per frame on the phone (`[FRAME]` lines at the menu: 30 fps, 25 slow frames per 5 s). `boot/class/Game.lua:tick` now advances the level every third tick on iOS.
+- Reading a phone log: `[FRAME]` lines at the menu have `enemies -1` (no player); a frame of hundreds of seconds is the app suspended; `[IOS] will enter background` / `did enter foreground` bracket it.

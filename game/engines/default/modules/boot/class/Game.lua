@@ -456,6 +456,12 @@ end
 function _M:tick()
 	if self.stopped then engine.Game.tick(self) return true end
 	if self.level then
+		-- iOS port: the decorative fight has every creature act on every tick, 13-23 ms of
+		-- AI per frame on the phone; a third of the pace is plenty for a backdrop
+		if __IOS__ then
+			self.touch_tick_skip = ((self.touch_tick_skip or 0) + 1) % 3
+			if self.touch_tick_skip ~= 0 then return false end
+		end
 		engine.GameEnergyBased.tick(self)
 		-- Fun stuff: this can make the game realtime, although calling it in display() will make it work better
 		-- (since display is on a set FPS while tick() ticks as much as possible
