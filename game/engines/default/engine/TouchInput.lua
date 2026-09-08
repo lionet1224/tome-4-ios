@@ -119,6 +119,7 @@ end
 function _M.fingerDown(id, x, y)
 	_M.input_serial = (_M.input_serial or 0) + 1 _M.fingers_down = (_M.fingers_down or 0) + 1
 	_M.last_down = now()
+	_M.last_down_x, _M.last_down_y = x, y
 	local o = _M.osk
 	if o and o.box then
 		local b = o.box

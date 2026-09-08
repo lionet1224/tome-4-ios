@@ -78,9 +78,13 @@ end
 function _M:on_focus(v)
 	game:onTickEnd(function()
 		self.key:unicodeInput(v)
-		-- a box the player just tapped shows the keyboard; an auto-focused one waits for a tap
+		-- a box the player just tapped shows the keyboard; an auto-focused one waits for a tap.
+		-- The tap must be on the box itself: the tap that opened the dialog (New character ->
+		-- the name field) used to count, and the keyboard slid up as the screen appeared
 		local TI = require "engine.TouchInput"
 		local tapped = TI.last_down and (core.game.getTime() - TI.last_down) < 800
+			and self.last_screen_x and TI.last_down_x and TI.last_down_x >= self.last_screen_x and TI.last_down_x < self.last_screen_x + self.w
+			and TI.last_down_y >= self.last_screen_y and TI.last_down_y < self.last_screen_y + self.h
 		if v and not tapped then return end
 		self:showKeyboard(v)
 	end)
