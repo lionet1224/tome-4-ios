@@ -218,7 +218,18 @@ end
 
 -- Birther hooks --------------------------------------------------------------
 
+-- the hero preview: a race picked but no lineage yet shows the race's first lineage
+function _M:setTile(...)
+	local d = self.descriptors_by_type
+	local pr, ps = d.race, d.subrace
+	local p = self.preview_subrace
+	if p and (not d.subrace or d.race ~= p.race) then d.race, d.subrace = p.race, p.subrace end
+	Birther.setTile(self, ...)
+	d.race, d.subrace = pr, ps
+end
+
 function _M:setDescriptor(key, val)
+	if key == "subrace" and val then self.preview_subrace = nil end
 	if key then self.descriptors_by_type[key] = val print("[BIRTHER] set descriptor", key, val) end
 	self:updateDescriptors()
 	self:setTile()
@@ -233,6 +244,11 @@ function _M:raceUse(item)
 	if item.nodes then
 		if item.locked then self:focusItem(item) return end
 		self.race_parent = item
+		-- show the hero as this race right away (its first lineage) instead of waiting for the subrace
+		local first
+		for _, n in ipairs(item.nodes) do if not n.locked then first = n break end end
+		self.preview_subrace = first and {race=item.id, subrace=first.id} or nil
+		self:setTile()
 		-- a single lineage: pick it right away
 		local only
 		for _, n in ipairs(item.nodes) do if not n.locked then if only then only = false break else only = n end end end
@@ -415,7 +431,14 @@ function _M:cardsFor(list, sel, fct, parents)
 			for _, n in ipairs(it.nodes) do if not n.locked and self.birth_descriptor_def.subrace[n.id] then sprite_id = n.id break end end
 		end
 		if not icon and sprite_id then
-			local img = "player/" .. sprite_id:lower():gsub("[^a-z0-9_]", "_") .. "_" .. tostring(self.descriptors_by_type.sex or "Female"):lower() .. ".png"
+			local sex = tostring(self.descriptors_by_type.sex or "Female"):lower()
+			local img = "player/" .. sprite_id:lower():gsub("[^a-z0-9_]", "_") .. "_" .. sex .. ".png"
+			-- races with only a composite tile (Giants: player/ogre_male/base_01.png): use its body base
+			if not fs.exists("/data/gfx/shockbolt/" .. img) then
+				local sd = self.birth_descriptor_def.subrace[sprite_id]
+				local mt = sd and sd.copy and sd.copy.moddable_tile
+				if type(mt) == "string" then img = "player/" .. mt:gsub("#sex#", sex) .. "/base_01.png" end
+			end
 			local e = Entity.new{image=img}
 			icon = function(x, y, size) e:toScreen(self.tiles, x, y, size, size) end
 		end
