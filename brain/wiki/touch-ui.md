@@ -617,3 +617,15 @@ Jordan asked what would improve the frame rate during AUTO and then said "do the
 ## 45. The birth screen opened at the idle frame rate (2026-09-08)
 
 The real cause of "the new character dialog stutters as it opens" (the keyboard guess in §43 was wrong: Jordan never tapped the name): the port's idle throttle (`main.c` `IOS_IDLE_MS`/`IOS_IDLE_FPS`) drops the display to 10 fps after a few seconds without input, and the tome module load takes longer than that, so the birth screen came up at 10 fps until the first touch (the phone log shows "[ENGINE] Setting requested FPS to 10" right before "[TOUCH] static background captured for New character"). Fix: `core.game.wakeIdle()` (binding to `ios_wake_idle` in main.c) is called from `Game:registerDialog`/`unregisterDialog`, and the idle delay is 8 s. Lesson: when the phone log has no `[FRAME]` lines around a screen, check `game.level` (the profiler only runs with a level) and look for engine FPS messages instead.
+
+## 46. Talent soak complete (2026-09-08)
+
+`tests/talentsoak.lua` has now exercised all 1051 player talents (activated + sustained, minus `other/npcs` and inscription
+slots) through both cast paths: `TouchManual:cast` (the strip) and `Player:actDo` (a routine step), in a god-mode arena
+with two clumps of immortal targets, letting turns pass before counting. Runs were resumed across segments
+(soak_from by talent id); skipped as arena-incompatible: T_DEMON_PLANE, T_PARADOX_CLONE, T_SEE_THE_THREADS (rebuild the
+game state), T_RIME_WRAITH (summon loops against immortal targets), T_SHERTUL_FORTRESS_ORBIT and T_TEMPORAL_REPRIEVE
+(plane shift). Touch-layer bugs found and fixed along the way: self-centred circles aimed at the selected target only,
+range-0 cones aimed at the player, actEnemies record fields, projectiles counted before landing. Everything else flagged
+by the soak was the talent's own requirement (alchemist gems in the quiver, wards, souls, a bow, traps and walls that
+touch nobody) and is identical in both paths. Verdict: the two cast paths agree for every talent.
