@@ -455,16 +455,22 @@ end
 --- Something to recover by resting: life, a resource that regenerates, a cooldown
 function _M:needRest()
 	local p = game.player
-	if not p or not p.max_life then return false end
-	if p.life < p.max_life then return true end
-	for _, res in ipairs(p.resources_def or {}) do
-		if not res.invert_values and not res.switch_direction and (not res.talent or p:knowTalent(res.talent)) then
-			local max, v = p["max_"..res.short_name], p[res.short_name]
-			if max and v and max > 0 and v < max then return true end
-		end
+	if not p or not p.max_life or p.resting or p.running then return false end
+	-- ask the game's own rest rule (a rest the pill offered used to end after 0 turns with
+	-- "all resources and life at maximum": it counted cooldowns and resources that do not
+	-- regenerate, the game does not); cached per frame, it is called a few times per frame
+	local frame = TouchInput.frames or 0
+	if self.need_rest_turn == frame and self.need_rest_val ~= nil then return self.need_rest_val end
+	local val = false
+	if #self:enemies() == 0 and p.restCheck then
+		local saved = p.resting
+		p.resting = {cnt=0}
+		local ok, res = pcall(p.restCheck, p)
+		p.resting = saved
+		val = ok and res == true
 	end
-	for tid, cd in pairs(p.talents_cd or {}) do if cd and cd > 0 then return true end end
-	return false
+	self.need_rest_turn, self.need_rest_val = frame, val
+	return val
 end
 
 function _M:displayCtx()

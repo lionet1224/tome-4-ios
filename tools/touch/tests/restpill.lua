@@ -11,6 +11,7 @@ return function(T)
 	T.log("full: wait pill", tostring(rects().wait ~= nil), tostring(rects().wait_label), "enemies", #p:actEnemies(), "needRest", tostring(game.uiset.touch_manual:needRest()))
 	if rects().wait and rects().wait_label == _t"Rest" then T.log("note: Rest shown at full (a cooldown or resource not full)") end
 	p.life = math.floor(p.max_life * 0.6) T.wait(500)
+	T.waitFor(function() return rects().wait_label == _t"Rest" end, 4000) -- the band is cached: the rects follow its next full draw
 	T.log("hurt: pill", tostring(rects().wait_label))
 	if rects().wait_label ~= _t"Rest" then T.log("BAD no Rest pill when hurt with no enemies") T.log("finished") return end
 	local r = rects().wait
@@ -20,5 +21,26 @@ return function(T)
 	if not p.resting then T.log("BAD Rest tap did not start resting") end
 	T.waitFor(function() return not p.resting end, 60000)
 	T.log("rested to", p.life, "/", p.max_life, "pill now", tostring(rects().wait_label))
+	-- full again: no Rest pill, even with a talent on cooldown (the game would rest 0 turns)
+	local any for tid in pairs(p.talents) do local t = p:getTalentFromId(tid) if t and t.mode == "activated" then any = tid break end end
+	if any then p.talents_cd[any] = 5 end
+	T.wait(800)
+	T.log("full with a cooldown: pill", tostring(rects().wait_label), "needRest", tostring(game.uiset.touch_manual:needRest()))
+	-- whenever the pill is offered, a tap must rest for at least a turn (the phone showed
+	-- "Rested for 0 turns" from a pill the game disagreed with)
+	if rects().wait_label == _t"Rest" then
+		local w = rects().wait
+		local turn0 = game.turn
+		T.tap(w.x + w.w / 2, w.y + w.h / 2)
+		T.waitFor(function() return p.resting end, 3000)
+		T.waitFor(function() return not p.resting end, 60000)
+		T.log("cooldown rest: turns", (game.turn - turn0) / 10)
+		if game.turn - turn0 < 10 then T.log("BAD the offered rest lasted no turn") end
+	end
+	-- a resource that cannot regenerate must not offer a rest: fake one with zero regen
+	p.life = p.max_life
+	T.waitFor(function() return rects().wait_label ~= _t"Rest" end, 4000)
+	T.log("full: pill", tostring(rects().wait_label))
+	if rects().wait_label == _t"Rest" then T.log("BAD Rest pill offered at full") end
 	T.log("finished")
 end
