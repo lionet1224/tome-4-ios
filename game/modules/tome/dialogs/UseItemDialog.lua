@@ -173,6 +173,11 @@ function _M:use(item)
 			self.actor:transmoInven(self.inven, self.item, self.object)
 			self.onuse(self.inven, self.item, self.object, false)
 		end)
+	elseif act == "wear_off" then
+		-- iOS port: wear in the off-hand slot outright (the game only picks it by itself when it is empty)
+		local off = self.actor:getObjectOffslot(self.object)
+		local id = off and self.actor["INVEN_"..off]
+		if id then self.actor:doWear(self.inven, self.item, self.object, self.actor, id) end
 	elseif act == "wear2" then
 		-- iOS port: put the item into the second weapon set without swapping sets first
 		local wi = self.object:wornInven()
@@ -226,6 +231,12 @@ function _M:generateList()
 	if not self.dst_actor and self.object.__transmo then list[#list+1] = {name=_t"Move to normal inventory", action="toinven"} end
 	if not self.dst_actor and not self.object.__transmo and not self.no_use_allowed then if self.object:canUseObject() then list[#list+1] = {name=_t"Use", action="use"} end end
 	if self.inven == self.actor.INVEN_INVEN and self.object:wornInven() and self.actor:getInven(self.object:wornInven()) then list[#list+1] = {name=_t"Wield/Wear", action="wear"} end
+	do -- iOS port: wear in the off-hand
+		local off = self.inven == self.actor.INVEN_INVEN and self.actor:getObjectOffslot(self.object)
+		if off and self.actor["INVEN_"..off] and self.actor:getInven(self.actor["INVEN_"..off]) and self.actor:canWearObject(self.object, off) then
+			list[#list+1] = {name=(_t"Wield in %s"):format(self.actor.inven_def[self.actor["INVEN_"..off]].name:lower()), action="wear_off"}
+		end
+	end
 	do -- iOS port: the second weapon set
 		local wi = self.inven == self.actor.INVEN_INVEN and self.object:wornInven()
 		local sn = wi and self.actor.inven_def[wi] and self.actor.inven_def[wi].short_name

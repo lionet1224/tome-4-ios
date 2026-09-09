@@ -656,6 +656,20 @@ function _M:selectWorn(e, slot)
 		self:act("wear2")
 		return
 	end
+	-- any worn slot tapped with a pack item selected that fits it: wear it there (a dagger
+	-- into the off-hand while the main hand holds a sword, Jordan's case)
+	if slot and not slot.set2 and self.cur and self.cur.object and not self.cur.worn and not (e and e.object == self.cur.object) then
+		local o = self.cur.object
+		local can = o:wornInven() and self.actor:canWearObject(o, slot.def.short_name)
+		if can then
+			print("[TOUCH] tap worn slot -> wear there", tostring(o.name), slot.def.short_name)
+			local inv = self.actor:getInven(slot.id)
+			if inv and inv[slot.item] then self.actor:doWear(self.cur.inven, self.cur.item, o, self.actor, slot.id, slot.item)
+			else self.actor:doWear(self.cur.inven, self.cur.item, o, self.actor, slot.id) end
+			self:onUsed(false)
+			return
+		end
+	end
 	self.c_list.sel = nil
 	self.cur = e
 	-- the grid or the doll called us; keep the other one's marker in step
