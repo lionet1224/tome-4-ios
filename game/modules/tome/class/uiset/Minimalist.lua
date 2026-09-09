@@ -2203,6 +2203,13 @@ function _M:displayTouchTargeting()
 		if game.mouse.areas_name and game.mouse.areas_name.touch_auto then game.mouse:unregisterZone("touch_auto") end
 		self.touch_attack_rect = nil
 		self.touch_auto_rect = nil
+	elseif lr.classic then
+		-- classic controls: no Act / AUTO / routine strip at all
+		if game.mouse.areas_name and game.mouse.areas_name.touch_attack then game.mouse:unregisterZone("touch_attack") end
+		if game.mouse.areas_name and game.mouse.areas_name.touch_act_strip then game.mouse:unregisterZone("touch_act_strip") end
+		if game.mouse.areas_name and game.mouse.areas_name.touch_auto then game.mouse:unregisterZone("touch_auto") end
+		self.touch_attack_rect = nil
+		self.touch_auto_rect = nil
 	else
 		self:displayTouchAttack(x2, y, bw)
 	end

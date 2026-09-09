@@ -219,6 +219,9 @@ function _M:layout()
 	end
 	r.act = {x=act_x, y=dock_y, w=bw, h=bw}
 	r.auto = {x=auto_x, y=dock_y, w=bw, h=bw}
+	-- classic controls: no Act, no AUTO (the dock spots stay for Cast / Cancel while aiming);
+	-- the pills take the thumb corner instead
+	r.classic = TouchInput.setting("classic") == true
 	if portrait then
 		-- the HUD band: the map ends above it (Jordan: "size the game area to be above
 		-- the main buttons"), so there is no drawer and no Skills button; the skill
@@ -233,6 +236,7 @@ function _M:layout()
 		r.band_y = strip_y - 8
 		-- context pills (Descend / Wait) beside AUTO towards the middle of the dock row
 		local cx = left and (auto_x + bw + 12) or (auto_x - 12 - _M.CTX_W)
+		if r.classic then cx = left and act_x or (act_x + bw - _M.CTX_W) end
 		r.ctx_lo = {x=cx, y=dock_bottom - _M.CTX_H, w=_M.CTX_W, h=_M.CTX_H}
 		r.ctx_hi = {x=cx, y=r.ctx_lo.y - 8 - _M.CTX_H, w=_M.CTX_W, h=_M.CTX_H}
 		local px = left and (cx + _M.CTX_W + 10) or (cx - 10 - _M.PAN_W)
@@ -290,11 +294,12 @@ function _M:hudHit(x, y)
 	local r = self.rects
 	if r.portrait and r.band_y and y >= r.band_y then return true end -- the whole band
 	if inRect(r.strip, x, y) and self:stripShown() then return true end
-	if inRect(r.more, x, y) or inRect(r.skills, x, y) or inRect(r.act, x, y) or inRect(r.auto, x, y) then return true end
+	if inRect(r.more, x, y) or inRect(r.skills, x, y) then return true end
+	if not r.classic and (inRect(r.act, x, y) or inRect(r.auto, x, y)) then return true end
 	if self:levelUpPending() and inRect(r.levelup, x, y) then return true end
 	if inRect(r.ctx_exit, x, y) or inRect(r.ctx_wait, x, y) or (self.ctx_pan_shown and inRect(r.ctx_pan, x, y)) then return true end
 	-- the routine strip above Act (it grows away from the screen edge)
-	if r.act and y >= r.act.y - _M.ACT_STRIP_H and y < r.act.y then
+	if r.act and not r.classic and y >= r.act.y - _M.ACT_STRIP_H and y < r.act.y then
 		if r.hand == "left" then
 			if x < r.act.x + r.act.w + 140 then return true end
 		elseif x >= r.act.x - 140 then return true end
@@ -842,7 +847,7 @@ function _M:display()
 	self:autoBind()
 	self:flushPendingStep()
 	self:displayTarget()
-	self:displayStepPreview()
+	if not self.rects.classic then self:displayStepPreview() end
 	self:displaySkills()
 	self:displayMore()
 	self:displayCtx()

@@ -1859,6 +1859,7 @@ end
 
 --- Auto-act: keep running the routine (and exploring) until something needs you
 function _M:autoActStart(force)
+	if require("engine.TouchInput").setting("classic") == true then return end -- classic controls: no AUTO
 	-- a stop condition holds right now: ask before running into it (Jordan: "show a
 	-- dialog asking if you really want to auto even though <reason>"); the
 	-- override lasts for this fight, then the usual stops apply again
