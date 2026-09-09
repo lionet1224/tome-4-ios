@@ -761,15 +761,13 @@ function _M:resolve(t, last, on_entity, key_chain)
 	-- depends on value resolvers (e.g. mbonus_level on 'chance') resolving
 	-- before function resolvers that read those fields. Iterate in a
 	-- deterministic order with "generic" resolvers last.
-	local ordered_keys = {}
-	for k in pairs(list) do ordered_keys[#ordered_keys+1] = k end
-	table.sort(ordered_keys, function(a, b)
-		local ea, eb = list[a], list[b]
-		local ga = type(ea) == "table" and ea.__resolver == "generic"
-		local gb = type(eb) == "table" and eb.__resolver == "generic"
-		if ga ~= gb then return gb end
-		return tostring(a) < tostring(b)
-	end)
+	-- (a partition, not a sort: sorting every entity's keys by name cost the world map trip
+	-- 50 s on the simulator; only "generic resolvers last" matters)
+	local ordered_keys, generic = {}, {}
+	for k, e in pairs(list) do
+		if type(e) == "table" and e.__resolver == "generic" then generic[#generic+1] = k else ordered_keys[#ordered_keys+1] = k end
+	end
+	for _, k in ipairs(generic) do ordered_keys[#ordered_keys+1] = k end
 	local r
 	for _, k in ipairs(ordered_keys) do
 		local e = list[k]
