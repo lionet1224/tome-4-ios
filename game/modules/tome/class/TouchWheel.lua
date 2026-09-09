@@ -43,7 +43,12 @@ function _M:init(uiset)
 	self.uiset = uiset
 	self.open = false
 	self.labels = {}
-	self.font = FontPackage:get("default", true)
+	-- the HUD labels follow the touch text size setting
+	local K = require "engine.ui.TouchKit"
+	local sc = K.uiScale and K.uiScale() or 1
+	local okf, f, size = pcall(FontPackage.resolveFont, FontPackage, "default")
+	if sc ~= 1 and okf and f and f[size] then self.font = core.display.newFont(f.font, math.floor(f[size] * sc + 0.5), f.bold)
+	else self.font = FontPackage:get("default", true) end
 end
 
 --- Which wheel does a touch at screen x,y belong to (nil = none)

@@ -157,6 +157,16 @@ function WornGrid:init(t)
 			end
 		end
 	end
+	-- the second weapon set (Q on the desktop): its slots follow, marked "2", so a
+	-- loadout can be built without swapping sets first (Jordan)
+	for _, sn in ipairs{"QS_MAINHAND", "QS_OFFHAND", "QS_PSIONIC_FOCUS", "QS_QUIVER"} do
+		local id = self.actor["INVEN_"..sn]
+		local def = id and self.actor.inven_def[id]
+		if id and def and self.actor.inven[id] then
+			local i = #self.slots
+			self.slots[i + 1] = {id=id, def=def, item=1, set2=true, x=(i % self.cols) * self.cw, y=math.floor(i / self.cols) * self.ch}
+		end
+	end
 	self.rows = math.max(1, math.ceil(#self.slots / self.cols))
 	self.h = self.rows * self.ch
 	self.hilite = {}
@@ -211,6 +221,12 @@ function WornGrid:display(x, y, nb_keyframes, screen_x, screen_y)
 			if back then local okb, bt = pcall(self.getUITexture, self, back) if okb and bt then bt.t:toScreenFull(fx + 7, fy + 7, fs - 14, fs - 14, bt.tw, bt.th, 1, 1, 1, 0.3) end end
 		end
 		if self.hilite[s] or self.sel == s then K.frame(cx + 1, cy + 1, self.cw - 2, self.ch - 2, K.GOLD, 2) end
+		if s.set2 then
+			-- a small "2" badge: the second weapon set
+			core.display.drawQuad(cx + self.cw - 20, cy + 3, 16, 16, 60, 46, 16, 235)
+			local d = K.text("2", 11, K.GOLD[1], K.GOLD[2], K.GOLD[3], true)
+			if d then K.draw(d, cx + self.cw - 20 + math.floor((16 - d.w) / 2), cy + 3 + math.floor((16 - d.h) / 2)) end
+		end
 	end
 end
 

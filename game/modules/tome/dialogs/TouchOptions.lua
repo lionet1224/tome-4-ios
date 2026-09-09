@@ -211,6 +211,15 @@ function _M:listFor(kind)
 					config.settings.particles_density = qty
 				end, 0))
 			end},
+			{name=_t"Game text size", desc=_t"The size of the game's own text: descriptions, the log, tooltips. Takes effect after a restart.", status=function() return _t(tostring(config.settings.tome.fonts and config.settings.tome.fonts.size or "normal"):capitalize()) end, fct=function()
+				local order = {"normal", "big", "small"}
+				local cur = config.settings.tome.fonts and config.settings.tome.fonts.size or "normal"
+				local idx = 1 for i, v in ipairs(order) do if v == cur then idx = i % #order + 1 end end
+				config.settings.tome.fonts = config.settings.tome.fonts or {type="default", size="normal"}
+				config.settings.tome.fonts.size = order[idx]
+				game:saveSettings("tome.fonts", ("tome.fonts = { type = %q, size = %q }\n"):format(config.settings.tome.fonts.type or "default", order[idx]))
+				self:switchTo(self.kind)
+			end},
 			{name=_t"Gamma", desc=_t"Brightness correction, 100 is neutral.", status=function() return tostring(config.settings.gamma_correction) end, fct=function()
 				game:registerDialog(GetQuantity.new(_t"Gamma correction", _t"From 50 to 300", config.settings.gamma_correction, 300, function(qty)
 					game:saveSettings("gamma_correction", ("gamma_correction = %d\n"):format(qty))

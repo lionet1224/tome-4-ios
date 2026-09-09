@@ -653,3 +653,17 @@ Runner trap: never leave `( … ) &` subshells behind when a command times out; 
 - §44's background gate had a hole: the redraw event handler skipped `redraw_pending = 0` along with the draw, so after
   resuming the display timer never asked for another frame ("the game stops working if I background and come back").
   The flag is now always cleared; only `on_redraw` is skipped while backgrounded.
+
+## 49. Second weapon set, bigger text, spot-aimed talents (2026-09-08)
+
+- **Set 2 from the inventory**: `UseItemDialog` action `wear2` ("Wield in set 2") moves a pack item into its
+  `INVEN_QS_<slot>` (mainhand/offhand/psionic focus/quiver) after `canWearObject`, bumping the previous occupant back
+  to the pack; the portrait `WornGrid` appends the QS slots with a "2" badge (`slot.set2`); Swap weapons in More
+  brings the set to hand. Test `weaponset.lua` (portrait).
+- **Text size**: `touch.ui_scale` now 0.9/1/1.1/1.25/1.4 (TouchKit clamp 1.5); `TouchWheel` builds its HUD label font
+  from `FontPackage:resolveFont("default")` × uiScale so band/pill labels follow it; Options › Video "Game text size"
+  cycles `tome.fonts.size` normal/big/small (restart).
+- **Spot-aimed talents** (`tg.nolock`: Blink rune): `TouchManual:cast` always opens the aim cursor; `actDo` refuses
+  them unless the step targets "aim by hand". Test `blinkrune.lua` inscribes a rune with `setInscription(..., true, true)`.
+- Open: "black screen when naming a weapon" — the log shows the tag GetText dialog, "[IOS-OSK] show", frames at 50 fps,
+  then a backgrounding; the renderer was alive. Awaiting Jordan's description (keyboard visible? recovers on dismiss?).

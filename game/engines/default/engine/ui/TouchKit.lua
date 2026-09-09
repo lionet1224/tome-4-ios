@@ -22,7 +22,7 @@ local fonts = {}
 local function uiScale()
 	local ok, TI = pcall(require, "engine.TouchInput")
 	local v = ok and TI.setting and tonumber(TI.setting("ui_scale")) or 1
-	if not v or v < 0.8 or v > 1.3 then v = 1 end
+	if not v or v < 0.8 or v > 1.5 then v = 1 end
 	return v
 end
 local function font(size)

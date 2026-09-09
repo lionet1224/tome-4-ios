@@ -173,6 +173,22 @@ function _M:use(item)
 			self.actor:transmoInven(self.inven, self.item, self.object)
 			self.onuse(self.inven, self.item, self.object, false)
 		end)
+	elseif act == "wear2" then
+		-- iOS port: put the item into the second weapon set without swapping sets first
+		local wi = self.object:wornInven()
+		local sn = wi and self.actor.inven_def[wi] and self.actor.inven_def[wi].short_name
+		local qs = sn and self.actor["INVEN_QS_"..sn]
+		local qinv = qs and self.actor:getInven(qs)
+		if not qinv then game.logPlayer(self.actor, "This item has no place in the second set.") return end
+		local ok, err = self.actor:canWearObject(self.object)
+		if not ok then game.logPlayer(self.actor, "%s can not wear %s: %s.", self.actor:getName():capitalize(), self.object:getName{do_color=true}, err or "?") return end
+		local o = self.actor:removeObject(self.inven, self.item)
+		-- the slot holds one item: the previous one goes back to the pack
+		while #qinv >= (qinv.max or 1) do local old = self.actor:removeObject(qinv, 1) if old then self.actor:addObject(self.actor.INVEN_INVEN, old) end end
+		self.actor:addObject(qs, o)
+		self.actor:sortInven()
+		game.logPlayer(self.actor, "You put %s in your second weapon set.", o:getName{do_color=true})
+		self.actor.changed = true
 	elseif act == "toinven" then
 		self.object.__transmo = false
 		self.actor:checkEncumbrance()
@@ -210,6 +226,11 @@ function _M:generateList()
 	if not self.dst_actor and self.object.__transmo then list[#list+1] = {name=_t"Move to normal inventory", action="toinven"} end
 	if not self.dst_actor and not self.object.__transmo and not self.no_use_allowed then if self.object:canUseObject() then list[#list+1] = {name=_t"Use", action="use"} end end
 	if self.inven == self.actor.INVEN_INVEN and self.object:wornInven() and self.actor:getInven(self.object:wornInven()) then list[#list+1] = {name=_t"Wield/Wear", action="wear"} end
+	do -- iOS port: the second weapon set
+		local wi = self.inven == self.actor.INVEN_INVEN and self.object:wornInven()
+		local sn = wi and self.actor.inven_def[wi] and self.actor.inven_def[wi].short_name
+		if sn and self.actor["INVEN_QS_"..sn] and self.actor:getInven(self.actor["INVEN_QS_"..sn]) then list[#list+1] = {name=_t"Wield in set 2", action="wear2"} end
+	end
 	if not self.object.__transmo then if self.inven ~= self.actor.INVEN_INVEN and self.object:wornInven() then list[#list+1] = {name=_t"Take off", action="takeoff"} end end
 	if not self.object.__transmo then if self.inven ~= self.actor.INVEN_INVEN and self.object.is_tinker and self.object.tinkered then list[#list+1] = {name=_t"Detach from item", action="tinker-remove"} end end
 	if not self.object.__transmo then if self.inven == self.actor.INVEN_INVEN and self.object.is_tinker and not self.object.tinkered then list[#list+1] = {name=_t"Attach to item", action="tinker-add"} end end
