@@ -31,6 +31,8 @@ run_half() { # $1 = udid, $2.. = tests
 		local early=""; grep -q "script_boot" "$t" && early="boot"
 		# a "portrait" mention in the test's first three lines runs it in portrait (the worn grid, the band...)
 		local extra="${TOUCH_EXTRA:-}"; head -3 "$t" | grep -qi "portrait" && extra="$extra, orientation=\"portrait\""
+		# "-- sweep-extra: , key=value" in the header adds touch settings (classic=true...)
+		local se=$(grep -m1 "^-- sweep-extra:" "$t" | sed 's/^-- sweep-extra://'); [ -n "$se" ] && extra="$extra$se"
 		UDID="$ud" TOUCH_EXTRA="$extra" bash "$ROOT/tools/touch/sim-run.sh" "$t" "$OUT/$n" $early > "$OUT/$n.txt" 2>&1
 		if grep -q "SCRIPT\]\s*finished" "$OUT/$n/console.log" && ! grep -q "Lua Error" "$OUT/$n/console.log"; then echo "PASS $n" >> "$OUT/results.txt"
 		else { echo "FAIL $n"; grep -m2 -E "Lua Error|script error|script load failed" -A6 "$OUT/$n/console.log" | cut -c1-200; } >> "$OUT/results.txt"; fi

@@ -1,5 +1,6 @@
 -- Classic controls (touch.classic=true, portrait): no Act, no AUTO, no routine strip; the
 -- pills sit in the thumb corner; Cast / Cancel still appear while aiming; AUTO cannot start.
+-- sweep-extra: , classic=true
 return function(T)
 	T.wait(1500) T.key("EXIT") T.wait(6000) T.key("EXIT") T.wait(600)
 	local Map = require "engine.Map"
