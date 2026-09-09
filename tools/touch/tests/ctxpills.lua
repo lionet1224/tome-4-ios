@@ -64,7 +64,11 @@ return function(T)
 		local wt = ctx().wait
 		ex = ctx().exit
 		T.log("with enemy: exit", tostring(ex ~= nil), "wait", tostring(wt ~= nil), wt and ("%d,%d"):format(wt.x, wt.y) or "", "enemies", #p:actEnemies())
-		if not wt then T.log("BAD no Wait pill with an enemy in view") end
+		if not wt then
+			T.log("BAD no Wait pill with an enemy in view")
+			local map = game.level.map
+			T.log("diag: canSee", tostring(p:canSee(npc)), "seen tile", tostring(map.seens(npc.x, npc.y)), "lit", tostring(map.lites(npc.x, npc.y)), "reaction", p:reactionToward(npc), "invisible", tostring(npc.invisible), "stealth", tostring(npc.stealth), "fov actors", p.fov and p.fov.actors_dist and #p.fov.actors_dist or -1, "dist", core.fov.distance(p.x, p.y, npc.x, npc.y), "npc on map", tostring(map(npc.x, npc.y, require("engine.Map").ACTOR) == npc))
+		end
 		if not ex then T.log("BAD exit pill gone with an enemy in view") end
 		if wt and ex and overlap(wt, ex) then T.log("BAD the two pills overlap") end
 		if wt and not inside(wt) then T.log("BAD Wait pill off screen") end
