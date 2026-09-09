@@ -667,3 +667,27 @@ Runner trap: never leave `( … ) &` subshells behind when a command times out; 
   them unless the step targets "aim by hand". Test `blinkrune.lua` inscribes a rune with `setInscription(..., true, true)`.
 - Open: "black screen when naming a weapon" — the log shows the tag GetText dialog, "[IOS-OSK] show", frames at 50 fps,
   then a backgrounding; the renderer was alive. Awaiting Jordan's description (keyboard visible? recovers on dismiss?).
+
+## 50. Moving to upstream 1.7.6, the bare branch, the release shape (2026-09-09)
+
+- **Source**: te4.org serves `t-engine4-src-<ver>.tar.bz2` (and `-nomusic`) for every version; git.net-core.org was unreachable.
+  The tarball packs the engine (`te4-1.7.6.teae`), the boot module and `tome-1.7.6.team` + `tome-1.7.6-gfx.team` as
+  zips; the git layout is engine → `game/engines/default/{engine,data}`, boot team `mod/*`+`data` → `modules/boot/`, tome
+  team `mod/*`+`data`(+gfx) → `game/modules/tome/`. 1.7.6 has the official `engine/I18N.lua` (`_t`), so the fork's wrappers fit.
+- **History**: `tome-1.7.6-root` = orphan commit of that tree without music; `ios-port-rebased` = all 311 port commits
+  replayed onto it (`git rebase --onto`, two real conflicts: the chat dialog class hook and the lore popup's learn callback,
+  resolved by `tmp/up/resolve.py` rules; `.gitignore` unions). The replayed tree equals the merge (`ios-port-1.7.6`).
+  `ios-core` = root + platform layer (src, tools/ios, tools/LuaJIT, bootstrap, premake) + six engine-Lua tweaks + README,
+  built with `TE4_TOUCH_LAYER=0` (main.c switch: fingers become mouse events, no TouchInput). It builds; runtime check pending.
+- **Sweep on 1.7.6**: 79 tests, all pass except the three world-map trips (places, places-wild, placesmore), which are
+  slowness, not hangs: alone, the trip finishes in ~80 s on the simulator (the static 170×100 world map generation waits
+  ~74k ticks; the zone-change save takes 84 s in its pipe). Under the two-simulator sweep they exceed the 420 s runner
+  allowance. The 1.7.6 build loads noticeably slower than 1.7.2 on the simulator (birth ~190 s vs ~90 s); timing side by
+  side is queued. Sweep fixes on the way: boot mode for `script_boot` tests, portrait from the header, `-- sweep-extra:`
+  header, resume via `SWEEP_SKIP_PASSED` + same output dir, `SWEEP_FROM`, `summary.txt` (last verdict per test).
+- **Licensing** (from COPYING, COPYING-MEDIA, CREDITS): code GPL-3; gfx "granted to use with the Tales of Maj'Eyal game
+  only" (ask darkgod@te4.org before IPAs); music is Jamendo/FMA Creative Commons by Celestial Aeon Project, Carlos Saura,
+  Anne van Schothorst → left out of the repo (`.gitignore`), drop the official folder in locally; sounds credited to
+  three authors without stated terms. Plan: source fork with art, no music, no IPA until DarkGod answers.
+- Harness lessons: a background poll that sleeps past ~10 min gets killed; a watcher must loop unbounded on `pgrep`;
+  never launch a second sweep while one runs (they share the simulators).
