@@ -17,7 +17,11 @@ tests=(); k=0
 for t in "$ROOT"/tools/touch/tests/*.lua; do n=$(basename "$t" .lua); case "$n" in mainmenu|loadzoom|stepdiag|settings|grab|fps|talentsoak|autofps) continue;; esac
 	if (( k % shard_n == shard_i )); then
 		# SWEEP_SKIP_PASSED=<results.txt of an earlier sweep>: leave out what already passed there
-		if [ -n "${SWEEP_SKIP_PASSED:-}" ] && grep -qx "PASS $n" "$SWEEP_SKIP_PASSED" 2>/dev/null; then :; else tests+=("$t"); fi
+		# SWEEP_FROM=<name>: start at that test (alphabetical order), skipping the earlier ones
+		# (resume an interrupted sweep: pass its own results.txt as SWEEP_SKIP_PASSED and the same output dir)
+		if [ -n "${SWEEP_SKIP_PASSED:-}" ] && grep -qx "PASS $n" "$SWEEP_SKIP_PASSED" 2>/dev/null; then :
+		elif [ -n "${SWEEP_FROM:-}" ] && [[ "$n" < "$SWEEP_FROM" ]]; then :
+		else tests+=("$t"); fi
 	fi; k=$((k+1)); done
 run_half() { # $1 = udid, $2.. = tests
 	local ud="$1"; shift
@@ -39,5 +43,7 @@ else
 	echo "(single simulator: no sim-b.udid)"
 	run_half "$A" "${tests[@]}"
 fi
-sort "$OUT/results.txt"
-echo "sweep done: $OUT ($(grep -c '^PASS' "$OUT/results.txt") pass, $(grep -c '^FAIL' "$OUT/results.txt") fail)"
+# the last verdict per test wins (a resumed sweep re-runs earlier failures)
+grep -E '^(PASS|FAIL) ' "$OUT/results.txt" | awk '{last[$2]=$1} END {for (t in last) print last[t], t}' | sort -k2 > "$OUT/summary.txt"
+cat "$OUT/summary.txt"
+echo "sweep done: $OUT ($(grep -c '^PASS' "$OUT/summary.txt") pass, $(grep -c '^FAIL' "$OUT/summary.txt") fail)"
