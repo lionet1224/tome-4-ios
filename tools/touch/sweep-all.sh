@@ -27,7 +27,9 @@ run_half() { # $1 = udid, $2.. = tests
 	local ud="$1"; shift
 	for t in "$@"; do
 		local n=$(basename "$t" .lua)
-		UDID="$ud" bash "$ROOT/tools/touch/sim-run.sh" "$t" "$OUT/$n" > "$OUT/$n.txt" 2>&1
+		# title-screen tests declare themselves with "script_boot" in their header: run them in boot mode
+		local early=""; grep -q "script_boot" "$t" && early="boot"
+		UDID="$ud" bash "$ROOT/tools/touch/sim-run.sh" "$t" "$OUT/$n" $early > "$OUT/$n.txt" 2>&1
 		if grep -q "SCRIPT\]\s*finished" "$OUT/$n/console.log" && ! grep -q "Lua Error" "$OUT/$n/console.log"; then echo "PASS $n" >> "$OUT/results.txt"
 		else { echo "FAIL $n"; grep -m2 -E "Lua Error|script error|script load failed" -A6 "$OUT/$n/console.log" | cut -c1-200; } >> "$OUT/results.txt"; fi
 	done
