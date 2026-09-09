@@ -1,0 +1,384 @@
+{
+    "25": {
+        "id": 25,
+        "name": "chat",
+        "data": {
+            "chatid": "chat4",
+            "chat": "#YELLOW#YOU ARE A CURIOUS ONE.",
+            "answer1": "[...]"
+        },
+        "class": "chat",
+        "html": "chat1",
+        "typenode": true,
+        "inputs": {
+            "input_1": {
+                "connections": [
+                    {
+                        "node": "32",
+                        "input": "output_1"
+                    }
+                ]
+            }
+        },
+        "outputs": {
+            "output_1": {
+                "connections": [
+                    {
+                        "node": "32",
+                        "output": "input_1"
+                    }
+                ]
+            }
+        },
+        "pos_x": 1564,
+        "pos_y": 207
+    },
+    "27": {
+        "id": 27,
+        "name": "chat",
+        "data": {
+            "chatid": "chat6",
+            "chat": "#YELLOW#YOU HAVE MADE THE RIGHT CHOICE. TOGETHER, WE SHALL BRING ABOUT THE DESTRUCTION OF OUR ENEMIES.",
+            "answer1": "#GOLD#[you are now an Avatar of a Distant Sun]"
+        },
+        "class": "chat",
+        "html": "chat1",
+        "typenode": true,
+        "inputs": {
+            "input_1": {
+                "connections": [
+                    {
+                        "node": "29",
+                        "input": "output_1"
+                    },
+                    {
+                        "node": "36",
+                        "input": "output_1"
+                    }
+                ]
+            }
+        },
+        "outputs": {
+            "output_1": {
+                "connections": [
+                    {
+                        "node": "39",
+                        "output": "input_1"
+                    }
+                ]
+            }
+        },
+        "pos_x": 2507,
+        "pos_y": -110
+    },
+    "29": {
+        "id": 29,
+        "name": "chat",
+        "data": {
+            "chatid": "welcome",
+            "chat": "<<<You feel the gentle warmth of your Distant Sun patron. It speaks directly to your mind!>>>\n#YELLOW#I AM HERE. DO YOU DESIRE TO SMITE EVIL, DESTROY THE DARKNESS AND SCOUR THE EARTH? I SHALL AID YOU IN THIS QUEST. TOGETHER, WE WILL BE UNSTOPPABLE. ALL DARKNESS SHALL BE CONSUMED BY OUR LIGHT.\n#LAST#",
+            "answer1": "Yes, give me your power!",
+            "answer2": "Who... Who are you?"
+        },
+        "class": "chat",
+        "html": "chat2",
+        "typenode": true,
+        "inputs": {
+            "input_1": {
+                "connections": []
+            }
+        },
+        "outputs": {
+            "output_1": {
+                "connections": [
+                    {
+                        "node": "27",
+                        "output": "input_1"
+                    }
+                ]
+            },
+            "output_2": {
+                "connections": [
+                    {
+                        "node": "32",
+                        "output": "input_1"
+                    }
+                ]
+            }
+        },
+        "pos_x": 92,
+        "pos_y": 131
+    },
+    "32": {
+        "id": 32,
+        "name": "chat",
+        "data": {
+            "chatid": "chat7",
+            "chat": "#YELLOW#I AM YOUR FRIEND. IT IS GOOD TO HAVE FRIENDS, ISN'T IT?",
+            "answer1": "But how are you speaking to me?",
+            "answer2": "You still haven't told me who or what you are.",
+            "answer3": "But what are you getting out of this?",
+            "answer4": "That doesn't tell me anything."
+        },
+        "class": "chat",
+        "html": "chat4",
+        "typenode": true,
+        "inputs": {
+            "input_1": {
+                "connections": [
+                    {
+                        "node": "29",
+                        "input": "output_2"
+                    },
+                    {
+                        "node": "25",
+                        "input": "output_1"
+                    },
+                    {
+                        "node": "33",
+                        "input": "output_1"
+                    },
+                    {
+                        "node": "34",
+                        "input": "output_1"
+                    }
+                ]
+            }
+        },
+        "outputs": {
+            "output_1": {
+                "connections": [
+                    {
+                        "node": "25",
+                        "output": "input_1"
+                    }
+                ]
+            },
+            "output_2": {
+                "connections": [
+                    {
+                        "node": "33",
+                        "output": "input_1"
+                    }
+                ]
+            },
+            "output_3": {
+                "connections": [
+                    {
+                        "node": "34",
+                        "output": "input_1"
+                    }
+                ]
+            },
+            "output_4": {
+                "connections": [
+                    {
+                        "node": "36",
+                        "output": "input_1"
+                    }
+                ]
+            }
+        },
+        "pos_x": 721,
+        "pos_y": 330
+    },
+    "33": {
+        "id": 33,
+        "name": "chat",
+        "data": {
+            "chatid": "chat8",
+            "chat": "#YELLOW#YOU NEED NOT CONCERN YOURSELF WITH SUCH THINGS. I KNOW YOU CRAVE POWER. I KNOW THE WEIGHT OF THE WORLD IS ON YOUR SHOULDERS. SO, ACCEPT MY BOONS. ALLOW ME TO HELP YOU.\n",
+            "answer1": "[...]"
+        },
+        "class": "chat",
+        "html": "chat1",
+        "typenode": true,
+        "inputs": {
+            "input_1": {
+                "connections": [
+                    {
+                        "node": "32",
+                        "input": "output_2"
+                    }
+                ]
+            }
+        },
+        "outputs": {
+            "output_1": {
+                "connections": [
+                    {
+                        "node": "32",
+                        "output": "input_1"
+                    }
+                ]
+            }
+        },
+        "pos_x": 1558,
+        "pos_y": 415
+    },
+    "34": {
+        "id": 34,
+        "name": "chat",
+        "data": {
+            "chatid": "chat9",
+            "chat": "#YELLOW#I AM GETTING PLENTY OUT OF THIS.",
+            "answer1": "[...]"
+        },
+        "class": "chat",
+        "html": "chat1",
+        "typenode": true,
+        "inputs": {
+            "input_1": {
+                "connections": [
+                    {
+                        "node": "32",
+                        "input": "output_3"
+                    }
+                ]
+            }
+        },
+        "outputs": {
+            "output_1": {
+                "connections": [
+                    {
+                        "node": "32",
+                        "output": "input_1"
+                    }
+                ]
+            }
+        },
+        "pos_x": 1559,
+        "pos_y": 776
+    },
+    "36": {
+        "id": 36,
+        "name": "chat",
+        "data": {
+            "chatid": "chat10",
+            "chat": "#YELLOW#I TIRE OF YOUR NAGGING QUESTIONS. TALK, TALK, TALK. YOU HAVE A SIMPLE CHOICE BEFORE YOU. WILL YOU BECOME POWERFUL? OR WILL YOU BE WEAK AND ALONE?",
+            "answer1": "Yes, give me your power!",
+            "answer2": "I don't trust you. Please go away."
+        },
+        "class": "chat",
+        "html": "chat2",
+        "typenode": true,
+        "inputs": {
+            "input_1": {
+                "connections": [
+                    {
+                        "node": "32",
+                        "input": "output_4"
+                    }
+                ]
+            }
+        },
+        "outputs": {
+            "output_1": {
+                "connections": [
+                    {
+                        "node": "27",
+                        "output": "input_1"
+                    }
+                ]
+            },
+            "output_2": {
+                "connections": [
+                    {
+                        "node": "37",
+                        "output": "input_1"
+                    }
+                ]
+            }
+        },
+        "pos_x": 1557,
+        "pos_y": 1046
+    },
+    "37": {
+        "id": 37,
+        "name": "chat",
+        "data": {
+            "chatid": "chat11",
+            "chat": "#YELLOW#I HAVE LITTLE PATIENCE FOR TIME WASTERS. THIS SHALL BE THE LAST TIME WE SPEAK.",
+            "answer1": "#GRAY#[prodigy point refunded]"
+        },
+        "class": "chat",
+        "html": "chat1",
+        "typenode": true,
+        "inputs": {
+            "input_1": {
+                "connections": [
+                    {
+                        "node": "36",
+                        "input": "output_2"
+                    }
+                ]
+            }
+        },
+        "outputs": {
+            "output_1": {
+                "connections": [
+                    {
+                        "node": "40",
+                        "output": "input_1"
+                    }
+                ]
+            }
+        },
+        "pos_x": 2017,
+        "pos_y": 1318
+    },
+    "39": {
+        "id": 39,
+        "name": "lua-code",
+        "data": {
+            "code": "player:callTalent(player.T_AVATAR_OF_A_DISTANT_SUN, \"becomeAvatar\")"
+        },
+        "class": "lua-code",
+        "html": "lua-code",
+        "typenode": true,
+        "inputs": {
+            "input_1": {
+                "connections": [
+                    {
+                        "node": "27",
+                        "input": "output_1"
+                    }
+                ]
+            }
+        },
+        "outputs": {
+            "output_1": {
+                "connections": []
+            }
+        },
+        "pos_x": 2859.4285714285716,
+        "pos_y": -43.42857142857143
+    },
+    "40": {
+        "id": 40,
+        "name": "lua-code",
+        "data": {
+            "code": "player:unlearnTalent(player.T_AVATAR_OF_A_DISTANT_SUN)\nplayer.unused_prodigies = player.unused_prodigies + 1\nplayer:attr(\"pissed_of_distant_sun\", 1)"
+        },
+        "class": "lua-code",
+        "html": "lua-code",
+        "typenode": true,
+        "inputs": {
+            "input_1": {
+                "connections": [
+                    {
+                        "node": "37",
+                        "input": "output_1"
+                    }
+                ]
+            }
+        },
+        "outputs": {
+            "output_1": {
+                "connections": []
+            }
+        },
+        "pos_x": 2477,
+        "pos_y": 1329
+    }
+}
