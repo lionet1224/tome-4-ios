@@ -33,6 +33,27 @@ return function(T)
 	T.log("set-2 slots in the grid", n2)
 	if n2 == 0 then T.log("BAD no set-2 slots in the worn grid") end
 	T.shot("weaponset-grid")
+	-- a second weapon: select it in the list, tap the empty set-2 offhand-less mainhand slot -> it replaces the first
+	local o2 = game.zone:makeEntity(game.level, "object", {type="weapon", subtype="waraxe"}, nil, true)
+	if o2 then
+		o2:identify(true) p:addObject(p.INVEN_INVEN, o2) d:refresh() T.wait(300)
+		local entry for _, e in ipairs(d.c_list.items or {}) do if e.object == o2 then entry = e end end
+		if entry then
+			d:selectEntry(entry) T.wait(200)
+			local slot for _, s in ipairs(d.c_grid.slots) do if s.set2 and s.id == p.INVEN_QS_MAINHAND then slot = s end end
+			-- the slot is taken by the battleaxe: tapping selects that; drop instead
+			d.drag = entry
+			local gx, gy = d.c_grid.last_screen_x + slot.x + 30, d.c_grid.last_screen_y + slot.y + 30
+			d:dropAt(gx, gy) T.wait(400)
+			local q = p:getInven(p.INVEN_QS_MAINHAND)[1]
+			T.log("after drop on the set-2 slot:", q and q:getName{do_color=false} or "nil")
+			if q ~= o2 then T.log("BAD dropping on the set-2 slot did not wield there") end
+			-- and the battleaxe went back to the pack
+			local back = false for _, oo in ipairs(p:getInven(p.INVEN_INVEN)) do if oo == o then back = true end end
+			if not back then T.log("BAD the replaced set-2 weapon did not return to the pack") end
+			o = o2
+		end
+	end
 	T.key("EXIT") T.wait(400)
 	-- swap sets: it comes to hand
 	game.key:triggerVirtual("QUICK_SWITCH_WEAPON") T.wait(400)

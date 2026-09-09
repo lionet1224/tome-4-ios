@@ -187,6 +187,10 @@ function WornGrid:generate()
 		self.on_select(o and {object=o, inven=s.id, item=s.item, worn=true} or nil, s)
 	end)
 end
+function WornGrid:slotAtScreen(x, y)
+	if not self.last_screen_x then return nil end
+	return self:slotAtLocal(x - self.last_screen_x, y - self.last_screen_y)
+end
 function WornGrid:slotAtLocal(x, y)
 	for _, s in ipairs(self.slots) do
 		if x >= s.x and x < s.x + self.cw and y >= s.y and y < s.y + self.ch then return s end
@@ -646,6 +650,12 @@ function _M:selectEntry(e)
 end
 
 function _M:selectWorn(e, slot)
+	-- an empty set-2 slot tapped with a pack item selected: put that item there
+	if not e and slot and slot.set2 and self.cur and self.cur.object and not self.cur.worn and self:set2SlotFor(self.cur.object) == slot.id then
+		print("[TOUCH] tap set-2 slot -> wear2", tostring(self.cur.object.name))
+		self:act("wear2")
+		return
+	end
 	self.c_list.sel = nil
 	self.cur = e
 	-- the grid or the doll called us; keep the other one's marker in step
@@ -709,11 +719,23 @@ function _M:startDrag(e)
 	print("[TOUCH] drag item", tostring(e.object.name), e.worn and "(worn)" or "")
 end
 
+-- the quick-swap slot a pack item belongs to (nil when it has none)
+function _M:set2SlotFor(o)
+	local wi = o and o:wornInven()
+	local sn = wi and self.actor.inven_def[wi] and self.actor.inven_def[wi].short_name
+	return sn and self.actor["INVEN_QS_"..sn] or nil
+end
+
 function _M:dropTarget(x, y)
-	local s = self.c_doll:slotAtScreen(x, y)
+	-- the paper doll in landscape, the worn grid in portrait (it holds the set-2 slots too)
+	local s = self.c_doll:slotAtScreen(x, y) or (self.c_grid and self.c_grid:slotAtScreen(x, y))
 	if not s then return nil end
 	local o = self.drag and self.drag.object
 	local ok = false
+	if s.set2 then
+		if o and not self.drag.worn and self:set2SlotFor(o) == s.id then local can, why = self.actor:canWearObject(o) ok = can and true or false if not ok then self.drop_why = why end end
+		return s, ok
+	end
 	if o and not self.drag.worn and o:wornInven() then
 		-- its own slot always fits (replacing what is there); other slots only if the game allows
 		if self.actor:getInven(o:wornInven()) == self.actor.inven[s.id] then ok = true
@@ -732,6 +754,12 @@ function _M:dropAt(x, y)
 	self.drag = nil
 	if s and not e.worn then
 		if not ok then game.logPlayer(self.actor, "%s does not go there.", e.object:getName{do_color=true}) print("[TOUCH] drop refused") return end
+		if s.set2 then
+			print("[TOUCH] drop -> set 2", tostring(e.object.name))
+			self.cur = e
+			self:act("wear2")
+			return
+		end
 		print("[TOUCH] drop -> wear", tostring(e.object.name), s.def.name)
 		local inv = self.actor:getInven(s.id)
 		if inv and inv[s.item] then self.actor:doWear(e.inven, e.item, e.object, self.actor, s.id, s.item)
