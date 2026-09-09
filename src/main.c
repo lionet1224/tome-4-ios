@@ -133,6 +133,11 @@ lua_err_type *last_lua_error_head = NULL, *last_lua_error_tail = NULL;
 SDL_mutex *renderingLock;
 SDL_mutex *realtimeLock;
 int redraw_pending = 0;
+/* iOS port: the touch layer (engine.TouchInput) owns fingers; build with -DTE4_TOUCH_LAYER=0
+   for a bare port where SDL turns fingers into mouse events for the stock UI */
+#ifndef TE4_TOUCH_LAYER
+#define TE4_TOUCH_LAYER 1
+#endif
 /* iOS: no GL while backgrounded (the driver traps on the next draw after resuming) */
 int ios_in_background = 0;
 int realtime_pending = 0;
@@ -570,6 +575,7 @@ bool on_event(SDL_Event *event)
 			docall(L, 6, 0);
 		}
 		return TRUE;
+#if TE4_TOUCH_LAYER
 	case SDL_FINGERDOWN:
 	case SDL_FINGERUP:
 		if (current_mousehandler != LUA_NOREF)
@@ -622,6 +628,7 @@ bool on_event(SDL_Event *event)
 			docall(L, 6, 0);
 		}
 		return TRUE;
+#endif
 	case SDL_JOYAXISMOTION:
 		if (current_mousehandler != LUA_NOREF)
 		{
@@ -1750,9 +1757,15 @@ int main(int argc, char *argv[])
 	// initialize engine and set up resolution and depth
 	Uint32 flags=SDL_INIT_TIMER | SDL_INIT_JOYSTICK;
 	#ifdef TE4_IOS
+#if TE4_TOUCH_LAYER
 	/* iOS port: fingers are handled by engine.TouchInput, not turned into mouse events */
 	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
 	SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
+#else
+	/* bare port: fingers become mouse events for the stock desktop UI */
+	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "1");
+	SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
+#endif
 	/* iOS port: portrait and landscape both allowed; Lua narrows this from the
 	 * touch.orientation setting (core.display.setOrientation) once it boots */
 	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight Portrait");

@@ -34,7 +34,8 @@ INCS=(-I"$ROOT/src" -I"$ROOT/src/luasocket" -I"$ROOT/src/fov" -I"$ROOT/src/expat
 WNO=(-Wno-implicit-function-declaration -Wno-deprecated-declarations
      -Wno-deprecated-non-prototype -Wno-incompatible-function-pointer-types
      -Wno-incompatible-pointer-types -Wno-int-conversion)
-CFLAGS=(-O2 $TARGET "${DEFS[@]}" "${INCS[@]}" "${WNO[@]}")
+# TOUCH_LAYER=0 builds the bare port (no engine.TouchInput: fingers are mouse events)
+CFLAGS=(-O2 $TARGET "${DEFS[@]}" "${INCS[@]}" "${WNO[@]}" -DTE4_TOUCH_LAYER=${TOUCH_LAYER:-1})
 
 compile() { # src -> obj (skipped when up to date)
 	local s="$1" o
