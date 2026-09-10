@@ -25,6 +25,18 @@ return function(T)
 	T.log("who", tostring(tm.strip_who and tm.strip_who.name), "expected", tostring(near and near.name))
 	if not (near and tm.strip_who == near) then T.log("BAD the who box does not show the nearest enemy") end
 	if tm.strip_clear_rect then T.log("BAD a clear x is drawn for an automatic pick") end
+	-- a strip tap with no hand-picked target aims by hand (Act alone picks on its own)
+	local card
+	for _, c in pairs(tm.strip_rects or {}) do
+		local t = c.tid and p:getTalentFromId(c.tid)
+		if t and t.mode ~= "sustained" and t.target and not card then card = c end
+	end
+	if card then
+		T.tap(card.x + card.w / 2, card.y + card.h / 2) T.wait(600)
+		T.log("strip tap", tostring(card.tid), "key", game.key == game.normal_key and "normal" or "targeting")
+		if game.key == game.normal_key then T.log("BAD a strip tap with no hand-picked target cast on its own") end
+		if game.key ~= game.normal_key then T.key("EXIT") T.wait(400) end
+	else T.log("no targeted card on the strip to tap") end
 	-- a hand-picked target wins over the nearest one
 	if far then tm:setTarget(far) T.wait(400)
 		T.log("manual who", tostring(tm.strip_who and tm.strip_who.name))

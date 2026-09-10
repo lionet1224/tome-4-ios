@@ -1,10 +1,10 @@
 -- ToME iOS port: manual play controls (no radial wheels).
 --   tap an enemy       -> it becomes the touch target (gold ring) and the skill strip slides in
---   tap a strip card   -> cast that talent at the target
+--   tap a strip card   -> cast that talent at the hand-picked target, else aim it by hand
 --   drag on the map    -> preview the destination tile, release to step (the only way to
 --                         walk while enemies are in view); hold still at the end to keep going
---   Skills button      -> opens/closes the drawer (the strip) at will; cards cast at the target,
---                         else at the nearest enemy, else aim by hand
+--   Skills button      -> opens/closes the drawer (the strip) at will; the box at its left shows
+--                         the target, else the enemy Act would go at (Act alone picks on its own)
 --   "..." button       -> action sheet with everything the right wheel used to hold
 -- Owned by the Minimalist uiset (self.touch_manual); drawn after the Act/AUTO dock.
 
@@ -588,13 +588,13 @@ function _M:displayStrip()
 		local sub = ("L%d %s · %d%%"):format(t.level or 1, tostring(rank):gsub("#[^#]*#", ""), life)
 		if #sub > 26 then sub = sub:sub(1, 25) end
 		self:label(sub, cx, r.y + 52, 0.55, 0.56, 0.53, 0.47, 1)
-		if auto then self:label(_t"nearest · tap name for details", cx, r.y + 74, 0.5, 0.56, 0.53, 0.47, 1)
+		if auto then self:label(_t"Act's pick · tap for details", cx, r.y + 74, 0.5, 0.56, 0.53, 0.47, 1)
 		else self:label(_t"tap name for details", cx, r.y + 74, 0.5, 0.94, 0.83, 0.54, 1) end
 	else
 		self.strip_clear_rect = nil
 		self:label(_t"No target", cx, r.y + 30, 0.8, 0.9, 0.87, 0.78, 1)
 		local n = #self:enemies()
-		self:label(n > 0 and _t"casts at the nearest enemy" or _t"tap a skill to aim it", cx, r.y + 60, 0.5, 0.56, 0.53, 0.47, 1)
+		self:label(_t"tap a skill to aim it", cx, r.y + 60, 0.5, 0.56, 0.53, 0.47, 1)
 	end
 	-- cards, scrolling by drag when they do not fit
 	local list = self:stripTalents()
@@ -679,9 +679,9 @@ function _M:stripTap(button, mx, my)
 				return
 			end
 			if button == "right" then self:cast(c.tid, nil, true) return end
-			local tgt = self:target() or self:nearestEnemy()
-			-- nobody in view: aim by hand (Cast / Cancel)
-			self:cast(c.tid, tgt, tgt == nil)
+			-- a hand-picked target takes the skill at once; otherwise aim by hand (Cast / Cancel).
+			-- Only Act picks targets on its own (Jordan: "from the hotbar I'd expect to target manually")
+			self:cast(c.tid, self:target(), true)
 			return
 		end
 	end

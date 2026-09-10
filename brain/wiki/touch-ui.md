@@ -709,3 +709,10 @@ level 50 Archmage in randart gear inside Vor Pride and relies on the level-chang
 second `saveGame()` right after collides with it and the pipe's `forceWait` hangs the app),
 `demos/demo-raid.lua` reboots into the save (`SIM_ALLOW_RESTART=1`) and films AUTO in the pride.
 Saves go to the phone with `xcrun devicectl device copy to` into the app's data container.
+
+Follow-up the same day: "When using from the hotbar I'd expect to target manually. Act lets you
+set targeting as either automatic or by hand." A strip tap now casts at the hand-picked target
+only, else it opens the aim (Cast / Cancel) like the hold did; nothing on the strip picks an enemy
+on its own any more. The who box keeps showing Act's pick, labelled `Act's pick · tap for details`.
+Tutorial and README wording updated; `autotarget` also checks that a strip tap with no target
+enters targeting mode.

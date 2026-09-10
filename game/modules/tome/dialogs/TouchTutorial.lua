@@ -95,7 +95,7 @@ _M.PAGES = {
 		title = _t"The band and the skill strip",
 		paras = {
 			_t"Held upright, the map ends above the band. The skill strip is always there: your skills in hotkey order, cooling ones dimmed with the turns left. Drag it sideways to scroll.",
-			_t"Tap an enemy to target it: a gold ring marks it and its name and life show at the left of the strip. Tap a skill to cast it at the target; with no target it hits the nearest enemy. Hold a skill to aim by hand.",
+			_t"Tap an enemy to target it: a gold ring marks it and its name and life show at the left of the strip. Tap a skill to cast it at the target; with no target you aim it by hand. The box at the left of the strip also shows the enemy Act would go at on its own.",
 			_t"The small x by the target clears it. Held sideways, SKILLS opens the same strip as a drawer.",
 		},
 		draw = function(self, x, y, w, h, t)

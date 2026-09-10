@@ -20,7 +20,7 @@ The author does not plan to maintain it and is looking for someone who wants to 
 | ![birth](docs/gifs/birth.gif) | **Character creation.** Five steps on one screen, the hero updating as you pick race and class, every race and class unlocked by default (Options → Touch). |
 
 Also: the skill strip always in view with cooldowns, a target ring with the target's life on
-the strip, hold a skill to aim by hand, two-finger tap to go back, pinch to zoom, rotate the
+the strip, skills aimed by hand unless you picked a target, two-finger tap to go back, pinch to zoom, rotate the
 phone at any time, larger text sizes, a classic mode without Act and AUTO, a screen that stays
 on and dims while AUTO runs, and a six-page controls guide inside the game.
 
