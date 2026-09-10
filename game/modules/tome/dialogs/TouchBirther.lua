@@ -196,8 +196,25 @@ function _M:on_register()
 	if ok and AP.enabled() and game.creating_player and not self.reopened then
 		game:onTickEnd(function()
 			local okb, err = pcall(function()
-				self:raceUse(self.all_races[1].nodes[1])
-				self:classUse(self.all_classes[1].nodes[1])
+				-- optional settings pick a subrace/subclass by id (else the first unlocked)
+				local pick = function(groups, want)
+					for _, g in ipairs(groups) do for _, n in ipairs(g.nodes or {}) do
+						if n.id == want and not n.locked then return n end
+					end end
+					return groups[1].nodes[1]
+				end
+				-- a requested locked class/race is unlocked for this roll (test heroes)
+				local unlock = function(kind, want)
+					for _, d in ipairs(want and self.birth_descriptor_def[kind] or {}) do
+						if d.name == want then d.locked = nil return true end
+					end
+				end
+				local r = unlock("subrace", config.settings.autopilot_subrace)
+				local c = unlock("subclass", config.settings.autopilot_subclass)
+				if r then self:generateRaces() end
+				if c then self:generateClasses() end
+				self:raceUse(pick(self.all_races, config.settings.autopilot_subrace))
+				self:classUse(pick(self.all_classes, config.settings.autopilot_subclass))
 				AP.event("birther_state", {subrace=tostring(self.descriptors_by_type.subrace), subclass=tostring(self.descriptors_by_type.subclass), race=tostring(self.descriptors_by_type.race)})
 				self:atEnd("created")
 			end)

@@ -10,7 +10,7 @@ D=$(xcrun simctl get_app_container "$UD" org.te4.tome.dev data)
 cp "$ROOT/tools/touch/demos/lib.lua" "$D/Documents/t-engine/4.0/touch-demo-lib.lua"
 UDID="$UD" TOUCH_EXTRA=", orientation=\"portrait\"$EXTRA" SIM_TIMEOUT=500 bash "$ROOT/tools/touch/sim-run.sh" "$ROOT/tools/touch/demos/demo-$NAME.lua" "$OUT" > "$OUT/run.txt" 2>&1 &
 pid=$!
-until grep -q "script started" "$OUT/console.log" 2>/dev/null || ! kill -0 $pid 2>/dev/null; do sleep 1; done
+until grep -q "demo start" "$OUT/console.log" 2>/dev/null || ! kill -0 $pid 2>/dev/null; do sleep 1; done
 i=0
 while kill -0 $pid 2>/dev/null && ! grep -q "SCRIPT\]\s*finished" "$OUT/console.log" 2>/dev/null; do
 	xcrun simctl io "$UD" screenshot --type=jpeg "$OUT/frames/f$(printf %05d $i).jpg" >/dev/null 2>&1

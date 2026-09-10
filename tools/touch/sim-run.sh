@@ -21,7 +21,11 @@ elif [ -n "$EARLY" ]; then printf 'touch = {show_island=true, script="/%s", scri
 else printf 'touch = {show_island=true, script="/%s"%s}\n' "$NAME" "$EXTRA" > "$D/Documents/t-engine/4.0/settings/touch.cfg"; fi
 printf 'audio.enable = false\naudio.music_volume = 0\naudio.effects_volume = 0\n' > "$D/Documents/t-engine/4.0/settings/audio.cfg"
 if [ -n "$EARLY" ]; then printf 'autopilot = false\n' > "$D/Documents/t-engine/4.0/settings/autopilot.cfg"
-else printf 'autopilot = true\nautopilot_birth_only = true\n' > "$D/Documents/t-engine/4.0/settings/autopilot.cfg"; fi
+else printf 'autopilot = true\nautopilot_birth_only = true\n' > "$D/Documents/t-engine/4.0/settings/autopilot.cfg"
+  # AP_RACE / AP_CLASS pick the birth subrace/subclass by id (e.g. AP_CLASS=Archmage)
+  [ -n "${AP_RACE:-}" ] && printf 'autopilot_subrace = "%s"\n' "$AP_RACE" >> "$D/Documents/t-engine/4.0/settings/autopilot.cfg"
+  [ -n "${AP_CLASS:-}" ] && printf 'autopilot_subclass = "%s"\n' "$AP_CLASS" >> "$D/Documents/t-engine/4.0/settings/autopilot.cfg"
+fi
 rm -f "$D"/Documents/t-engine/4.0/tome/shot-*.png "$D"/Documents/t-engine/4.0/boot/shot-*.png "$D"/Documents/t-engine/4.0/shot-*.png 2>/dev/null
 rm -f "$D"/Documents/t-engine/4.0/tome/touch-test.log "$D"/Documents/t-engine/4.0/boot/touch-test.log "$D"/Documents/t-engine/4.0/touch-test.log 2>/dev/null
 xcrun simctl terminate "$UD" org.te4.tome.dev 2>/dev/null
@@ -31,7 +35,7 @@ t=0
 FL="$D/Documents/t-engine/4.0/tome/touch-test.log $D/Documents/t-engine/4.0/boot/touch-test.log"
 STOP="SCRIPT\] finished|SCRIPT\] done|script load failed|script must return|Lua Error"
 [ -n "${SIM_IGNORE_LUAERR:-}" ] && STOP="SCRIPT\] finished|SCRIPT\] done|script load failed|script must return"   # the soak counts talent errors itself
-until grep -qE "$STOP" "$LOG" 2>/dev/null || cat $FL 2>/dev/null | grep -qE "SCRIPT\] finished|SCRIPT\] done|script error" || [ "$(grep -c 'script started' "$LOG" 2>/dev/null)" -ge 2 ] || [ $t -ge ${SIM_TIMEOUT:-200} ]; do sleep 2; t=$((t+2)); done
+until grep -qE "$STOP" "$LOG" 2>/dev/null || cat $FL 2>/dev/null | grep -qE "SCRIPT\] finished|SCRIPT\] done|script error" || [ -z "${SIM_ALLOW_RESTART:-}" -a "$(grep -c 'script started' "$LOG" 2>/dev/null)" -ge 2 ] || [ $t -ge ${SIM_TIMEOUT:-200} ]; do sleep 2; t=$((t+2)); done
 sleep 4
 xcrun simctl terminate "$UD" org.te4.tome.dev 2>/dev/null
 for f in "$D"/Documents/t-engine/4.0/tome/shot-*.png "$D"/Documents/t-engine/4.0/boot/shot-*.png "$D"/Documents/t-engine/4.0/shot-*.png; do [ -f "$f" ] && mv "$f" "$OUT/"; done

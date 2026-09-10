@@ -1,6 +1,6 @@
 -- shared bits for the demo scripts (portrait); the capture harness films from "script started" to "finished"
 local L = {}
-function L.prelude(T) T.wait(1500) T.key("EXIT") T.wait(6000) T.key("EXIT") T.wait(800) end
+function L.prelude(T) T.wait(1500) T.key("EXIT") T.wait(6000) T.key("EXIT") T.wait(800) T.log("demo start") end
 function L.clearHostiles()
 	local Map = require "engine.Map"
 	local p, map = game.player, game.level.map

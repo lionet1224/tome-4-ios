@@ -16,6 +16,7 @@ The author does not plan to maintain it and is looking for someone who wants to 
 | ![routines](docs/gifs/routines.gif) | **Routines.** A priority list: each tap does the first step that applies. Steps carry a When chip (adjacent, 2+ enemies, life low, target low, no enemies in view, pets below cap), sustains are kept on, and every class starts with a routine built from the way it is played. Cycle mode for fixed combos. |
 | ![pills](docs/gifs/pills.gif) | **Pills.** Descend, Ascend or Enter when you stand on stairs or an exit. Wait with enemies in view. Rest when hurt and alone, running the game's own rest until you tap. Pan whenever AUTO is off. |
 | ![inventory](docs/gifs/inventory.gif) | **Inventory.** Filter chips, what you wear in a grid at the top with the second weapon set beside it, and every item's description compared against what you have on. Tap a worn slot with an item selected to put it there; drag works too. |
+| ![raid](docs/gifs/raid.gif) | **A raid on AUTO.** A level 50 Archmage inside Vor Pride, AUTO running the class routine against the orc pride. The character comes from `tools/touch/demos/hero-archmage.lua`, which builds a max-level hero in randart gear and saves them at the pride gates (`AP_CLASS=Archmage AP_RACE=Higher` picks the birth). |
 | ![birth](docs/gifs/birth.gif) | **Character creation.** Five steps on one screen, the hero updating as you pick race and class, every race and class unlocked by default (Options → Touch). |
 
 Also: the skill strip always in view with cooldowns, a target ring with the target's life on
@@ -50,7 +51,8 @@ from an official ToME download at `game/modules/tome/data/music/` before buildin
 - `game/modules/tome/dialogs/Touch*.lua`: every screen redone for the phone.
 - `game/modules/tome/class/Player.lua`: routines and AUTO (`act*`, `autoAct*`).
 - `tools/touch/`: 96 scripted tests run in the simulator (`sweep-all.sh` runs them all on two
-  simulators), and the demo scripts that made the images above.
+  simulators), and the demo scripts that made the images above (`demos/democap.sh <udid> <name>`
+  films one; `demos/hero-archmage.lua` builds the level 50 character used by the raid).
 - `brain/wiki/`: the design notes written while building it, section by section.
 
 The branch `ios-core` holds only the platform layer, with no interface treatment, for anyone
