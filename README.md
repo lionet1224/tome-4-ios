@@ -35,6 +35,10 @@ tools/ios/install-device.sh             # build, sign, install and launch on the
 PLATFORM=sim tools/ios/build-engine.sh  # a simulator build in tools/ios/out/ToME.app
 ```
 
+Signing needs your Apple team id (Xcode > Settings > Accounts, or developer.apple.com under
+Membership): write it to `tools/ios/team.txt` (ignored by git) or export `APPLE_TEAM`. The Xcode
+project carries no team of its own.
+
 The phone must be plugged in, unlocked, and trusting the Mac. `tools/ios/pull-log.sh` copies
 the game log and any crash report off the phone.
 

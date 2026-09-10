@@ -6,13 +6,18 @@ set -euo pipefail
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 XC="$ROOT/tools/ios/xcode"
+# Signing needs your Apple team id (Xcode > Settings > Accounts, or developer.apple.com > Membership):
+# put it in tools/ios/team.txt (ignored by git) or export APPLE_TEAM. The project itself carries none.
+TEAM="${APPLE_TEAM:-}"
+[ -z "$TEAM" ] && [ -f "$ROOT/tools/ios/team.txt" ] && TEAM=$(tr -d '[:space:]' < "$ROOT/tools/ios/team.txt")
+[ -z "$TEAM" ] && { echo "no Apple team id: write it to tools/ios/team.txt or export APPLE_TEAM (10 characters, from Xcode > Settings > Accounts)"; exit 1; }
 [ "${1:-}" = "--no-engine" ] || PLATFORM=dev bash "$ROOT/tools/ios/build-engine.sh"
 DEV=$(xcrun devicectl list devices 2>/dev/null | grep -E "connected|available" | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}' | head -1)
 [ -z "$DEV" ] && { echo "no connected iPhone (plug it in, unlock, trust this Mac)"; exit 1; }
 XDEST=$(cd "$XC" && xcodebuild -project ToME.xcodeproj -scheme ToME -showdestinations 2>/dev/null | grep 'platform:iOS, arch' | grep -oE 'id:[0-9A-F-]+' | cut -d: -f2 | head -1)
 echo "[install] device $DEV (xcode dest $XDEST)"
 rm -rf "$XC/DerivedData/Build/Products/Release-iphoneos/ToME.app"  # force embed + codesign to rerun
-(cd "$XC" && xcodebuild -project ToME.xcodeproj -scheme ToME -configuration Release -destination "id=$XDEST" -allowProvisioningUpdates -derivedDataPath "$XC/DerivedData" build | grep -E 'error:|BUILD (SUCCEEDED|FAILED)|embedded engine')
+(cd "$XC" && xcodebuild -project ToME.xcodeproj -scheme ToME -configuration Release -destination "id=$XDEST" -allowProvisioningUpdates DEVELOPMENT_TEAM="$TEAM" -derivedDataPath "$XC/DerivedData" build | grep -E 'error:|BUILD (SUCCEEDED|FAILED)|embedded engine')
 APP=$(find "$XC/DerivedData" -name 'ToME.app' -path '*Release-iphoneos*' -maxdepth 6 | head -1)
 [ -z "$APP" ] && { echo "no built app found"; exit 1; }
 # the embed phase swaps the engine binary in after Xcode signed the bundle, so sign

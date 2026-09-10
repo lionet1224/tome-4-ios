@@ -66,3 +66,6 @@ xcuserdata/
 
 # the official music (Creative Commons, not ours to redistribute): drop the folder in locally
 game/modules/tome/data/music/
+
+# your Apple team id for device signing (see tools/ios/install-device.sh)
+tools/ios/team.txt
