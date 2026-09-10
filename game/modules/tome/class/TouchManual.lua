@@ -531,11 +531,19 @@ end
 
 function _M:displayTarget()
 	local t = self:target()
+	local auto = not t and self:nearestEnemy() or nil
+	t = t or auto
 	if not t then return end
 	local map = game.level.map
 	local x, y = map:getTileToScreen(t.x, t.y)
 	local tw, th = map.tile_w * (map.zoom or 1), map.tile_h * (map.zoom or 1)
 	if not x or x < 0 or y < 0 then return end
+	if auto then
+		-- the enemy a skill would go at on its own: a steady, thinner ring
+		frame(x - 1, y - 1, tw + 2, th + 2, 0, 0, 0, 120, 3)
+		frame(x - 1, y - 1, tw + 2, th + 2, 210, 170, 74, 170, 2)
+		return
+	end
 	local pulse = 2 + 2 * math.sin(now() / 160)
 	frame(x - pulse, y - pulse, tw + 2 * pulse, th + 2 * pulse, 0, 0, 0, 160, 5)
 	frame(x - pulse, y - pulse, tw + 2 * pulse, th + 2 * pulse, 210, 170, 74, 255, 3)
@@ -553,15 +561,20 @@ function _M:displayStrip()
 	local p = game.player
 	quad(r.x, r.y, r.w, r.h, 20, 22, 28, 230)
 	frame(r.x, r.y, r.w, r.h, 58, 61, 70, 255, 2)
-	-- who: the target, or what a tap will do without one
+	-- who: the target, else the nearest enemy (the one a skill goes at on its own), else what a tap will do
 	local who_w = 170
 	local cx = r.x + 12 + who_w / 2 - 6
-	self.strip_who_rect = t and {x=r.x, y=r.y, w=12 + who_w, h=r.h} or nil
-	if t then
+	local auto = not t and self:nearestEnemy() or nil
+	local who = t or auto
+	self.strip_who = who
+	self.strip_who_rect = who and {x=r.x, y=r.y, w=12 + who_w, h=r.h} or nil
+	if who then
+		t = who
 		local nm = t.name or "?"
 		if #nm > 18 then nm = nm:sub(1, 17).."." end
-		self:label(nm, cx, r.y + 24, 0.8, 0.94, 0.83, 0.54, 1)
-		if portrait then
+		if auto then self:label(nm, cx, r.y + 24, 0.8, 0.9, 0.87, 0.78, 1)
+		else self:label(nm, cx, r.y + 24, 0.8, 0.94, 0.83, 0.54, 1) end
+		if portrait and not auto then
 			-- a small x in the header corner clears the target (the strip itself stays)
 			local cr = {x=r.x + 12 + who_w - 30, y=r.y + 4, w=26, h=26}
 			quad(cr.x, cr.y, cr.w, cr.h, 36, 39, 47, 255)
@@ -575,7 +588,8 @@ function _M:displayStrip()
 		local sub = ("L%d %s · %d%%"):format(t.level or 1, tostring(rank):gsub("#[^#]*#", ""), life)
 		if #sub > 26 then sub = sub:sub(1, 25) end
 		self:label(sub, cx, r.y + 52, 0.55, 0.56, 0.53, 0.47, 1)
-		self:label(_t"tap name for details", cx, r.y + 74, 0.5, 0.94, 0.83, 0.54, 1)
+		if auto then self:label(_t"nearest · tap name for details", cx, r.y + 74, 0.5, 0.56, 0.53, 0.47, 1)
+		else self:label(_t"tap name for details", cx, r.y + 74, 0.5, 0.94, 0.83, 0.54, 1) end
 	else
 		self.strip_clear_rect = nil
 		self:label(_t"No target", cx, r.y + 30, 0.8, 0.9, 0.87, 0.78, 1)
@@ -648,8 +662,8 @@ function _M:stripTap(button, mx, my)
 	if self.strip_clear_rect and inRect(self.strip_clear_rect, mx, my) then self:setTarget(nil) return end
 	-- the target's name: open its sheet (the desktop hover tooltip has no finger equivalent)
 	if self.strip_who_rect and inRect(self.strip_who_rect, mx, my) then
-		local t = self:target()
-		if t then
+		local t = self:target() or self.strip_who
+		if t and not t.dead then
 			print("[TOUCH] inspect", t.name)
 			local ok, err = pcall(function() game:registerDialog(require("mod.dialogs.CharacterSheet").new(t)) end)
 			if not ok then print("[TOUCH] inspect failed", tostring(err)) end
@@ -878,7 +892,9 @@ end
 
 function _M:bandKey()
 	local r = self.rects
-	return ("%d:%d:%d:%s:%s:%s"):format(game.w, game.h, r.band_y or 0, r.hand or "", tostring(self.strip_scroll or 0), tostring(self.drawer_open))
+	local who = self:target() or self:nearestEnemy()
+	return ("%d:%d:%d:%s:%s:%s:%s:%d"):format(game.w, game.h, r.band_y or 0, r.hand or "", tostring(self.strip_scroll or 0), tostring(self.drawer_open),
+		who and tostring(who.uid) or "", who and math.floor(100 * (who.life or 0) / math.max(1, who.max_life or 1)) or 0)
 end
 
 function _M:bandNeedsRefresh()

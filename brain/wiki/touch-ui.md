@@ -691,3 +691,21 @@ Runner trap: never leave `( … ) &` subshells behind when a command times out; 
   three authors without stated terms. Plan: source fork with art, no music, no IPA until DarkGod answers.
 - Harness lessons: a background poll that sleeps past ~10 min gets killed; a watcher must loop unbounded on `pgrep`;
   never launch a second sweep while one runs (they share the simulators).
+
+## 51. The strip shows the automatic target (2026-09-10)
+
+Jordan: "The hot bar should show the auto selected enemy. Right now it only shows when you
+manually select." Act and a tapped skill go at the nearest enemy when nothing was picked by hand,
+so the strip's who box now shows that enemy (`TouchManual.nearestEnemy`, the same ordering Act
+uses) with `nearest · tap name for details` under it, in the plain text colour rather than the
+gold of a hand-picked target, and without the clear x. The map gets a steady thin ring on it; the
+hand-picked target keeps the pulsing gold one. Tapping the name opens the sheet of whoever is
+shown (`strip_who`). The band cache key carries the shown enemy's uid and life percent, so the
+cached band redraws when the nearest enemy or its life changes. Test: `autotarget`.
+
+Also today: hero saves for footage. `AP_CLASS`/`AP_RACE` on `sim-run.sh` pick the autopilot birth
+(TouchBirther unlocks the requested descriptor for that roll), `demos/hero-archmage.lua` builds a
+level 50 Archmage in randart gear inside Vor Pride and relies on the level-change autosave (a
+second `saveGame()` right after collides with it and the pipe's `forceWait` hangs the app),
+`demos/demo-raid.lua` reboots into the save (`SIM_ALLOW_RESTART=1`) and films AUTO in the pride.
+Saves go to the phone with `xcrun devicectl device copy to` into the app's data container.
