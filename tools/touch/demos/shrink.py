@@ -1,4 +1,4 @@
-#!/Users/jmbrown/.claude/jobs/2d5a61e0/tmp/venv/bin/python
+#!/usr/bin/env python3
 """Halve a GIF's frame rate and colours: shrink.py in.gif out.gif [keep_every]"""
 import sys
 from PIL import Image, ImageSequence

@@ -1,9 +1,9 @@
 # libvorbisenc pkg-config source file
 
-prefix=/Users/jmbrown/tome-ios/tools/ios/prefix-dev
-exec_prefix=/Users/jmbrown/tome-ios/tools/ios/prefix-dev/bin
-libdir=/Users/jmbrown/tome-ios/tools/ios/prefix-dev/lib
-includedir=/Users/jmbrown/tome-ios/tools/ios/prefix-dev/include
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}/bin
+libdir=${prefix}/lib
+includedir=${prefix}/include
 
 Name: vorbisenc
 Description: vorbisenc is a library that provides a convenient API for setting up an encoding environment using libvorbis

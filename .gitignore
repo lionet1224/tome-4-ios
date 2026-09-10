@@ -63,3 +63,6 @@ tools/ios/xcode/DerivedData/
 tools/ios/out-dev/
 tools/ios/out/
 xcuserdata/
+
+# the official music (Creative Commons, not ours to redistribute): drop the folder in locally
+game/modules/tome/data/music/

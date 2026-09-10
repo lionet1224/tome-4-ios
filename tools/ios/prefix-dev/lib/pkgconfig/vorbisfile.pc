@@ -1,9 +1,9 @@
 # libvorbisfile pkg-config source file
 
-prefix=/Users/jmbrown/tome-ios/tools/ios/prefix-dev
-exec_prefix=/Users/jmbrown/tome-ios/tools/ios/prefix-dev/bin
-libdir=/Users/jmbrown/tome-ios/tools/ios/prefix-dev/lib
-includedir=/Users/jmbrown/tome-ios/tools/ios/prefix-dev/include
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}/bin
+libdir=${prefix}/lib
+includedir=${prefix}/include
 
 Name: vorbisfile
 Description: vorbisfile is a library that provides a convenient high-level API for decoding and basic manipulation of all Vorbis I audio streams

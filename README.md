@@ -1,110 +1,76 @@
-# 용어집
+# Tales of Maj'Eyal on iPhone, unofficial
 
-https://docs.google.com/spreadsheets/d/184BXRyjua2MvZ9h0VMyQ7l_JExpcHUcbDA-lwiyYcrI/edit#gid=0
+A port of T-Engine4 / Tales of Maj'Eyal 1.7.6 to iOS with an interface built for a phone
+held in one hand. It is not a DarkGod project, it is not on the App Store, and it is free:
+you build it yourself and sideload it with your own Apple ID. It exists because one player
+wanted ToME on the train.
 
-# 작업 진행 상황
+The author does not plan to maintain it and is looking for someone who wants to take it on.
 
-* 작업 중인 section을 기록해둘것.
-* 기록 방법 : 현재 작업 중인 영역 제일 윗줄에 있는 section ~~~ 경로를 기록해두고, 작업자 닉네임 같이 기록해두면 됨.
+## What the phone version does
 
-ex) section "game/addons/tome-items-vault/overload/mod/dialogs/ItemsVault.lua" 에 속한 문장을 번역중일 경우,
+| | |
+|---|---|
+| ![movement](docs/gifs/move.gif) | **Moving.** Tap a tile to walk there. Drag on the map and the destination lights up under your finger, release to step, hold still to keep walking. With enemies in view only the drag moves you, so a stray tap never costs a turn. The Pan pill turns a one-finger drag into a camera scroll. |
+| ![auto](docs/gifs/auto.gif) | **Act and AUTO.** Act does the next step of your routine: a bump, a shot, a skill, closing in on its own. AUTO keeps acting and exploring until something needs you: low life, a low resource, an elite in view, a level up, drowning. It asks first if a stop rule already holds. |
+| ![routines](docs/gifs/routines.gif) | **Routines.** A priority list: each tap does the first step that applies. Steps carry a When chip (adjacent, 2+ enemies, life low, target low, no enemies in view, pets below cap), sustains are kept on, and every class starts with a routine built from the way it is played. Cycle mode for fixed combos. |
+| ![pills](docs/gifs/pills.gif) | **Pills.** Descend, Ascend or Enter when you stand on stairs or an exit. Wait with enemies in view. Rest when hurt and alone, running the game's own rest until you tap. Pan whenever AUTO is off. |
+| ![inventory](docs/gifs/inventory.gif) | **Inventory.** Filter chips, what you wear in a grid at the top with the second weapon set beside it, and every item's description compared against what you have on. Tap a worn slot with an item selected to put it there; drag works too. |
+| ![raid](docs/gifs/raid.gif) | **A raid on AUTO.** A level 50 Archmage inside Vor Pride, AUTO running the class routine against the orc pride. The character comes from `tools/touch/demos/hero-archmage.lua`, which builds a max-level hero in randart gear and saves them at the pride gates (`AP_CLASS=Archmage AP_RACE=Higher` picks the birth). |
+| ![birth](docs/gifs/birth.gif) | **Character creation.** Five steps on one screen, the hero updating as you pick race and class, every race and class unlocked by default (Options → Touch). |
 
-section "game/addons/tome-items-vault/overload/mod/dialogs/ItemsVault.lua" - uueeck
+Also: the skill strip always in view with cooldowns, a target ring with the target's life on
+the strip, skills aimed by hand unless you picked a target, two-finger tap to go back, pinch to zoom, rotate the
+phone at any time, larger text sizes, a classic mode without Act and AUTO, a screen that stays
+on and dims while AUTO runs, and a six-page controls guide inside the game.
 
-이런 식으로 기록 요망.
+## Building and installing
 
-각자 작업 중인 영역이 겹치지 않도록 하기 위한 수단임.
+Requirements: macOS on Apple silicon, Xcode with the iOS SDK, an Apple ID signed in to Xcode
+(a free account works; its builds expire after seven days and need reinstalling).
 
 ```
-27571 / 29558 문장 / 20.11.06 19:54 기준
+tools/ios/build-deps.sh                 # SDL2, SDL2_image, SDL2_ttf, libpng, ogg/vorbis, LuaJIT: once
+tools/ios/install-device.sh             # build, sign, install and launch on the plugged-in phone
+PLATFORM=sim tools/ios/build-engine.sh  # a simulator build in tools/ios/out/ToME.app
 ```
 
-# 작업시 유의 사항
+The phone must be plugged in, unlocked, and trusting the Mac. `tools/ios/pull-log.sh` copies
+the game log and any crash report off the phone.
 
-- 깃헙 데스크탑 실행하고 Fetch Origin 눌러서 변경 사항 받아오고, 커밋 올릴땐 제목에
-? files translate
-내용은 번역한 파일 경로(섹션명)을 하나하나 써주면 됨.
+Music is not in the repository (see Licensing). For a build with music, put the `music` folder
+from an official ToME download at `game/modules/tome/data/music/` before building.
 
-- 검수 시 번역 문제같은게 발생되면 리포지트리 페이지에 들어가서 issue 메뉴를 쓸것.
+## Layout of the port
 
+- `src/`: the engine's C, with an OpenGL ES 1 compatibility layer for its fixed-function
+  rendering (`gles1_compat.c`), iOS glue in `main.c`, a crash reporter, the safe area.
+- `tools/ios/`: the build pipeline, the Xcode wrapper, the app icon.
+- `game/engines/default/engine/TouchInput.lua`: the finger layer. Gestures, the test harness.
+- `game/modules/tome/class/TouchManual.lua`: the band, the strip, the pills, Act and AUTO.
+- `game/modules/tome/dialogs/Touch*.lua`: every screen redone for the phone.
+- `game/modules/tome/class/Player.lua`: routines and AUTO (`act*`, `autoAct*`).
+- `tools/touch/`: 96 scripted tests run in the simulator (`sweep-all.sh` runs them all on two
+  simulators), and the demo scripts that made the images above (`demos/democap.sh <udid> <name>`
+  films one; `demos/hero-archmage.lua` builds the level 50 character used by the raid).
+- `brain/wiki/`: the design notes written while building it, section by section.
 
-- %d %s는 텍스트 출력할때 인자를 받아와서 해당 위치에 출력하는 코드임. 데미지라던가 그런거. %%는 %를 출력하기 위한 코드니 그대로 쓸것.
+The branch `ios-core` holds only the platform layer, with no interface treatment, for anyone
+who wants to build a different interface on a working port.
 
-- 번역하다보면 저 인자 위치를 바꿔야하거나, 인자에 조사(을, 를, 이, 가 등)를 붙여야할 상황이 올거임.
-그럴때는
-t("%s 원문 %s", "%s 번역문 %s", 문장 타입, {인자 출력 순서}, {조사 지정})
-으로 작성하면 됨.
-예를 들어,
-t("%s resists %s attack!", "%s은(는) %s 공격을 저항했다!", 문장 타입)
-라는 문장이 있다고 치자. 만약 인자 서순을 바꿔서 번역하고 싶다면,
-t("%s resists %s attack!", "%s 공격을 %s은(는) 저항했다!", 문장 타입, {2, 1})
-로 작성하면 됨.
-2번째 인자를 먼저 출력하고, 1번째 인자를 그 다음으로 출력한다는 의미. 인자가 3개 이상이면 그에 맞게 작성해야함.
+## Known issues
 
-사용 가능한 조사 종류는 아래 조사 코드 참고.
+- No DLC classes (the port is built from the free source tarball).
+- Landscape has the older layout without the bottom band.
+- Naming an item has produced a black screen on a phone once; not reproduced in the simulator.
+- Free-account builds expire after seven days.
 
-- 다음으로 조사를 붙일때는
-t("%s resists %s attack!", "%s %s 저항했다!", 문장 타입, nil, {"는", "를"})
-으로 하면 됨. 은,는 이,가 같이 조사 짝끼리 세트로 묶이고, 자동으로 함수로 골라서 출력해주니까 둘 중 하나면 쓰면 됨.
-저 nil은 조사를 넣어야하는데 순서를 바꿀 필요는 없을때 집어넣는거.
-nil == null임.
+## Licensing
 
-- #Source# #Target# 도 조사를 붙일 수 있음.
-단, 얘넨 숫자로 붙여야함.
-조사 코드는
-1 이,가
-2 은,는
-3 을,를
-4 로,으로
-5 다,이다
-6 와,과
-7 이
-으로 구성되어있고, #Source3# #Target1# 이런 식으로 사용하면 됨.
+The code is GPL-3 (COPYING); this repository's changes are GPL-3 as well. The graphics under
+the game's gfx folders are granted for use with Tales of Maj'Eyal only (COPYING-MEDIA), and
+this is Tales of Maj'Eyal, unofficial and free. The music credited in CREDITS (Celestial Aeon
+Project, Carlos Saura, Anne van Schothorst, via Jamendo and the Free Music Archive) is not
+redistributed here. Sound effects are credited in CREDITS.
 
-- 단어류 (physical, mental save)는 해당 단어 전체를 검색해서 다 고쳐야하므로 번역할때 주의할 것.
-용어집으로 단어 통일이 필요.
-
-- 대소문자 구분 필수
-
-# readme
-
-This is NOT the repository for [ToME4](http://te4.org/), the repository for it is [here](https://git.net-core.org/tome/t-engine4).
-
-This repository is a platform for co-work oriented towards an I18n-enhanced T-Engine and ToME4.
-
-## Install and run
-
-Install [Git for windows](https://git-scm.com/downloads) .
-
-After install, right click and choose 'Git bash here', run the following command.
-
-```bash
-git clone https://github.com/cinornu/t-engine4-i18n_korean.git
-```
-
-It will download and sync the repository.
-
-Everytime you need to update, you can right click in the repository, choose 'Git bash here' and use this command:
-
-```bash
-git pull
-```
-
-You can run `t-engine.exe` to start the game.
-
-## Developer's guide
-
-You would need a console environment, `lua 5.1`，`luarocks` <https://luarocks.org/> and the following `luarocks` packages.
-
-* `luafilesystem` latest version
-* `lpeg` 0.9-1 DON'T use latest version!
-
-Translation tools is under `i18n_tools` directory.
-
-The translation preparation will includes those steps:
-
-* Change dir to `i18n_tools`.
-* Run `lua i18n_extractor.lua ../game/engines ../game/modules/tome ../game/dlcs ../game/addons >tmp.log` to extract any text in the game to `i18n_list.lua` file.
-* Run `lua i18n_helper.lua` . It will rearrange and deduplicate all text in  `merge_translation.lua`, and print the rearranged translation file to `output_translation.lua` and or untranslated texts to  `untranslated.lua`
-* It will also generate `game/engines/data/locales/ko_KR.lua`, which is used by the game.
-* You can add tranlation texts in the end of `merge_translation.lua` and repeat runing `lua i18n_helper.lua` to rearrange it, after this, you should use `output_translation.lua` to replace `merge_translation.lua`.
+Tales of Maj'Eyal and T-Engine4 are by Nicolas Casalini (DarkGod) and the ToME community.

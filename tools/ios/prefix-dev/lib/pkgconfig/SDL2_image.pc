@@ -1,4 +1,4 @@
-prefix=/Users/jmbrown/tome-ios/tools/ios/prefix-dev
+prefix=${pcfiledir}/../..
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include

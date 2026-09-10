@@ -1,7 +1,7 @@
-prefix=/Users/jmbrown/tome-ios/tools/ios/prefix-dev
-exec_prefix=/Users/jmbrown/tome-ios/tools/ios/prefix-dev
-libdir=/Users/jmbrown/tome-ios/tools/ios/prefix-dev/lib
-includedir=/Users/jmbrown/tome-ios/tools/ios/prefix-dev/include/libpng16
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include/libpng16
 
 Name: libpng
 Description: Loads and saves PNG files

@@ -1,4 +1,4 @@
-#!/Users/jmbrown/.claude/jobs/2d5a61e0/tmp/venv/bin/python
+#!/usr/bin/env python3
 """Assemble JPEG frames into a GIF (480 px wide, ~3 fps as captured)."""
 import sys, glob, os
 from PIL import Image

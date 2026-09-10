@@ -1,9 +1,9 @@
 # ogg pkg-config file
 
-prefix=/Users/jmbrown/tome-ios/tools/ios/prefix-dev
-exec_prefix=/Users/jmbrown/tome-ios/tools/ios/prefix-dev/bin
-libdir=/Users/jmbrown/tome-ios/tools/ios/prefix-dev/lib
-includedir=/Users/jmbrown/tome-ios/tools/ios/prefix-dev/include
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}/bin
+libdir=${prefix}/lib
+includedir=${prefix}/include
 
 Name: ogg
 Description: ogg is a library for manipulating ogg bitstreams
