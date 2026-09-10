@@ -727,6 +727,7 @@ function _M:drag(phase, t, x, y)
 		end
 		if (dir and not s.dir) or (not dir and s.dir) or (dir and s.dir and (dir[1] ~= s.dir[1] or dir[2] ~= s.dir[2])) then s.moved_at = now() end
 		s.dir = dir
+		s.maxd = math.max(s.maxd or 0, d)
 		return true
 	elseif phase == "tick" then
 		if s.dir and now() - s.moved_at >= _M.REPEAT_AFTER_MS and now() - s.last >= _M.REPEAT_EVERY_MS then
@@ -740,10 +741,14 @@ function _M:drag(phase, t, x, y)
 			local dx, dy = t.x - t.x0, t.y - t.y0
 			local d = math.sqrt(dx * dx + dy * dy)
 			local held = now() - (t.t0 or now())
-			if not s.dir or (d < _M.STEP_MIN_PX and held < _M.STEP_MIN_MS) then
+			local dragged = (s.maxd or 0) >= _M.STEP_MIN_PX or held >= _M.STEP_MIN_MS
+			if not dragged then
 				print(("[TOUCH] drag too short for a step (%d px, %d ms)"):format(d, held))
 				return "tap"
 			end
+			-- the finger came back to where it started: a cancelled step, never a tap
+			-- (Jordan: "when you cancel a drag-to-step it registers as a click to move")
+			if not s.dir then print(("[TOUCH] drag cancelled (%d px out, %d ms)"):format(s.maxd or 0, held)) return true end
 			self:stepOnce(s)
 		end
 		return true
