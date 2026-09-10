@@ -716,3 +716,20 @@ only, else it opens the aim (Cast / Cancel) like the hold did; nothing on the st
 on its own any more. The who box keeps showing Act's pick, labelled `Act's pick · tap for details`.
 Tutorial and README wording updated; `autotarget` also checks that a strip tap with no target
 enters targeting mode.
+
+## 52. Act shows what a tap will do (2026-09-10)
+
+Jordan: "When I click Act and I'm not adjacent to an enemy and have a gap closing move later in
+the order it will run the later skill despite not showing its icon. Can Act always show what it
+will do if it is pressed in its current state?" The preview used to pick the first step whose
+condition held and that was not cooling, so a melee opener out of reach showed while the tap
+fell through to Rush. Now `actDo(step, dry)` and `actTry(step, r, dry)` run the very same checks
+as the tap without acting (range, LOS, usability, target, the approach and wait fallbacks), and
+`actNextStep` is that dry run over the routine in tap order (priority or cycle, out-of-combat
+steps then explore). `actPreview` carries `what`: cast/bump/approach/back/wait/item/swap/on/off,
+`step_in` (out of reach, the tap closes in one tile: the dock shows `>>` Close in), `wait_for`,
+`explore`, or nil with no step when nothing applies (the dock shows `-` Nothing). Test: `actpreview`.
+`routines-conds` needed a sight-clear line for its placed vermin (a tree at +2 hid it).
+
+Same day: strip taps aim by hand (a hand-picked target takes the skill), drag-to-step never walks
+while held (release steps, a return to the start cancels).

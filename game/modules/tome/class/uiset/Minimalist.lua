@@ -2280,6 +2280,17 @@ function _M:displayTouchAttack(x, y, bw)
 		-- no enemy in view: the tap auto-explores
 		self.touch_wheel:drawLabel("z", x + bw / 2, y + 34, 2, 0.94, 0.83, 0.54, 1)
 		self.touch_wheel:drawLabel(_t"Explore", x + bw / 2, y + 72, 0.65, 0.9, 0.87, 0.78, 1)
+	elseif pv and pv.what == "step_in" then
+		-- the step is out of reach: the tap closes in one tile instead
+		self.touch_wheel:drawLabel(">>", x + bw / 2, y + 34, 2, 1, 0.83, 0.79, 1)
+		self.touch_wheel:drawLabel(_t"Close in", x + bw / 2, y + 72, 0.65, 0.9, 0.87, 0.78, 1)
+	elseif pv and pv.what == "wait_for" then
+		self.touch_wheel:drawLabel("...", x + bw / 2, y + 34, 2, 1, 0.83, 0.79, 1)
+		self.touch_wheel:drawLabel(_t"Wait", x + bw / 2, y + 72, 0.65, 0.9, 0.87, 0.78, 1)
+	elseif pv and not step then
+		-- nothing in the routine applies right now: the tap only says so
+		self.touch_wheel:drawLabel("-", x + bw / 2, y + 34, 2, 0.6, 0.55, 0.5, 1)
+		self.touch_wheel:drawLabel(_t"Nothing", x + bw / 2, y + 72, 0.65, 0.6, 0.55, 0.5, 1)
 	elseif step then
 		local ent = p:actStepEntity(step)
 		if ent then

@@ -1704,7 +1704,8 @@ function _M:actCondOK(step, tgt)
 end
 
 --- Try one step. Returns true when a turn was spent (or aiming started), else false + reason
-function _M:actDo(step)
+-- dry = true: check everything but do nothing, returning true, what, target
+function _M:actDo(step, dry)
 	local kind = step.kind
 	if kind == "talent" then
 		local t = step.tid and self:knowTalent(step.tid) and self:getTalentFromId(step.tid) or nil
@@ -1714,22 +1715,24 @@ function _M:actDo(step)
 		if t.mode == "sustained" then
 			if step.off then
 				if not self:isTalentActive(t.id) then return false, _t"not active" end
+				if dry then return true, "off" end
 				print("[ACT] sustain off", t.name) self:useTalent(t.id) return true
 			end
 			-- a sustain step means "keep on": active already costs nothing and falls through
 			if self:isTalentActive(t.id) then return false, _t"already on" end
+			if dry then return true, "on" end
 			print("[ACT] sustain on", t.name) self:useTalent(t.id) return true
 		end
 		local ok, tg = pcall(self.getTalentTarget, self, t)
 		-- archery shots (Kneecapper and the other called shots) declare no target table but still
 		-- aim: treat any talent with a range or requires_target as targeted so the routine's rule applies
 		local aims = (ok and tg) or t.requires_target or (self:getTalentRange(t) or 0) > 0
-		if not aims then print("[ACT] talent (no target)", t.name) self:useTalent(t.id) return true end
+		if not aims then if dry then return true, "cast" end print("[ACT] talent (no target)", t.name) self:useTalent(t.id) return true end
 		-- a spot-aimed talent (Blink rune) makes no sense at an enemy's square: only by hand
 		if ok and type(tg) == "table" and tg.nolock and step.target ~= "manual" and step.target ~= "self" then return false, _t"aims at a spot (set aim by hand)" end
 		local tgt = self:actResolveTarget(step, t)
-		if tgt == "manual" then print("[ACT] talent manual", t.name) self:useTalent(t.id) return true end
-		if tgt == self then print("[ACT] talent self", t.name) self:useTalent(t.id, nil, nil, nil, self) return true end
+		if tgt == "manual" then if dry then return true, "manual" end print("[ACT] talent manual", t.name) self:useTalent(t.id) return true end
+		if tgt == self then if dry then return true, "self" end print("[ACT] talent self", t.name) self:useTalent(t.id, nil, nil, nil, self) return true end
 		if not tgt then return false, _t"no target" end
 		-- a self-centred area talent (range 0 with a radius) is cast on yourself when the
 		-- chosen enemy is inside its reach; it used to be refused as "out of range"
@@ -1744,6 +1747,7 @@ function _M:actDo(step)
 				if e.d <= reach then inside = e.a break end
 			end end
 			if inside then
+				if dry then return true, "cast", inside end
 				print("[ACT] talent around me", t.name, inside.name, directional and "(aimed)" or "")
 				self:useTalent(t.id, nil, nil, nil, directional and inside or self) return true
 			end
@@ -1751,21 +1755,25 @@ function _M:actDo(step)
 		end
 		local d = core.fov.distance(self.x, self.y, tgt.x, tgt.y)
 		if d > self:getTalentRange(t) or not self:hasLOS(tgt.x, tgt.y) then return false, _t"out of range", tgt end
+		if dry then return true, "cast", tgt end
 		print("[ACT] talent", t.name, tgt.name)
 		self:useTalent(t.id, nil, nil, nil, tgt)
 		return true
 	elseif kind == "item" then
 		local o = self:findInAllInventories(step.item, {no_add_name=true, force_id=true, no_count=true})
 		if not o then return false, _t"item missing" end
+		if dry then return true, "item" end
 		print("[ACT] item", step.item)
 		self:hotkeyInventory(step.item)
 		return true
 	elseif kind == "wait" then
+		if dry then return true, "wait" end
 		print("[ACT] wait")
 		self:waitTurn()
 		return true
 	elseif kind == "swap" then
 		if game.key ~= game.normal_key then return false, _t"busy" end
+		if dry then return true, "swap" end
 		print("[ACT] swap weapons")
 		game.key:triggerVirtual("QUICK_SWITCH_WEAPON")
 		return true
@@ -1776,6 +1784,7 @@ function _M:actDo(step)
 		for _, e in ipairs(self:actEnemies()) do if not nearest or e.d < nearest.d then nearest = e end end
 		if not nearest then return false, _t"no enemy" end
 		if nearest.d >= range then return false, _t"far enough" end
+		if dry then return true, "back", nearest.a end
 		return self:touchStepBack(nearest.a)
 	end
 	local tgt = self:actResolveTarget(step)
@@ -1784,6 +1793,7 @@ function _M:actDo(step)
 	if kind == "bump" then
 		if not adj then return false, _t"not adjacent", tgt end
 		if self:reactionToward(tgt) >= 0 then return false, _t"not an enemy", tgt end
+		if dry then return true, "bump", tgt end
 		print("[ACT] bump", tgt.name)
 		self:actMove(tgt.x, tgt.y, tgt)
 		return true
@@ -1791,6 +1801,7 @@ function _M:actDo(step)
 		if adj then return false, _t"already adjacent" end
 		local nx, ny = self:actPathStep(tgt)
 		if not nx then return false, _t"no path" end
+		if dry then return true, "approach", tgt end
 		print("[ACT] approach", nx, ny)
 		if not self:actMove(nx, ny, tgt) then return false, _t"blocked", tgt end
 		return true
@@ -1798,35 +1809,43 @@ function _M:actDo(step)
 	return false, _t"unknown step"
 end
 
+--- One step of the routine: true = the tap is spent, false = move on to the next step.
+-- dry = true only asks: returns true, what ("cast", "bump", "step_in", "wait_for", ...), target
+function _M:actTry(step, r, dry, reasons)
+	if not self:actCondOK(step) then return false end
+	local ok, why, far_target = self:actDo(step, dry)
+	if ok then
+		if dry then return true, why, far_target end
+		self.changed = true self.act_last_ok = true return true
+	end
+	-- a talent on cooldown is skipped outright (no turn spent) unless the routine says otherwise
+	local cooling = why == _t"cooling down" and r.skip_cooldown ~= false
+	if not cooling and step.if_unusable == "approach" and far_target then
+		-- out of range: close in one tile (never onto a creature we are not fighting)
+		local nx, ny = self:actPathStep(far_target)
+		if nx then
+			if dry then return true, "step_in", far_target end
+			print("[ACT] step in", nx, ny, far_target.name)
+			if self:actMove(nx, ny, far_target) then self.changed = true self.act_last_ok = true return true end
+		end
+	end
+	if not cooling and step.if_unusable == "wait" then
+		if dry then return true, "wait_for", far_target end
+		game.logPlayer(self, "Waiting for %s (%s).", self:actStepName(step), why or "")
+		self:waitTurn()
+		return true
+	end
+	if reasons then reasons[#reasons+1] = ("%s: %s"):format(self:actStepName(step), why or "?") end
+	return false
+end
+
 --- One tap of the Act button
 function _M:actStep()
 	if game.key ~= game.normal_key then return end
 	local r = self:actRoutine()
 	local enemies = #self:actEnemies()
-	-- one step: true = the tap is spent, false = move on to the next step
 	local reasons = {}
-	local function try(step)
-		if not self:actCondOK(step) then return false end
-		local ok, why, far_target = self:actDo(step)
-		if ok then self.changed = true self.act_last_ok = true return true end
-		-- a talent on cooldown is skipped outright (no turn spent) unless the routine says otherwise
-		local cooling = why == _t"cooling down" and r.skip_cooldown ~= false
-		if not cooling and step.if_unusable == "approach" and far_target then
-			-- out of range: close in one tile (never onto a creature we are not fighting)
-			local nx, ny = self:actPathStep(far_target)
-			if nx then
-				print("[ACT] step in", nx, ny, far_target.name)
-				if self:actMove(nx, ny, far_target) then self.changed = true self.act_last_ok = true return true end
-			end
-		end
-		if not cooling and step.if_unusable == "wait" then
-			game.logPlayer(self, "Waiting for %s (%s).", self:actStepName(step), why or "")
-			self:waitTurn()
-			return true
-		end
-		reasons[#reasons+1] = ("%s: %s"):format(self:actStepName(step), why or "?")
-		return false
-	end
+	local function try(step) return self:actTry(step, r, false, reasons) end
 	-- nothing to fight: the out-of-combat steps first (keep sustains on, resummon), then explore
 	if enemies == 0 then
 		for _, step in ipairs(r.steps or {}) do
@@ -2025,38 +2044,46 @@ end
 
 --- The step the next tap would run: the position in cycle mode, in priority mode the first
 -- step whose condition holds and that is not cooling / already on (a cheap look, no targeting)
+--- The step a tap would run right now, decided exactly the way the tap decides it (a dry run of
+-- actStep): returns step, what, target; what = "explore" with nobody in view, nil when nothing applies
+-- (Jordan: "can Act always show what it will do if it is pressed in its current state")
 function _M:actNextStep(r)
 	r = r or self:actRoutine()
 	if not r.steps or #r.steps == 0 then return nil end
-	if r.mode == "cycle" then return r.steps[util.bound(r.pos or 1, 1, #r.steps)] end
 	local fighting = #self:actEnemies() > 0
-	for _, st in ipairs(r.steps) do
-		local right_phase = fighting and st.cond ~= "no_enemies" or (not fighting and st.cond == "no_enemies")
-		if right_phase and self:actCondOK(st) then
-			local t = st.kind == "talent" and st.tid and self:knowTalent(st.tid) and self:getTalentFromId(st.tid) or nil
-			local cooling = t and self:isTalentCoolingDown(t) and r.skip_cooldown ~= false
-			local on = t and t.mode == "sustained" and not st.off and self:isTalentActive(t.id)
-			if not cooling and not on then return st end
-		end
+	local function dry(st)
+		local ok, res, what, tgt = pcall(self.actTry, self, st, r, true)
+		if not ok then print("[ACT] preview error", res) return nil end
+		if res then return what or "do", tgt end
 	end
-	return r.steps[1]
+	if not fighting then
+		for _, st in ipairs(r.steps) do
+			if st.cond == "no_enemies" then local what, tgt = dry(st) if what then return st, what, tgt end end
+		end
+		return nil, "explore"
+	end
+	if r.mode == "cycle" then
+		for i = 0, #r.steps - 1 do
+			local st = r.steps[(util.bound(r.pos or 1, 1, #r.steps) - 1 + i) % #r.steps + 1]
+			if st.cond ~= "no_enemies" then local what, tgt = dry(st) if what then return st, what, tgt end end
+		end
+		return nil
+	end
+	for _, st in ipairs(r.steps) do
+		if st.cond ~= "no_enemies" then local what, tgt = dry(st) if what then return st, what, tgt end end
+	end
+	return nil
 end
 
 --- What the next tap will do (for the HUD), cached per turn
 function _M:actPreview()
 	local r = self:actRoutine()
-	local step = self:actNextStep(r)
-	if not step then return nil end
-	local key = table.concat({tostring(game.turn or 0), tostring(self.act_active), tostring(r.pos or 1), tostring(self.x), tostring(self.y), tostring(#r.steps)}, ":")
+	local key = table.concat({tostring(game.turn or 0), tostring(self.act_active), tostring(r.pos or 1), tostring(self.x), tostring(self.y), tostring(#r.steps), tostring(#self:actEnemies())}, ":")
 	if self.act_preview_key ~= key then
-		local t = step.kind == "talent" and step.tid and self:knowTalent(step.tid) and self:getTalentFromId(step.tid) or nil
-		local tgt = nil
-		if step.kind ~= "wait" and step.kind ~= "item" then
-			local ok, res = pcall(self.actResolveTarget, self, step, t)
-			if ok then tgt = res end
-		end
+		local step, what, tgt = self:actNextStep(r)
+		local t = step and step.kind == "talent" and step.tid and self:knowTalent(step.tid) and self:getTalentFromId(step.tid) or nil
 		self.act_preview_key = key
-		self.act_preview = {step=step, t=t, target=(type(tgt) == "table" and tgt ~= self) and tgt or nil, explore=#self:actEnemies() == 0}
+		self.act_preview = {step=step, what=what, t=t, target=(type(tgt) == "table" and tgt ~= self) and tgt or nil, explore=what == "explore"}
 	end
 	return self.act_preview
 end

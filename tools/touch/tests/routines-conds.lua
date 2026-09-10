@@ -7,10 +7,11 @@ return function(T)
 	for _, e in pairs(game.level.entities) do
 		if e.__is_actor and e ~= p and e.x and p:reactionToward(e) < 0 then map:remove(e.x, e.y, Map.ACTOR) game.level:removeEntity(e) end
 	end
-	local function free(x, y) return map:isBound(x, y) and not map:checkEntity(x, y, Map.TERRAIN, "block_move") and not map(x, y, Map.ACTOR) end
+	-- the line to the right must be open to walk and to see (a tree at +2 hid the far vermin once)
+	local function free(x, y) return map:isBound(x, y) and not map:checkEntity(x, y, Map.TERRAIN, "block_move") and not map:checkEntity(x, y, Map.TERRAIN, "block_sight") and not map(x, y, Map.ACTOR) end
 	local placed = false
 	for r = 0, 14 do for x = math.floor(map.w / 2) - r, math.floor(map.w / 2) + r do for y = math.floor(map.h / 2) - r, math.floor(map.h / 2) + r do
-		if not placed and free(x, y) and free(x + 1, y) and free(x + 3, y) then p:move(x, y, true) placed = true end
+		if not placed and free(x, y) and free(x + 1, y) and free(x + 2, y) and free(x + 3, y) then p:move(x, y, true) placed = true end
 	end end if placed then break end end
 	local spawned = {}
 	local function mk(dx, dy)
