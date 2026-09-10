@@ -11,7 +11,7 @@ The author does not plan to maintain it and is looking for someone who wants to 
 
 | | |
 |---|---|
-| ![movement](docs/gifs/move.gif) | **Moving.** Tap a tile to walk there. Drag on the map and the destination lights up under your finger, release to step, hold still to keep walking. With enemies in view only the drag moves you, so a stray tap never costs a turn. The Pan pill turns a one-finger drag into a camera scroll. |
+| ![movement](docs/gifs/move.gif) | **Moving.** Tap a tile to walk there. Drag on the map and the destination lights up under your finger, release to step; holding never moves you. With enemies in view only the drag moves you, so a stray tap never costs a turn. The Pan pill turns a one-finger drag into a camera scroll. |
 | ![auto](docs/gifs/auto.gif) | **Act and AUTO.** Act does the next step of your routine: a bump, a shot, a skill, closing in on its own. AUTO keeps acting and exploring until something needs you: low life, a low resource, an elite in view, a level up, drowning. It asks first if a stop rule already holds. |
 | ![routines](docs/gifs/routines.gif) | **Routines.** A priority list: each tap does the first step that applies. Steps carry a When chip (adjacent, 2+ enemies, life low, target low, no enemies in view, pets below cap), sustains are kept on, and every class starts with a routine built from the way it is played. Cycle mode for fixed combos. |
 | ![pills](docs/gifs/pills.gif) | **Pills.** Descend, Ascend or Enter when you stand on stairs or an exit. Wait with enemies in view. Rest when hurt and alone, running the game's own rest until you tap. Pan whenever AUTO is off. |

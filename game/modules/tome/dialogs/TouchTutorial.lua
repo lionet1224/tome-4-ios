@@ -134,7 +134,7 @@ _M.PAGES = {
 	{
 		title = _t"Moving and the pills",
 		paras = {
-			_t"Drag on the map: the destination lights up under your finger, release to step, hold still at the end to keep walking. With the coast clear a tap walks there too; with enemies in view only the drag moves you.",
+			_t"Drag on the map: the destination lights up under your finger, release to step; holding the finger still never moves you. With the coast clear a tap walks there too; with enemies in view only the drag moves you.",
 			_t"Pills appear beside AUTO when they apply: Descend, Ascend or Enter on stairs and exits, Wait with enemies in view, Rest when you are hurt and alone. Tap them instead of hunting for the tile.",
 			_t"Pan is always there while AUTO is off: tap it, drag the map to look around, tap it again or take a step to stop.",
 		},

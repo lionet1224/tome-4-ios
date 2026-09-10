@@ -2,7 +2,7 @@
 --   tap an enemy       -> it becomes the touch target (gold ring) and the skill strip slides in
 --   tap a strip card   -> cast that talent at the hand-picked target, else aim it by hand
 --   drag on the map    -> preview the destination tile, release to step (the only way to
---                         walk while enemies are in view); hold still at the end to keep going
+--                         walk while enemies are in view); holding never moves, only the release
 --   Skills button      -> opens/closes the drawer (the strip) at will; the box at its left shows
 --                         the target, else the enemy Act would go at (Act alone picks on its own)
 --   "..." button       -> action sheet with everything the right wheel used to hold
@@ -22,8 +22,6 @@ _M.DRAG_DEADZONE = 28
 -- was a tap (thumbs roll a few mm while tapping)
 _M.STEP_MIN_PX = 44
 _M.STEP_MIN_MS = 250
-_M.REPEAT_AFTER_MS = 600
-_M.REPEAT_EVERY_MS = 220
 _M.BTN = 86
 _M.CARD_W, _M.CARD_H = 68, 78
 _M.STRIP_H = 96
@@ -730,10 +728,7 @@ function _M:drag(phase, t, x, y)
 		s.maxd = math.max(s.maxd or 0, d)
 		return true
 	elseif phase == "tick" then
-		if s.dir and now() - s.moved_at >= _M.REPEAT_AFTER_MS and now() - s.last >= _M.REPEAT_EVERY_MS then
-			if #self:enemies() > 0 and s.steps > 0 then return true end -- an enemy came into view: stop walking
-			self:stepOnce(s)
-		end
+		-- holding still never walks: only the release steps (Jordan: "holding in a direction still moves you")
 		return true
 	elseif phase == "end" then
 		self.step = nil

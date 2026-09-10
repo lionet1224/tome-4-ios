@@ -113,7 +113,7 @@ function _M:generateListTouch()
 	end
 	local relayout = function() if self:isTome() and game.uiset and game.uiset.resizeIconsHotkeysToolbar then game.uiset:resizeIconsHotkeysToolbar() end end
 	toggle(_t"Touch wheels", _t"Hold in the left third of the screen for a wheel of your hotkeys, in the right third for actions. Off = the hotbar and the touch row instead.", "wheel", {true, false}, {_t"on", _t"off"}, relayout)
-	toggle(_t"Drag to step", _t"Drag on the map: the destination tile lights up, release to step (hold still to keep walking). Off = dragging pans the camera instead.", "drag_step", {true, false}, {_t"yes", _t"no"})
+	toggle(_t"Drag to step", _t"Drag on the map: the destination tile lights up, release to step. Off = dragging pans the camera instead.", "drag_step", {true, false}, {_t"yes", _t"no"})
 	toggle(_t"Orientation", _t"Auto follows how you hold the phone. Landscape or portrait keeps it that way. Changes apply at once on iOS 16 and later; older versions need a restart.", "orientation", {"auto", "landscape", "portrait"}, {_t"auto", _t"landscape", _t"portrait"}, function() require("engine.TouchInput").applyOrientation() end)
 	toggle(_t"Thumb side", _t"The hand that holds the phone: Act and AUTO sit under that thumb, Skills and More on the other side.", "hand", {"left", "right"}, {_t"left", _t"right"}, relayout)
 	toggle(_t"Wheel opens on", _t"Hold: keep the finger still for a moment. First movement: the wheel opens as soon as the finger moves (dragging the map then only works in the middle third).", "trigger", {"hold", "drag"}, {_t"hold", _t"first movement"})

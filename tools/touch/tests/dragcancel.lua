@@ -32,7 +32,20 @@ return function(T)
 		T.log("after drag", dirx > 0 and "right" or "left", ox, oy, "->", p.x, p.y)
 		if p.x ~= ox + dirx then T.log("BAD a drag did not step once") end
 	else T.log("both sides blocked; step check skipped") end
-	-- a plain tap on that tile still walks there
+	-- holding still in a direction never walks: nothing until the release, then one step
+	dirx = free(1) and 1 or (free(-1) and -1) or nil
+	if not dirx then T.log("both sides blocked; hold check skipped") end
+	if dirx then
+		ox, oy = p.x, p.y
+		TI.fingerDown(1, sx, sy) T.wait(30)
+		for i = 1, 5 do TI.fingerMove(1, sx + 16 * i * dirx, sy) end
+		T.wait(1800)
+		T.log("held 1.8 s", ox, oy, "->", p.x, p.y)
+		if p.x ~= ox or p.y ~= oy then T.log("BAD holding still moved the player") end
+		TI.fingerUp(1, sx + 80 * dirx, sy) T.wait(900)
+		T.log("after release", ox, oy, "->", p.x, p.y)
+		if p.x ~= ox + dirx then T.log("BAD the release did not step once") end
+	end
 	if p.running then p:runStop() end
 	T.log("finished")
 end
