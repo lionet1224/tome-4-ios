@@ -24,6 +24,8 @@ return function(T)
 	p.act_preview_key = nil
 	local pv = p:actPreview()
 	T.log("preview", tostring(pv and pv.step and pv.step.tid), tostring(pv and pv.what), "target", tostring(pv and pv.target and pv.target.name))
+	-- a stale aiming cursor far off the enemy (the phone had x=-1 here): the shot must still go at the enemy
+	if game.target and game.target.target then game.target.target.x, game.target.target.y = -1, p.y + 9 end
 	local life0, turn0, x0 = npc.life, game.turn, p.x
 	p:actStep() T.wait(1200)
 	T.log("after Act: enemy life", life0, "->", npc.life, "turn", turn0, "->", game.turn, "aiming", tostring(game.key ~= game.normal_key), "player x", x0, "->", p.x)

@@ -1764,7 +1764,7 @@ function _M:actDo(step, dry)
 		if d > self:getTalentRange(t) or not self:hasLOS(tgt.x, tgt.y) then return false, _t"out of range", tgt end
 		if dry then return true, "cast", tgt end
 		print("[ACT] talent", t.name, tgt.name)
-		self:actUseTalentAt(t, tgt)
+		if not self:actUseTalentAt(t, tgt) then return false, _t"refused", tgt end
 		return true
 	elseif kind == "item" then
 		local o = self:findInAllInventories(step.item, {no_add_name=true, force_id=true, no_count=true})
@@ -1823,21 +1823,29 @@ end
 -- (Jordan: "the disengage action isn't working")
 function _M:actUseTalentAt(t, tgt)
 	local orig = rawget(self, "getTarget")
+	-- where the cursor was before the cast: a later aim uses the cursor only when the talent
+	-- moved it during this cast (Disengage does); a stale cursor from an earlier aim sent Shoot's
+	-- arrows to x=-1 on the phone (Jordan: "auto is failing to shoot")
+	local gt0 = game.target and game.target.target
+	local sx, sy = gt0 and gt0.x, gt0 and gt0.y
 	local n = 0
 	self.getTarget = function(a, typ)
 		n = n + 1
 		if n == 1 then return tgt.x, tgt.y, tgt end
 		local gt = game.target and game.target.target
-		if gt and gt.x and gt.y and (gt.x ~= tgt.x or gt.y ~= tgt.y) then
+		local moved = gt and gt.x and gt.y and (gt.x ~= sx or gt.y ~= sy) and (gt.x ~= tgt.x or gt.y ~= tgt.y)
+		if moved and game.level.map:isBound(gt.x, gt.y) then
 			print("[ACT] aim", n, "of", t.name, "-> pre-placed", gt.x, gt.y)
 			return gt.x, gt.y, gt.entity
 		end
 		return tgt.x, tgt.y, tgt
 	end
-	local ok, err = pcall(self.useTalent, self, t.id)
+	local ok, res = pcall(self.useTalent, self, t.id)
 	if rawget(self, "getTarget") ~= orig then self.getTarget = orig end
-	if not ok then print("[ACT] cast failed", t.name, tostring(err)) end
-	return ok
+	if not ok then print("[ACT] cast error", t.name, tostring(res)) return false end
+	-- the talent refused (no energy spent): tell the routine so it moves on instead of retrying forever
+	if res == false then print("[ACT] cast refused", t.name) return false end
+	return true
 end
 
 --- One step of the routine: true = the tap is spent, false = move on to the next step.
