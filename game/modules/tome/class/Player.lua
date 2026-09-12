@@ -1711,7 +1711,14 @@ function _M:actDo(step, dry)
 		local t = step.tid and self:knowTalent(step.tid) and self:getTalentFromId(step.tid) or nil
 		if not t then return false, _t"unknown talent" end
 		if self:isTalentCoolingDown(t) then return false, _t"cooling down" end
-		if not self:preUseTalent(t, true, true) then return false, _t"not usable" end
+		if not self:preUseTalent(t, true, true) then
+			-- an empty quiver or pouch: say so, the routine waits a turn to reload (see actTry)
+			-- (Jordan: "shoot on auto isn't working": AUTO stopped with 'Shoot: not usable' once the pouch ran dry)
+			local ammo = self.hasAmmo and self:hasAmmo()
+			local archery = t.id == self.T_SHOOT or (type(t.type) == "table" and type(t.type[1]) == "string" and (t.type[1]:find("archery") or t.type[1]:find("sling") or t.type[1]:find("skirmisher")))
+			if ammo and archery and (ammo.combat.shots_left or 0) <= 0 and not (ammo.infinite or self:attr("infinite_ammo")) then return false, _t"out of ammo" end
+			return false, _t"not usable"
+		end
 		if t.mode == "sustained" then
 			if step.off then
 				if not self:isTalentActive(t.id) then return false, _t"not active" end
@@ -1844,6 +1851,19 @@ function _M:actTry(step, r, dry, reasons)
 	end
 	-- a talent on cooldown is skipped outright (no turn spent) unless the routine says otherwise
 	local cooling = why == _t"cooling down" and r.skip_cooldown ~= false
+	-- out of ammo: a turn of waiting reloads (moving does too), unless an enemy is adjacent,
+	-- in which case the later steps (a bump, a melee skill) get their turn instead
+	if why == _t"out of ammo" then
+		local adjacent = false
+		for _, e in ipairs(self:actEnemies()) do if e.d <= 1 then adjacent = true break end end
+		if not adjacent then
+			if dry then return true, "wait_for", nil end
+			game.logPlayer(self, "Reloading: %s is out of ammo.", self:actStepName(step))
+			print("[ACT] reload wait", self:actStepName(step))
+			self:waitTurn()
+			return true
+		end
+	end
 	if not cooling and step.if_unusable == "approach" and far_target then
 		-- out of range: close in one tile (never onto a creature we are not fighting)
 		local nx, ny = self:actPathStep(far_target)
