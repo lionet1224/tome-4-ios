@@ -1757,7 +1757,7 @@ function _M:actDo(step, dry)
 		if d > self:getTalentRange(t) or not self:hasLOS(tgt.x, tgt.y) then return false, _t"out of range", tgt end
 		if dry then return true, "cast", tgt end
 		print("[ACT] talent", t.name, tgt.name)
-		self:useTalent(t.id, nil, nil, nil, tgt)
+		self:actUseTalentAt(t, tgt)
 		return true
 	elseif kind == "item" then
 		local o = self:findInAllInventories(step.item, {no_add_name=true, force_id=true, no_count=true})
@@ -1807,6 +1807,30 @@ function _M:actDo(step, dry)
 		return true
 	end
 	return false, _t"unknown step"
+end
+
+--- Cast a talent at an enemy the way a routine step does. A forced target would answer every
+-- aim inside the talent with the enemy's square; talents that aim twice (Disengage: the enemy,
+-- then the escape square) then fail. So the first aim gets the enemy and any later aim gets the
+-- talent's own pre-placed cursor (Disengage puts the escape square there before asking).
+-- (Jordan: "the disengage action isn't working")
+function _M:actUseTalentAt(t, tgt)
+	local orig = rawget(self, "getTarget")
+	local n = 0
+	self.getTarget = function(a, typ)
+		n = n + 1
+		if n == 1 then return tgt.x, tgt.y, tgt end
+		local gt = game.target and game.target.target
+		if gt and gt.x and gt.y and (gt.x ~= tgt.x or gt.y ~= tgt.y) then
+			print("[ACT] aim", n, "of", t.name, "-> pre-placed", gt.x, gt.y)
+			return gt.x, gt.y, gt.entity
+		end
+		return tgt.x, tgt.y, tgt
+	end
+	local ok, err = pcall(self.useTalent, self, t.id)
+	if rawget(self, "getTarget") ~= orig then self.getTarget = orig end
+	if not ok then print("[ACT] cast failed", t.name, tostring(err)) end
+	return ok
 end
 
 --- One step of the routine: true = the tap is spent, false = move on to the next step.
