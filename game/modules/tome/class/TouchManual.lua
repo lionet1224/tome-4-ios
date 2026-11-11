@@ -23,8 +23,10 @@ _M.DRAG_DEADZONE = 28
 _M.STEP_MIN_PX = 44
 _M.STEP_MIN_MS = 250
 _M.BTN = 86
-_M.CARD_W, _M.CARD_H = 68, 78
-_M.STRIP_H = 96
+-- the Act / AUTO / Cast / Cancel squares
+_M.DOCK = 100
+_M.CARD_W, _M.CARD_H = 68, 74
+_M.STRIP_H = 88
 -- context pills beside AUTO: "Descend" (on a transition tile) and "Wait" (enemies in view)
 _M.CTX_W, _M.CTX_H = 150, 44
 -- the Pan pill (camera drag mode) beside the context pills, shown whenever AUTO is off
@@ -33,7 +35,13 @@ _M.PAN_W = 96
 local DIRS = {[-1]={[-1]=7, [0]=4, [1]=1}, [0]={[-1]=8, [0]=5, [1]=2}, [1]={[-1]=9, [0]=6, [1]=3}}
 
 -- the touch layer asks whether a one-finger map drag should scroll the camera (the Pan pill)
-TouchInput.pan_active = function() local m = game and game.uiset and game.uiset.touch_manual return m and m.pan_mode and true or false end
+-- (the mode is a saved setting: it stays on across steps, dialogs and restarts until the pill is tapped again)
+TouchInput.pan_active = function()
+	local m = game and game.uiset and game.uiset.touch_manual
+	if not (m and m.pan_mode) then return false end
+	local p = game.player
+	return not (p and p.auto_act) and game.key == game.normal_key
+end
 
 local function now() return core.game.getTime() end
 local function quad(x, y, w, h, r, g, b, a) core.display.drawQuad(x, y, w, h, r, g, b, a or 255) end
@@ -43,8 +51,23 @@ local function frame(x, y, w, h, r, g, b, a, t)
 end
 local function inRect(r, x, y) return r and x >= r.x and x < r.x + r.w and y >= r.y and y < r.y + r.h end
 
+--- Cut a name to `maxw` width units (a CJK character counts 2) without splitting a UTF-8 sequence
+local function clip(s, maxw)
+	s = tostring(s)
+	local out, w = {}, 0
+	for ch in s:gmatch("[%z\1-\127\194-\244][\128-\191]*") do
+		local cw = #ch > 1 and 2 or 1
+		if w + cw > maxw then return table.concat(out) .. "." end
+		out[#out+1] = ch
+		w = w + cw
+	end
+	return s
+end
+_M.clip = clip
+
 function _M:init(uiset)
 	self.uiset = uiset
+	self.pan_mode = (config.settings.touch and config.settings.touch.pan_mode) and true or nil
 	self.strip_scroll = 0
 	self.rects = {}
 	self.zones = {}
@@ -189,7 +212,7 @@ end
 ---------------------------------------------------------------------------
 
 --- Height of the routine strip drawn above Act by the uiset (boxes + name)
-_M.ACT_STRIP_H = 76
+_M.ACT_STRIP_H = 60
 
 --- Screen rectangles for this frame. This is the one place the touch HUD is
 -- laid out: the uiset draws Act/AUTO (and Cast/Cancel) at r.act / r.auto.
@@ -198,13 +221,13 @@ _M.ACT_STRIP_H = 76
 function _M:layout()
 	local sa = TouchInput.safeArea()
 	local w, h = game.w, game.h
-	local bw, gap = 112, 10
+	local bw, gap = _M.DOCK, 10
 	local portrait = TouchInput.portrait()
 	local left = TouchInput.hand() == "left"
 	local fs = _M.BTN
 	local r = self.rects
 	r.portrait, r.hand = portrait, left and "left" or "right"
-	local dock_y = h - sa.b - 24 - bw
+	local dock_y = h - sa.b - 12 - bw
 	local dock_bottom = dock_y + bw
 	-- Act under the thumb, AUTO beside it towards the middle
 	local act_x, auto_x
@@ -228,10 +251,11 @@ function _M:layout()
 		local sk_x = left and (w - sa.r - 24 - fs) or (sa.l + 24)
 		r.skills = nil
 		r.more = {x=sk_x, y=dock_bottom - 44, w=fs, h=44}
-		r.levelup = {x=sk_x, y=r.more.y - 8 - 44, w=fs, h=44}
-		local strip_y = dock_y - _M.ACT_STRIP_H - 8 - _M.STRIP_H
+		r.inspect = {x=sk_x, y=r.more.y - 8 - 44, w=fs, h=44}
+		r.levelup = {x=sk_x, y=r.inspect.y - 8 - 44, w=fs, h=44}
+		local strip_y = dock_y - _M.ACT_STRIP_H - 6 - _M.STRIP_H
 		r.strip = {x=sa.l + 12, y=strip_y, w=w - sa.l - sa.r - 24, h=_M.STRIP_H}
-		r.band_y = strip_y - 8
+		r.band_y = strip_y - 6
 		-- context pills (Descend / Wait) beside AUTO towards the middle of the dock row
 		local cx = left and (auto_x + bw + 12) or (auto_x - 12 - _M.CTX_W)
 		if r.classic then cx = left and act_x or (act_x + bw - _M.CTX_W) end
@@ -245,9 +269,10 @@ function _M:layout()
 		local sk_x = left and (auto_x + bw + gap) or (auto_x - gap - fs)
 		r.skills = {x=sk_x, y=dock_bottom - fs, w=fs, h=fs}
 		r.more = {x=sk_x, y=r.skills.y - 8 - 44, w=fs, h=44}
-		-- a glowing Level up pill above More whenever points are unspent
-		r.levelup = {x=sk_x, y=r.more.y - 8 - 44, w=fs, h=44}
-		local sy = h - sa.b - 24 - _M.STRIP_H
+		r.inspect = {x=sk_x, y=r.more.y - 8 - 44, w=fs, h=44}
+		-- a glowing Level up pill above the magnifier whenever points are unspent
+		r.levelup = {x=sk_x, y=r.inspect.y - 8 - 44, w=fs, h=44}
+		local sy = h - sa.b - 12 - _M.STRIP_H
 		if left then
 			local x0 = sk_x + fs + 12
 			r.strip = {x=x0, y=sy, w=(w - sa.r - 120) - x0, h=_M.STRIP_H}
@@ -292,7 +317,7 @@ function _M:hudHit(x, y)
 	local r = self.rects
 	if r.portrait and r.band_y and y >= r.band_y then return true end -- the whole band
 	if inRect(r.strip, x, y) and self:stripShown() then return true end
-	if inRect(r.more, x, y) or inRect(r.skills, x, y) then return true end
+	if inRect(r.more, x, y) or inRect(r.skills, x, y) or inRect(r.inspect, x, y) then return true end
 	if not r.classic and (inRect(r.act, x, y) or inRect(r.auto, x, y)) then return true end
 	if self:levelUpPending() and inRect(r.levelup, x, y) then return true end
 	if inRect(r.ctx_exit, x, y) or inRect(r.ctx_wait, x, y) or (self.ctx_pan_shown and inRect(r.ctx_pan, x, y)) then return true end
@@ -326,6 +351,7 @@ end
 
 --- Called by the uiset while a dialog is open: nothing of ours must catch taps
 function _M:hide()
+	if self.inspect_mode then self:setInspectMode(false, "hidden") end
 	for name in pairs(self.zones) do self:dropZone(name) end
 	self.rects = {}
 end
@@ -403,6 +429,73 @@ function _M:displayMore()
 	self:label("...", r.x + r.w / 2, r.y + r.h / 2 - 4, 1.4, 0.9, 0.87, 0.78, 1)
 	self:zone("touch_more", r, function(button) if button == "left" then self:openMore() end end)
 	self:displayLevelUp()
+end
+
+--- The magnifier: while it is lit, the next tap on the map shows that tile's details in a dialog
+function _M:setInspectMode(on, why)
+	if (self.inspect_mode and true or false) == (on and true or false) then return end
+	self.inspect_mode = on or nil
+	self.band_dirty = true
+	print("[TOUCH] inspect mode", on and "on" or "off", why or "")
+end
+
+function _M:displayInspect()
+	local r = self.rects.inspect
+	if not r then self:dropZone("touch_inspect") return end
+	local on = self.inspect_mode
+	local down = K.pressed(r.x, r.y, r.w, r.h)
+	if on then
+		quad(r.x, r.y, r.w, r.h, 80, 62, 22, 235)
+		frame(r.x, r.y, r.w, r.h, 210, 170, 74, 255, 2)
+	else
+		quad(r.x, r.y, r.w, r.h, down and 43 or 20, down and 39 or 22, down and 24 or 28, 225)
+		if down then frame(r.x, r.y, r.w, r.h, 210, 170, 74, 255, 2) else frame(r.x, r.y, r.w, r.h, 58, 61, 70, 255, 2) end
+	end
+	-- a magnifying glass: a ring and a handle
+	local cr, cg, cb = 232, 224, 200
+	if on then cr, cg, cb = 255, 224, 140 end
+	local cx, cy, rad = r.x + r.w / 2 - 4, r.y + r.h / 2 - 4, 10
+	for i = 0, 27 do
+		local a = i * math.pi / 14
+		quad(math.floor(cx + math.cos(a) * rad - 1.5), math.floor(cy + math.sin(a) * rad - 1.5), 3, 3, cr, cg, cb, 255)
+	end
+	for i = 0, 9 do quad(math.floor(cx + 7 + i), math.floor(cy + 7 + i), 4, 4, cr, cg, cb, 255) end
+	self:zone("touch_inspect", r, function(button) if button == "left" then self:setInspectMode(not self.inspect_mode) end end)
+end
+
+--- A gold border round the map and a hint while the magnifier is armed
+function _M:displayInspectOverlay()
+	if not self.inspect_mode then return end
+	local r = self.rects
+	local bottom = (r.portrait and r.band_y) or game.h
+	local sa = TouchInput.safeArea()
+	local a = 150 + math.floor(80 * math.sin(now() / 220))
+	frame(0, 0, game.w, bottom, 240, 200, 80, a, 4)
+	local y = sa.t + 150
+	self:label(_t"Tap something to inspect", game.w / 2, y, 0.8, 1, 0.9, 0.55, 1)
+end
+
+--- Open a dialog with everything the map tooltip would say about that tile
+function _M:inspectTile(tx, ty)
+	local map = game.level and game.level.map
+	if not map or not tx or not ty or tx < 0 or ty < 0 or tx >= map.w or ty >= map.h then return false end
+	if not (map.seens(tx, ty) or map.remembers(tx, ty)) then return false end
+	local ok, tt = pcall(game.tooltip.getTooltipAtMap, game.tooltip, tx, ty)
+	if not ok then print("[TOUCH] inspect failed", tostring(tt)) return false end
+	if not tt then return false end
+	local ts = tstring{}
+	for _, part in ipairs(tt) do
+		if type(part) == "string" then part = part:toTString() end
+		if type(part) == "table" and part.is_tstring then
+			if #ts > 0 then ts:add(true, "---", true) end
+			ts:merge(part)
+		end
+	end
+	if #ts == 0 then return false end
+	print("[TOUCH] inspect", tx, ty)
+	self:setInspectMode(false, "done")
+	game:registerDialog(require("mod.dialogs.TouchInspect").new(_t"Details", ts))
+	return true
 end
 
 function _M:levelUpPending()
@@ -502,25 +595,23 @@ function _M:displayCtx()
 			else print("[TOUCH] context pill: wait") game.key:triggerVirtual("MOVE_STAY") end
 		end)
 	else self:dropZone("touch_ctx_wait") end
-	-- Pan: one-finger drags scroll the camera until the pill is tapped again or you step
+	-- Pan: one-finger drags scroll the camera until the pill is tapped again
 	local p = game.player
-	if self.pan_mode and self.pan_from and p and (p.x ~= self.pan_from.x or p.y ~= self.pan_from.y) then self:setPanMode(false, "stepped") end
 	self.ctx_pan_shown = r.ctx_pan and not (p and p.auto_act) and game.key == game.normal_key
 	if self.ctx_pan_shown then
 		self:displayCtxPill("touch_ctx_pan", r.ctx_pan, self.pan_mode and _t"Panning" or _t"Pan", function() self:setPanMode(not self.pan_mode) end, self.pan_mode)
 	else
 		self:dropZone("touch_ctx_pan")
-		if self.pan_mode then self:setPanMode(false, "hidden") end
 	end
 end
 
 function _M:setPanMode(on, why)
 	if (self.pan_mode and true or false) == (on and true or false) then return end
 	self.pan_mode = on or nil
-	self.pan_from = on and game.player and {x=game.player.x, y=game.player.y} or nil
 	self.band_dirty = true
 	print("[TOUCH] pan mode", on and "on" or "off", why or "")
-	if on then game.logPlayer(game.player, "#GOLD#Pan:#LAST# drag the map to look around; tap Pan again or step to stop.") end
+	require("mod.class.TouchWheel").set("pan_mode", on and true or false)
+	if on then game.logPlayer(game.player, "#GOLD#Pan:#LAST# drag the map to look around; tap Pan again to stop.") end
 end
 
 ---------------------------------------------------------------------------
@@ -568,8 +659,7 @@ function _M:displayStrip()
 	self.strip_who_rect = who and {x=r.x, y=r.y, w=12 + who_w, h=r.h} or nil
 	if who then
 		t = who
-		local nm = t.name or "?"
-		if #nm > 18 then nm = nm:sub(1, 17).."." end
+		local nm = clip(t.name or "?", 18)
 		if auto then self:label(nm, cx, r.y + 24, 0.8, 0.9, 0.87, 0.78, 1)
 		else self:label(nm, cx, r.y + 24, 0.8, 0.94, 0.83, 0.54, 1) end
 		if portrait and not auto then
@@ -583,16 +673,11 @@ function _M:displayStrip()
 		end
 		local rank = (type(t.TextRank) == "function" and select(1, t:TextRank())) or (t.rank and tostring(t.rank)) or ""
 		local life = t.max_life and t.max_life > 0 and math.floor(100 * t.life / t.max_life) or 0
-		local sub = ("L%d %s · %d%%"):format(t.level or 1, tostring(rank):gsub("#[^#]*#", ""), life)
-		if #sub > 26 then sub = sub:sub(1, 25) end
-		self:label(sub, cx, r.y + 52, 0.55, 0.56, 0.53, 0.47, 1)
-		if auto then self:label(_t"Act's pick · tap for details", cx, r.y + 74, 0.5, 0.56, 0.53, 0.47, 1)
-		else self:label(_t"tap name for details", cx, r.y + 74, 0.5, 0.94, 0.83, 0.54, 1) end
+		local sub = ("L%d %s · %d%%"):format(t.level or 1, (tostring(rank):gsub("#[^#]*#", "")), life)
+		self:label(clip(sub, 26), cx, r.y + 56, 0.62, 0.7, 0.67, 0.6, 1)
 	else
 		self.strip_clear_rect = nil
-		self:label(_t"No target", cx, r.y + 30, 0.8, 0.9, 0.87, 0.78, 1)
-		local n = #self:enemies()
-		self:label(_t"tap a skill to aim it", cx, r.y + 60, 0.5, 0.56, 0.53, 0.47, 1)
+		self:label(_t"No target", cx, r.y + r.h / 2, 0.8, 0.9, 0.87, 0.78, 1)
 	end
 	-- cards, scrolling by drag when they do not fit
 	local list = self:stripTalents()
@@ -633,9 +718,8 @@ function _M:displayStrip()
 					frame(x, y, cw, ch, 120, 170, 210, 255, 2)
 				end
 			end
-			local n = e.t and e.t.name or e.name or "?"
-			if #n > 9 then n = n:sub(1, 8).."." end
-			self:label(n, x + cw / 2, y + ch - 12, 0.5, 0.9, 0.87, 0.78, 1)
+			local n = clip(e.t and e.t.name or e.name or "?", 8)
+			self:label(n, x + cw / 2, y + ch - 11, 0.58, 0.9, 0.87, 0.78, 1)
 			self.strip_rects[i] = {x=x, y=y, w=cw, h=ch, tid=e.tid, item=e.item}
 		end
 	end
@@ -861,9 +945,11 @@ function _M:display()
 	self:autoBind()
 	self:flushPendingStep()
 	self:displayTarget()
+	self:displayInspectOverlay()
 	if not self.rects.classic then self:displayStepPreview() end
 	self:displaySkills()
 	self:displayMore()
+	self:displayInspect()
 	self:displayCtx()
 	self:displayStrip()
 	-- what the test harness reads
@@ -893,7 +979,7 @@ end
 function _M:bandKey()
 	local r = self.rects
 	local who = self:target() or self:nearestEnemy()
-	return ("%d:%d:%d:%s:%s:%s:%s:%d"):format(game.w, game.h, r.band_y or 0, r.hand or "", tostring(self.strip_scroll or 0), tostring(self.drawer_open),
+	return ("%d:%d:%d:%s:%s:%s:%s:%s:%d"):format(game.w, game.h, r.band_y or 0, r.hand or "", tostring(self.strip_scroll or 0), tostring(self.drawer_open), tostring(self.inspect_mode or false),
 		who and tostring(who.uid) or "", who and math.floor(100 * (who.life or 0) / math.max(1, who.max_life or 1)) or 0)
 end
 
@@ -937,6 +1023,7 @@ function _M:displayLive()
 	self:autoBind()
 	self:flushPendingStep()
 	self:displayTarget()
+	self:displayInspectOverlay()
 	self:displayStepPreview()
 end
 
@@ -945,4 +1032,5 @@ function _M:displayQuiet()
 	if not game.level or not game.player then return end
 	self:flushPendingStep()
 	self:displayTarget()
+	self:displayInspectOverlay()
 end

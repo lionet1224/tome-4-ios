@@ -301,7 +301,7 @@ function _M:displayAtMap(tmx, tmy, mx, my, text, force, nb_keyframes)
 		if my > y2 - self.h then my = y2 - self.h end
 		-- iOS port: while aiming, keep clear of the Cast / Cancel buttons (bottom right)
 		if require("engine.TouchInput").active() and game.targetmode_key and game.key == game.targetmode_key then
-			local bx, by = game.w - 24 - 2 * 112 - 10, game.h - 24 - 112
+			local bx, by = game.w - 24 - 2 * 100 - 10, game.h - 12 - 100
 			if mx + self.w > bx and my + self.h > by then
 				if bx - self.w - 8 >= x1 then mx = bx - self.w - 8 else my = math.max(y1, by - self.h - 8) end
 			end

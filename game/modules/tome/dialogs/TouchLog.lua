@@ -32,7 +32,7 @@ function Chips:generate()
 	self.mouse:reset()
 	self.key:reset()
 	-- shrink padding, then font, until the row fits
-	for _, try in ipairs{{17, 26, 6}, {17, 14, 4}, {15, 12, 4}, {13, 10, 3}} do
+	for _, try in ipairs{{17, 26, 6}, {17, 14, 4}, {16, 12, 4}, {15, 10, 3}} do
 		self.size = try[1]
 		local x = 0
 		for _, it in ipairs(self.items) do
@@ -68,6 +68,7 @@ end
 function _M:init(title, shadow, log, chat)
 	self.log = log or (game.uiset and game.uiset.logdisplay)
 	self.chat = chat or profile.chat
+	self.no_close_bar = true -- has its own Close button
 	Dialog.init(self, title or _t"Message log", game.w * 0.96, game.h * 0.96)
 
 	local bigfont = K.font(22)

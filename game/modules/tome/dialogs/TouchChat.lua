@@ -263,7 +263,7 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 		local ys = 48
 		local yx, yy = x + self.iw - ys - 12, y + 12
 		pcall(you.toScreen, you, self.tiles, yx, yy, ys, ys)
-		local d = text(_t"You", 12, 142, 136, 120, true)
+		local d = text(_t"You", 14, 142, 136, 120, true)
 		if d then draw(d, yx + (ys - d.w) / 2, yy + ys + 4) end
 		return
 	end
@@ -287,7 +287,7 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 		local ys = 56
 		local yx, yy = x + (pw - ys) / 2, y + self.ih - ys - 26
 		pcall(you.toScreen, you, self.tiles, yx, yy, ys, ys)
-		local d = text(_t"You", 12, 142, 136, 120, true)
+		local d = text(_t"You", 14, 142, 136, 120, true)
 		if d then draw(d, x + (pw - d.w) / 2, yy + ys + 4) end
 	end
 end

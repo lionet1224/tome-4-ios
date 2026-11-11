@@ -174,10 +174,10 @@ function _M:drawIcon(e, x, y, size, tid, dim)
 	-- wheel badge: the slot number in a small gold tag
 	local slot = tid and self:slotOf(tid)
 	if slot then
-		local d = text(tostring(slot), 11, 27, 21, 16, true)
+		local d = text(tostring(slot), 14, 27, 21, 16, true)
 		if d then
-			quad(x + size - d.w - 6, y + size - 16, d.w + 6, 16, GOLD)
-			draw(d, x + size - d.w - 3, y + size - 15)
+			quad(x + size - d.w - 6, y + size - 18, d.w + 6, 18, GOLD)
+			draw(d, x + size - d.w - 3, y + size - 18)
 		end
 	end
 end
@@ -360,12 +360,10 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	local maxw = self.detail_w - (tx - dx) - 12
 	draw(text(e.cname, 22, 240, 212, 138, true, maxw), tx, y + 16)
 	local sc = e.ok and {123, 211, 137} or {224, 122, 106}
-	draw(text(e.status, 13, sc[1], sc[2], sc[3], false, maxw), tx, y + 48)
-	if self.mode == "slots" then
-		draw(text(_t"Tap a slot: this is the order of the skill drawer", 13, 142, 136, 120, false, maxw), tx, y + 68)
-	else
+	draw(text(e.status, 15, sc[1], sc[2], sc[3], false, maxw), tx, y + 46)
+	if self.mode ~= "slots" then
 		local slot = self:slotOf(e.talent)
-		draw(text(slot and ("On the wheel: slot %d, page %d"):tformat(slot, math.floor((slot - 1) / _M.SLOTS_PER_PAGE) + 1) or _t"Not on the bar", 13, 142, 136, 120, false, maxw), tx, y + 68)
+		draw(text(slot and ("On the wheel: slot %d, page %d"):tformat(slot, math.floor((slot - 1) / _M.SLOTS_PER_PAGE) + 1) or _t"Not on the bar", 15, 142, 136, 120, false, maxw), tx, y + 67)
 	end
 end
 
@@ -388,12 +386,10 @@ function _M:innerDisplayBackPortrait(x, y)
 	local maxw = self.iw - (tx - x) - 12
 	draw(text(e.cname, 22, 240, 212, 138, true, maxw), tx, sy + 16)
 	local sc = e.ok and {123, 211, 137} or {224, 122, 106}
-	draw(text(e.status, 13, sc[1], sc[2], sc[3], false, maxw), tx, sy + 48)
-	if self.mode == "slots" then
-		draw(text(_t"Tap a slot: this is the order of the skill drawer", 13, 142, 136, 120, false, maxw), tx, sy + 68)
-	else
+	draw(text(e.status, 15, sc[1], sc[2], sc[3], false, maxw), tx, sy + 46)
+	if self.mode ~= "slots" then
 		local slot = self:slotOf(e.talent)
-		draw(text(slot and ("On the wheel: slot %d, page %d"):tformat(slot, math.floor((slot - 1) / _M.SLOTS_PER_PAGE) + 1) or _t"Not on the bar", 13, 142, 136, 120, false, maxw), tx, sy + 68)
+		draw(text(slot and ("On the wheel: slot %d, page %d"):tformat(slot, math.floor((slot - 1) / _M.SLOTS_PER_PAGE) + 1) or _t"Not on the bar", 15, 142, 136, 120, false, maxw), tx, sy + 67)
 	end
 end
 

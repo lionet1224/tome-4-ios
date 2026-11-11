@@ -23,6 +23,7 @@ function _M:init(mm_mode)
 	self.map = map
 	self.portrait = require("engine.TouchInput").portrait()
 
+	self.no_close_bar = true -- has its own Close button
 	Dialog.init(self, ("Map: #0080FF#%s"):tformat(game.old_zone_name or (game.zone and game.zone.name) or ""), game.w * 0.96, game.h * 0.96)
 
 	local gap = 12
@@ -35,11 +36,14 @@ function _M:init(mm_mode)
 		self.map_w = self.iw - PANE_W - gap
 		self.map_h = self.ih
 	end
-	-- fit the whole level if we can; otherwise a readable size and panning
-	self.fit_size = math.max(2, math.floor(math.min(self.map_w / map.w, self.map_h / map.h)))
-	self.bsize = util.bound(self.fit_size, 6, 24)
+	-- fit what is explored (not the whole, mostly black, level) into the pane
+	local x0, y0, x1, y1 = self:knownBounds()
+	self.known = {x0, y0, x1, y1}
+	local bw, bh = x1 - x0 + 1, y1 - y0 + 1
+	self.fit_size = math.max(2, math.floor(math.min(self.map_w / bw, self.map_h / bh)))
+	self.bsize = util.bound(self.fit_size, 6, 36)
 	self.scroll_x, self.scroll_y = 0, 0
-	self:centerOn(game.player.x, game.player.y)
+	self:centerOn(math.floor((x0 + x1) / 2), math.floor((y0 + y1) / 2))
 
 	local mc = GenericContainer.new{width=self.map_w, height=self.map_h}
 	self.c_map = mc
@@ -125,6 +129,31 @@ function _M:touch_reopen()
 	return nd
 end
 
+-- bounding box of the tiles the player has seen or remembers, padded a little and
+-- never smaller than 16x16 so a fresh level is not blown up absurdly
+function _M:knownBounds()
+	local map = self.map
+	local x0, y0, x1, y1 = map.w, map.h, -1, -1
+	for x = 0, map.w - 1 do for y = 0, map.h - 1 do
+		if map.remembers(x, y) or map.seens(x, y) then
+			if x < x0 then x0 = x end
+			if y < y0 then y0 = y end
+			if x > x1 then x1 = x end
+			if y > y1 then y1 = y end
+		end
+	end end
+	local p = game.player
+	if p and p.x then
+		x0, y0, x1, y1 = math.min(x0, p.x), math.min(y0, p.y), math.max(x1, p.x), math.max(y1, p.y)
+	end
+	if x1 < 0 then return 0, 0, map.w - 1, map.h - 1 end
+	x0, y0, x1, y1 = x0 - 3, y0 - 3, x1 + 3, y1 + 3
+	local mn = 16
+	if x1 - x0 + 1 < mn then local d = mn - (x1 - x0 + 1) x0, x1 = x0 - math.floor(d / 2), x1 + math.ceil(d / 2) end
+	if y1 - y0 + 1 < mn then local d = mn - (y1 - y0 + 1) y0, y1 = y0 - math.floor(d / 2), y1 + math.ceil(d / 2) end
+	return math.max(0, x0), math.max(0, y0), math.min(map.w - 1, x1), math.min(map.h - 1, y1)
+end
+
 -- tiles visible in the pane at the current zoom
 function _M:tilesShown()
 	return math.floor(self.map_w / self.bsize), math.floor(self.map_h / self.bsize)
@@ -145,14 +174,22 @@ end
 
 function _M:zoom(dir)
 	local cx, cy = self:tileAt(self.map_w / 2, self.map_h / 2)
-	self.bsize = util.bound(self.bsize + dir * 3, 4, 40)
+	self.bsize = util.bound(self.bsize + dir * 3, math.min(self.fit_size, 40), 40)
 	self.map._map:setupMiniMapGridSize(self.bsize)
 	if cx then self:centerOn(cx, cy) else self:clampScroll() end
 end
 
+-- when the whole level is smaller than the pane it is centred: pixel offset of the grid
+function _M:gridOffset()
+	local ox = math.max(0, math.floor((self.map_w - self.map.w * self.bsize) / 2))
+	local oy = math.max(0, math.floor((self.map_h - self.map.h * self.bsize) / 2))
+	return ox, oy
+end
+
 -- pane-local pixel -> map tile (nil when outside the level)
 function _M:tileAt(bx, by)
-	local tx, ty = self.scroll_x + math.floor(bx / self.bsize), self.scroll_y + math.floor(by / self.bsize)
+	local ox, oy = self:gridOffset()
+	local tx, ty = self.scroll_x + math.floor((bx - ox) / self.bsize), self.scroll_y + math.floor((by - oy) / self.bsize)
 	if tx < 0 or ty < 0 or tx >= self.map.w or ty >= self.map.h then return nil end
 	return tx, ty
 end
@@ -231,9 +268,12 @@ function _M:innerDisplay(x, y, nb_keyframes)
 	end
 
 	local tw, th = self:tilesShown()
+	tw, th = math.min(tw, map.w), math.min(th, map.h)
+	local ox, oy = self:gridOffset()
 	K.quad(mx, my, self.map_w, self.map_h, {12, 13, 16})
-	core.display.glScissor(true, mx, my, self.map_w, self.map_h)
-	map:minimapDisplay(mx, my, self.scroll_x, self.scroll_y, tw, th, 0.95)
+	core.display.glScissor(true, self.map_sx, self.map_sy, self.map_w, self.map_h)
+	map:minimapDisplay(mx + ox, my + oy, self.scroll_x, self.scroll_y, tw, th, 0.95)
+	mx, my = mx + ox, my + oy
 	-- the player, ringed so it reads at any zoom
 	local p = game.player
 	if p and p.x then
@@ -251,5 +291,5 @@ function _M:innerDisplay(x, y, nb_keyframes)
 		K.frame(cx - self.bsize / 2 - 2, cy - self.bsize / 2 - 2, self.bsize + 4, self.bsize + 4, {123, 211, 137}, 2)
 	end
 	core.display.glScissor(false)
-	K.frame(mx, my, self.map_w, self.map_h, {40, 43, 52}, 1)
+	K.frame(mx - ox, my - oy, self.map_w, self.map_h, {40, 43, 52}, 1)
 end

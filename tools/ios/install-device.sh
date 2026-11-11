@@ -12,7 +12,7 @@ TEAM="${APPLE_TEAM:-}"
 [ -z "$TEAM" ] && [ -f "$ROOT/tools/ios/team.txt" ] && TEAM=$(tr -d '[:space:]' < "$ROOT/tools/ios/team.txt")
 [ -z "$TEAM" ] && { echo "no Apple team id: write it to tools/ios/team.txt or export APPLE_TEAM (10 characters, from Xcode > Settings > Accounts)"; exit 1; }
 [ "${1:-}" = "--no-engine" ] || PLATFORM=dev bash "$ROOT/tools/ios/build-engine.sh"
-DEV=$(xcrun devicectl list devices 2>/dev/null | grep -E "connected|available" | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}' | head -1)
+DEV=$(xcrun devicectl list devices 2>/dev/null | grep -E "connected|available" | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}|[0-9A-F]{8}-[0-9A-F]{16}' | head -1)
 [ -z "$DEV" ] && { echo "no connected iPhone (plug it in, unlock, trust this Mac)"; exit 1; }
 XDEST=$(cd "$XC" && xcodebuild -project ToME.xcodeproj -scheme ToME -showdestinations 2>/dev/null | grep 'platform:iOS, arch' | grep -oE 'id:[0-9A-F-]+' | cut -d: -f2 | head -1)
 echo "[install] device $DEV (xcode dest $XDEST)"
@@ -33,5 +33,5 @@ if ! codesign --verify --deep --strict "$APP" >/dev/null 2>&1; then
 fi
 codesign --verify --deep --strict "$APP" || { echo "app signature does not verify - aborting"; exit 1; }
 xcrun devicectl device install app --device "$DEV" "$APP"
-xcrun devicectl device process launch --device "$DEV" org.te4.tome.dev || true
+xcrun devicectl device process launch --device "$DEV" com.lionet.tome || true
 echo "[install] done: Tales of Maj'Eyal is on the phone"

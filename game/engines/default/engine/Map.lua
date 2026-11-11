@@ -159,7 +159,6 @@ function _M:setZoom(zoom, tmx, tmy)
 	self.zoom = _M.zoom
 	self.viewport.mwidth = math.floor(self.viewport.width / (self.tile_w * _M.zoom))
 	self.viewport.mheight = math.floor(self.viewport.height / (self.tile_h * _M.zoom))
-	print("[MAP] setting zoom level", _M.zoom, self.viewport.mwidth, self.viewport.mheight)
 
 	self._map:setZoom(
 		self.tile_w * self.zoom,

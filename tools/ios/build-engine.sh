@@ -79,7 +79,11 @@ done
 for s in "$ROOT"/src/wfc/*.cpp; do compile "$s"; done
 
 echo "=== linking ==="
-clang++ $TARGET -o "$APP/t-engine" "${OBJS[@]}" "$PREFIX/lib/libSDL2main.a" \
+# Device: declare an iOS 18 SDK in the binary. SDL 2.30.9 does not adopt UIScene, and iOS 26+
+# traps at launch (NoSceneLifecycleAdoption) for apps linked against a newer SDK.
+LINK_SDK_COMPAT=()
+[ "$PLATFORM" = dev ] && LINK_SDK_COMPAT=(-Xlinker -platform_version -Xlinker ios -Xlinker $MIN_IOS -Xlinker 18.0)
+clang++ $TARGET "${LINK_SDK_COMPAT[@]}" -o "$APP/t-engine" "${OBJS[@]}" "$PREFIX/lib/libSDL2main.a" \
 	"$PREFIX/lib/libSDL2.a" "$PREFIX/lib/libSDL2_image.a" "$PREFIX/lib/libSDL2_ttf.a" \
 	"$PREFIX/lib/libpng16.a" "$PREFIX/lib/libvorbisfile.a" "$PREFIX/lib/libvorbis.a" \
 	"$PREFIX/lib/libogg.a" "$PREFIX/lib/libluajit-$PLATFORM.a" \
@@ -140,6 +144,7 @@ cat > "$APP/Info.plist" <<'EOF'
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key><true/>
+	<key>CADisableMinimumFrameDurationOnPhone</key><true/>
 </dict>
 </plist>
 EOF

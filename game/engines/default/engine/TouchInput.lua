@@ -328,10 +328,9 @@ function _M.gesture(nb_fingers, x, y, d_rot, d_pinch)
 	if not m or nb_fingers < 2 then return end
 	m.pinch = (m.pinch or 0) + (d_pinch or 0)
 	if math.abs(m.pinch) > 0.015 then m.pinched = true end
-	if m.pinched and _M.on_pinch and math.abs(m.pinch) >= 0.04 then
+	if m.pinched and _M.on_pinch and math.abs(m.pinch) >= 0.012 then
 		local delta = m.pinch * 2.5
 		m.pinch = 0
-		print("[TOUCH] pinch zoom", delta)
 		pcall(_M.on_pinch, delta)
 	end
 end

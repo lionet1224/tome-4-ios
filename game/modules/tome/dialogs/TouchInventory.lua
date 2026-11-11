@@ -51,7 +51,7 @@ function Doll:generate()
 	self.key:reset()
 	self.frame = self:getUITexture(self.doll.itemframe)
 	self.frame_sel = self:getUITexture(self.doll.itemframe_sel)
-	self.small = core.display.newFont(FontPackage:getFont("default"), 12)
+	self.small = core.display.newFont(FontPackage:getFont("default"), 14)
 	self.labels = {}
 	self.mouse:registerZone(0, 0, self.w, self.h, function(button, x, y, xrel, yrel, bx, by, event)
 		if event == "motion" and self.on_drag and not self.dragging then
@@ -126,7 +126,7 @@ function Doll:display(x, y, nb_keyframes, screen_x, screen_y)
 			if back then local okb, bt = pcall(self.getUITexture, self, back) if okb and bt then bt.t:toScreenFull(bx + 8, by + 8, self.box - 16, self.box - 16, bt.tw, bt.th, 1, 1, 1, 0.35) end end
 		end
 		local name = tostring(s.def.name or s.def.short_name):lower():gsub("^in ", ""):gsub("^on ", ""):gsub("^around ", "")
-		if #name > 9 then name = name:sub(1, 9) end
+		if #name > 9 then name = require("engine.ui.TouchKit").u8cut(name, 9) end
 		local l = self:label(name)
 		l._tex:toScreenFull(bx + (self.box - l.w) / 2, by + self.box + 1, l.w, l.h, l._tex_w, l._tex_h)
 	end
@@ -227,9 +227,9 @@ function WornGrid:display(x, y, nb_keyframes, screen_x, screen_y)
 		if self.hilite[s] or self.sel == s then K.frame(cx + 1, cy + 1, self.cw - 2, self.ch - 2, K.GOLD, 2) end
 		if s.set2 then
 			-- a small "2" badge: the second weapon set
-			core.display.drawQuad(cx + self.cw - 20, cy + 3, 16, 16, 60, 46, 16, 235)
-			local d = K.text("2", 11, K.GOLD[1], K.GOLD[2], K.GOLD[3], true)
-			if d then K.draw(d, cx + self.cw - 20 + math.floor((16 - d.w) / 2), cy + 3 + math.floor((16 - d.h) / 2)) end
+			core.display.drawQuad(cx + self.cw - 22, cy + 3, 18, 18, 60, 46, 16, 235)
+			local d = K.text("2", 14, K.GOLD[1], K.GOLD[2], K.GOLD[3], true)
+			if d then K.draw(d, cx + self.cw - 22 + math.floor((18 - d.w) / 2), cy + 3 + math.floor((18 - d.h) / 2)) end
 		end
 	end
 end
@@ -250,7 +250,7 @@ function Chips:generate()
 	self.key:reset()
 	self.tex = {}
 	-- lay the chips out; shrink padding then font until the row fits
-	for _, try in ipairs{{17, 26, 6}, {17, 14, 4}, {15, 12, 4}, {13, 10, 3}} do
+	for _, try in ipairs{{17, 26, 6}, {17, 14, 4}, {16, 12, 4}, {15, 10, 3}} do
 		self.font_c = core.display.newFont(FontPackage:getFont("default"), try[1])
 		local x = 0
 		for _, it in ipairs(self.items) do
@@ -294,7 +294,7 @@ end
 function Card:generate()
 	self.mouse:reset() self.key:reset()
 	self.f_title = core.display.newFont(FontPackage:getFont("default"), 22)
-	self.f_small = core.display.newFont(FontPackage:getFont("default"), 14)
+	self.f_small = core.display.newFont(FontPackage:getFont("default"), 15)
 	self.f_row = core.display.newFont(FontPackage:getFont("default"), 17)
 	self.texts = {}
 end
@@ -419,7 +419,7 @@ function _M:build()
 	for _, t in ipairs(TABS) do if t.kind ~= "transmo" or self.actor:attr("has_transmo") then chips[#chips+1] = {title=t.title, kind=t.kind} end end
 	self.c_chips = Chips.new{width=self.list_w, items=chips, default="all", on_change=function(kind) self.tab = kind if self.c_list then self:refresh() end end}
 	-- a strip under the chips for the chest hint (only when the character owns the chest)
-	self.banner_h = self.actor:attr("has_transmo") and 40 or 0
+	self.banner_h = self.actor:attr("has_transmo") and 48 or 0
 	self.c_list = TouchItemList.new{width=self.list_w, height=ph - self.c_chips.h - 6 - self.banner_h, actor=self.actor, scrollbar=true, items={},
 		on_select=function(e) self:selectEntry(e) end, on_use=function(e) self:primary() end, on_drag=function(e) self:startDrag(e) end}
 	local bh = 56
@@ -459,7 +459,7 @@ function _M:buildPortrait()
 	local chips = {}
 	for _, t in ipairs(TABS) do if t.kind ~= "transmo" or self.actor:attr("has_transmo") then chips[#chips+1] = {title=t.short or t.title, kind=t.kind} end end
 	self.c_chips = Chips.new{width=self.iw, items=chips, default="all", on_change=function(kind) self:switchTab(kind) end}
-	self.banner_h = self.actor:attr("has_transmo") and 40 or 0
+	self.banner_h = self.actor:attr("has_transmo") and 48 or 0
 	-- what is worn, always in view between the chips and the list
 	self.c_grid = WornGrid.new{width=self.iw, actor=self.actor, on_select=function(e, slot) self:selectWorn(e, slot) end}
 	self.grid_top = self.c_chips.h + 6 + self.banner_h
@@ -797,7 +797,7 @@ function _M:innerDisplay(x, y, nb_keyframes)
 		local strong = self.chest_mode
 		K.quad(bx, by, self.list_w, self.banner_h - 4, strong and {60, 46, 16} or {29, 31, 38})
 		local msg = strong and _t"Leaving the level: whatever stays in the chest is transmogrified into gold. Keep or wear what you want first." or _t"Items in the chest are transmogrified into gold when you leave the level."
-		for i, l in ipairs(K.wrap(msg, K.font(12), self.list_w - 20, 2)) do K.draw(K.text(l, 12, 240, 220, 150, false, self.list_w - 20), bx + 10, by + 4 + (i - 1) * 16) end
+		for i, l in ipairs(K.wrap(msg, K.font(14), self.list_w - 20, 2)) do K.draw(K.text(l, 14, 240, 220, 150, false, self.list_w - 20), bx + 10, by + 3 + (i - 1) * 19) end
 	end
 	local e = self.drag
 	if not e then return end

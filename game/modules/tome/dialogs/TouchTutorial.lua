@@ -51,7 +51,7 @@ local function hudbox(x, y, w, h, big, small, border, a)
 	K.quad(x, y, w, h, {20, 22, 28}, math.floor(230 * (a or 1)))
 	K.frame(x, y, w, h, border or {58, 61, 70}, 2)
 	if big then centered(big, 26, INK, x + w / 2, y + h / 2 - 26, true, a) end
-	if small then centered(small, 12, MUTE, x + w / 2, y + h - 22, false, a) end
+	if small then centered(small, 14, MUTE, x + w / 2, y + h - 24, false, a) end
 end
 -- a phone shaped frame with a tile grid inside; returns the grid origin and tile size
 local function phone(x, y, w, h)
@@ -82,10 +82,10 @@ _M.PAGES = {
 			local ax, ay = px + 16, py + ph - 16 - bw
 			hudbox(ax, ay, bw, bw, "Z", "ACT", ACT)
 			hudbox(ax + bw + 10, ay, bw, bw, ">>", "AUTO")
-			centered(_t"Bump attack", 11, MUTE, ax + bw / 2, ay + bw / 2 + 4)
+			centered(_t"Bump attack", 14, MUTE, ax + bw / 2, ay + bw / 2 + 4)
 			-- the routine strip
-			label("Basic", 12, {240, 212, 138}, ax + 30, ay - 44)
-			K.quad(ax + 36, ay - 26, 22, 18, {20, 22, 28}) K.frame(ax + 36, ay - 26, 22, 18, GOLD, 1) label("X", 11, INK, ax + 42, ay - 24)
+			label(_t"Basic", 14, {240, 212, 138}, ax + 30, ay - 50)
+			K.quad(ax + 36, ay - 28, 26, 22, {20, 22, 28}) K.frame(ax + 36, ay - 28, 26, 22, GOLD, 1) label("X", 14, INK, ax + 43, ay - 28)
 			-- a finger pressing Act
 			local pulse = 0.75 + 0.25 * math.sin(t / 6)
 			finger(ax + bw / 2 + 6, ay + bw / 2 + 8, pulse)
@@ -116,19 +116,19 @@ _M.PAGES = {
 			local dh = 66
 			local dx, dy, dw = bx + 10, by + 10, pw - 20
 			K.quad(dx, dy, dw, dh, {20, 22, 28}, 235) K.frame(dx, dy, dw, dh, {58, 61, 70}, 2)
-			label(_t"goblin", 13, INK, dx + 10, dy + 10, true)
-			label(_t"12/20  x", 10, MUTE, dx + 10, dy + 32)
+			label(_t"goblin", 15, INK, dx + 10, dy + 8, true)
+			label(_t"12/20  x", 14, MUTE, dx + 10, dy + 34)
 			local cx = dx + 100
 			for i = 1, 5 do
 				local ready = i <= 3
 				if cx + 46 < dx + dw - 6 then
 					K.quad(cx, dy + 7, 46, dh - 14, {36, 39, 47}, ready and 255 or 120)
-					if ready then K.frame(cx, dy + 7, 46, dh - 14, GOLD, 2) else label("3", 12, RED, cx + 30, dy + 9, true) end
+					if ready then K.frame(cx, dy + 7, 46, dh - 14, GOLD, 2) else label("3", 14, RED, cx + 29, dy + 8, true) end
 					centered(({"A", "S", "H", "F", "W"})[i], 18, ready and INK or MUTE, cx + 23, dy + 15, true, ready and 1 or 0.6)
 				end
 				cx = cx + 52
 			end
-			label(_t"drag to scroll", 10, MUTE, dx + dw - 84, dy + dh + 8)
+			label(_t"drag to scroll", 14, MUTE, dx + dw - 110, dy + dh + 8)
 		end,
 	},
 	{
@@ -136,7 +136,7 @@ _M.PAGES = {
 		paras = {
 			_t"Drag on the map: the destination lights up under your finger, release to step; holding the finger still never moves you. With the coast clear a tap walks there too; with enemies in view only the drag moves you.",
 			_t"Pills appear beside AUTO when they apply: Descend, Ascend or Enter on stairs and exits, Wait with enemies in view, Rest when you are hurt and alone. Tap them instead of hunting for the tile.",
-			_t"Pan is always there while AUTO is off: tap it, drag the map to look around, tap it again or take a step to stop.",
+			_t"Pan is always there while AUTO is off: tap it, drag the map to look around, tap it again to stop (it stays on until you do).",
 		},
 		draw = function(self, x, y, w, h, t)
 			local px, py, pw, ph = x + 10, y + 20, w - 20, h - 40
@@ -147,20 +147,20 @@ _M.PAGES = {
 			local phase = (t % 60) / 60
 			local off = phase < 0.6 and (phase / 0.6) or (1 - (phase - 0.6) / 0.4)
 			finger(yx + ts / 2 + off * 60, yy + ts / 2 + 10, 0.9)
-			label(_t"release = step", 11, MUTE, yx - 6, yy + ts + 8)
+			label(_t"release = step", 14, MUTE, yx - 6, yy + ts + 8)
 			-- the dock with the pills
 			local bw = 64
 			local ax, ay = px + 14, py + ph - 14 - bw
 			hudbox(ax, ay, bw, bw, "Z", "ACT", ACT)
 			hudbox(ax + bw + 8, ay, bw, bw, ">>", "AUTO")
-			local pxl, pw2, ph2 = ax + 2 * bw + 18, 92, 26
+			local pxl, pw2, ph2 = ax + 2 * bw + 18, 92, 28
 			local function pill(yy2, txt, on)
 				K.quad(pxl, yy2, pw2, ph2, on and {80, 62, 22} or {60, 46, 16}, 235) K.frame(pxl, yy2, pw2, ph2, GOLD, 2)
-				centered(txt, 11, {240, 212, 138}, pxl + pw2 / 2, yy2 + 6, true)
+				centered(txt, 14, {240, 212, 138}, pxl + pw2 / 2, yy2 + 3, true)
 			end
 			pill(ay, _t"Wait") pill(ay - ph2 - 6, _t"Descend")
 			K.quad(pxl + pw2 + 8, ay, 60, ph2, {60, 46, 16}, 235) K.frame(pxl + pw2 + 8, ay, 60, ph2, GOLD, 2)
-			centered(_t"Pan", 11, {240, 212, 138}, pxl + pw2 + 38, ay + 6, true)
+			centered(_t"Pan", 14, {240, 212, 138}, pxl + pw2 + 38, ay + 3, true)
 		end,
 	},
 	{
@@ -177,16 +177,16 @@ _M.PAGES = {
 			local grow = (t % 40) / 40
 			K.circle(hx, hy, 14 + grow * 22, {240, 212, 138}, 0.5 * (1 - grow), 12 + grow * 22)
 			finger(hx, hy, 1)
-			K.quad(hx + 30, hy - 40, 120, 74, {20, 22, 28}, 235) K.frame(hx + 30, hy - 40, 120, 74, {58, 61, 70}, 2)
-			label(_t"Inspect", 12, INK, hx + 40, hy - 34) label(_t"Mark for Act", 12, INK, hx + 40, hy - 12) label(_t"Travel here", 12, INK, hx + 40, hy + 10)
+			K.quad(hx + 30, hy - 40, 128, 84, {20, 22, 28}, 235) K.frame(hx + 30, hy - 40, 128, 84, {58, 61, 70}, 2)
+			label(_t"Inspect", 14, INK, hx + 40, hy - 36) label(_t"Mark for Act", 14, INK, hx + 40, hy - 12) label(_t"Travel here", 14, INK, hx + 40, hy + 12)
 			local tx, ty = gx + 6 * ts, gy + 1 * ts
 			finger(tx, ty, 0.9) finger(tx + 46, ty + 6, 0.9)
-			label(_t"two fingers = back", 12, MUTE, tx - 40, ty + 40)
+			label(_t"two fingers = back", 14, MUTE, tx - 40, ty + 40)
 			local cx, cy = gx + 5 * ts, gy + 4.2 * ts
 			local sp = 24 + 22 * (0.5 + 0.5 * math.sin(t / 8))
 			finger(cx - sp, cy, 0.9) finger(cx + sp, cy, 0.9)
 			arrow(cx - sp - 20, cy, -1, 26, MUTE) arrow(cx + sp + 20, cy, 1, 26, MUTE)
-			label(_t"pinch = zoom", 12, MUTE, cx - 40, cy + 34)
+			label(_t"pinch = zoom", 14, MUTE, cx - 40, cy + 34)
 		end,
 	},
 	{
@@ -203,12 +203,19 @@ _M.PAGES = {
 			centered("...", 20, INK, px + pw - 12 - 30, py + 10, true)
 			local items = {_t"Level up!", _t"Places", _t"Inventory", _t"Character sheet", _t"Talents", _t"Journal", _t"Level map", _t"Swap weapons", _t"Party", _t"Rest", _t"Explore", _t"Options"}
 			local lx, ly, lw = px + 40, py + 16, pw - 130
-			local rh = math.min(26, math.floor((ph - 40) / #items))
-			K.quad(lx - 10, ly - 8, lw + 20, #items * rh + 16, {20, 22, 28}, 235) K.frame(lx - 10, ly - 8, lw + 20, #items * rh + 16, {58, 61, 70}, 2)
+			-- 14 px rows need ~22 px each: two columns when one column does not fit
+			local avail = ph - 40
+			local cols = (#items * 22 <= avail) and 1 or 2
+			local per = math.ceil(#items / cols)
+			local rh = math.min(26, math.floor(avail / per))
+			local cw = math.floor(lw / cols)
+			K.quad(lx - 10, ly - 8, lw + 20, per * rh + 16, {20, 22, 28}, 235) K.frame(lx - 10, ly - 8, lw + 20, per * rh + 16, {58, 61, 70}, 2)
 			local hi = math.floor(t / 20) % #items + 1
 			for i, it in ipairs(items) do
-				if i == hi then K.quad(lx, ly + (i - 1) * rh, lw, rh - 2, {43, 39, 24}) K.frame(lx, ly + (i - 1) * rh, lw, rh - 2, GOLD, 1) end
-				label(it, 12, i == hi and {240, 212, 138} or INK, lx + 10, ly + (i - 1) * rh + 3, i == hi)
+				local c, r = math.floor((i - 1) / per), (i - 1) % per
+				local ix, iy = lx + c * cw, ly + r * rh
+				if i == hi then K.quad(ix, iy, cw - 2, rh - 2, {43, 39, 24}) K.frame(ix, iy, cw - 2, rh - 2, GOLD, 1) end
+				label(it, 14, i == hi and {240, 212, 138} or INK, ix + 8, iy + (rh - 18) / 2, i == hi, cw - 14)
 			end
 		end,
 	},
@@ -229,14 +236,15 @@ _M.PAGES = {
 				K.quad(qx, my + 88, 36, 36, {40, 8, 8}) K.frame(qx, my + 88, 36, 36, {106, 32, 32}, 1)
 				centered(n, 14, {255, 192, 176}, qx + 18, my + 96, true)
 			end
-			label(_t"cooling down", 12, MUTE, mx - 4, my + 130)
+			label(_t"cooling down", 14, MUTE, mx - 4, my + 130)
 			local bw = 96
 			local ax, ay = px + 16, py + ph - 16 - bw
 			hudbox(ax, ay, bw, bw, "Z", "ACT", ACT)
 			hudbox(ax + bw + 10, ay, bw, bw, ">>", "AUTO")
 			local blink = math.floor(t / 15) % 2 == 0
-			K.quad(ax + bw + 4, ay - 28, 150, 24, RED, blink and 255 or 160)
-			label(_t"Stopped: elite in view", 12, {30, 10, 10}, ax + bw + 12, ay - 24, true)
+			local sd = txt(_t"Stopped: elite in view", 14, {30, 10, 10}, true)
+			K.quad(ax + bw + 4, ay - 30, (sd and sd.w or 150) + 16, 26, RED, blink and 255 or 160)
+			if sd then K.draw(sd, ax + bw + 12, ay - 27) end
 		end,
 	},
 }
@@ -343,9 +351,9 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	end
 	-- words
 	local tx, ty = x + self.text_x + 14, y + self.text_y + 10
-	label(("%d / %d"):format(self.page, n), 12, MUTE, tx, ty)
-	label(page.title, 26, {240, 212, 138}, tx, ty + 18, true, self.text_w - 28)
-	local yy = ty + 62
+	label(("%d / %d"):format(self.page, n), 14, MUTE, tx, ty)
+	label(page.title, 26, {240, 212, 138}, tx, ty + 20, true, self.text_w - 28)
+	local yy = ty + 64
 	local f = K.font(17)
 	for _, p in ipairs(page.paras) do
 		for _, l in ipairs(K.wrap(p, f, self.text_w - 28, 30)) do
@@ -354,5 +362,5 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 		end
 		yy = yy + 10
 	end
-	if self.page == n then label(_t"You can reopen this guide from More or Options.", 13, MUTE, tx, y + self.ih - 66 - 20, false, self.text_w - 28) end
+	if self.page == n then label(_t"You can reopen this guide from More or Options.", 15, MUTE, tx, y + self.ih - 66 - 20, false, self.text_w - 28) end
 end

@@ -43,7 +43,7 @@ function _M:init()
 		for _, s in ipairs(saves) do if s.usable then self.last_save = s break end end
 	end
 
-	self.c_flow = K.Flow.new{width=self.iw, height=self.ih - 24}
+	self.c_flow = K.Flow.new{width=self.iw, height=self.ih - 28}
 	self:loadUI{
 		{left=0, top=0, ui=self.c_flow},
 	}
@@ -85,21 +85,21 @@ function _M:buildCards()
 		}, cols=1, row_h=96, icon_size=80}
 	end
 	local main = {
-		{name=_t"New character", sub=_t"Start a new adventure", on_tap=function() self.list[1].fct() end},
-		{name=_t"Load game", sub=_t"All saved characters", on_tap=function() self.list[2].fct() end},
-		{name=_t"Options", sub=_t"Touch, video, sound, keys", on_tap=function() self.list[3].fct() end},
-		{name=_t"More", sub=_t"Addons, credits, profile", on_tap=function() self.list[4].fct() end},
+		{name=_t"New character", on_tap=function() self.list[1].fct() end},
+		{name=_t"Load game", on_tap=function() self.list[2].fct() end},
+		{name=_t"Options", on_tap=function() self.list[3].fct() end},
+		{name=_t"More", on_tap=function() self.list[4].fct() end},
 	}
-	secs[#secs+1] = {title=s and _t"Or" or _t"Play", items=main, cols=2, row_h=76, center=true}
+	secs[#secs+1] = {title=s and _t"Or" or _t"Play", items=main, cols=2, row_h=64, center=true}
 	-- te4.org profile: the touch login sheet (DLC needs it)
-	local who
+	local who -- only real state: logged-in name / offline
 	if config.settings.disable_all_connectivity then who = _t"Online features are off"
 	elseif profile and profile.auth and profile.auth.name then who = (_t"Logged in as %s"):tformat(tostring(profile.auth.name))
-	else who = _t"Log in to te4.org for DLC and the vault" end
+	end
 	secs[#secs+1] = {title=_t"Account", items={
 		{name=_t"Online profile", sub=who, on_tap=function() game:registerDialog(require("mod.dialogs.TouchLogin").new()) end},
-		{name=_t"Backups", sub=_t"Back up and restore your saves", on_tap=function() game:registerDialog(require("engine.dialogs.TouchBackups").new(false)) end},
-	}, cols=1, row_h=64, center=true}
+		{name=_t"Backups", on_tap=function() game:registerDialog(require("engine.dialogs.TouchBackups").new(false)) end},
+	}, cols=1, row_h=60, center=true}
 	self.c_flow:setSections(secs)
 end
 
@@ -132,10 +132,10 @@ end
 function _M:innerDisplayBack(x, y, nb_keyframes)
 	x, y = x + self.ix, y + self.iy
 	-- engine version, small, bottom left
-	draw(text(("T-Engine4 %d.%d.%d"):format(engine.version[1], engine.version[2], engine.version[3]), 11, 142, 136, 120), x + 4, y + self.ih - 16)
+	draw(text(("T-Engine4 %d.%d.%d"):format(engine.version[1], engine.version[2], engine.version[3]), 14, 142, 136, 120), x + 4, y + self.ih - 22)
 	if profile and profile.auth and profile.auth.name then
-		local d = text(("%s"):format(tostring(profile.auth.name)), 11, 142, 136, 120, false, self.iw / 2)
-		if d then draw(d, x + self.iw - d.w - 4, y + self.ih - 16) end
+		local d = text(("%s"):format(tostring(profile.auth.name)), 14, 142, 136, 120, false, self.iw / 2)
+		if d then draw(d, x + self.iw - d.w - 4, y + self.ih - 22) end
 	end
 end
 

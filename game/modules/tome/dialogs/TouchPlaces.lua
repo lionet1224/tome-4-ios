@@ -115,7 +115,7 @@ function _M:build()
 	if #s.shops > 0 then secs[#secs+1] = {title=_t"Shops", items=self:cards(s.shops), min_w=220, row_h=88} end
 	if #s.people > 0 then secs[#secs+1] = {title=_t"People", items=self:cards(s.people), min_w=220, row_h=88} end
 	if #secs == 0 then
-		secs[#secs+1] = {title=wild and _t"Nothing known here yet" or _t"Nothing known on this level yet", items={{name=_t"Explore to find places.", sub=_t"Towns, dungeons, shops and people appear here once you have seen them.", on_tap=function() game:unregisterDialog(self) end}}, cols=1, row_h=88}
+		secs[#secs+1] = {title=wild and _t"Nothing known here yet" or _t"Nothing known on this level yet", items={{name=_t"Explore to find places.", on_tap=function() game:unregisterDialog(self) end}}, cols=1, row_h=64}
 	end
 	self.c_flow:setSections(secs)
 	self.sections = s

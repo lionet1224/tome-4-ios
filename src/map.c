@@ -960,8 +960,9 @@ static int map_set_zoom(lua_State *L)
 	map->tile_h = tile_h;
 	map->mwidth = mwidth;
 	map->mheight = mheight;
+	/* the seens texture is sized by the map (w, h), not the zoom: recreating it on
+	   every zoom step made pinch zooming stutter */
 	map->seen_changed = TRUE;
-	setup_seens_texture(map);
 	return 0;
 }
 

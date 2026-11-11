@@ -69,7 +69,7 @@ function _M:init(actor)
 	if self.portrait then
 		self.rail_w, self.detail_w, self.content_w = self.iw, self.iw, self.iw
 		self.rail_h = 140                       -- chips (rows of three, scrolls past two rows)
-		self.hint_h = 22                        -- the mode hint line under the routine buttons
+		self.hint_h = 24                        -- the mode hint line under the routine buttons
 		self.top_h = self.rail_h + 8 + bh + 8 + bh + 8 + bh + 8 + self.hint_h
 		self.sheet_h = 80 + 150 + 4 * (bh + 8) + 8
 		self.sheet_y = self.ih - self.sheet_h
@@ -318,7 +318,7 @@ function _M:drawStepIcon(st, x, y, size)
 	local b = self:builtin(st.kind)
 	quad(x, y, size, size, {36, 39, 47})
 	frame(x, y, size, size, {60, 63, 72}, 1)
-	local d = text(b and b.glyph or "?", 12, 240, 212, 138, true)
+	local d = text(b and b.glyph or "?", 14, 240, 212, 138, true)
 	if d then draw(d, x + (size - d.w) / 2, y + (size - d.h) / 2) end
 end
 
@@ -343,9 +343,9 @@ function _M:refresh(keep_scroll)
 		items[#items+1] = {name=r.name, sub=(#r.steps == 1 and _t"1 step" or (_t"%d steps"):format(#r.steps)) .. (active and _t"  ·  in use" or ""), sel=i == self.edit_idx, data=r,
 			on_tap=function() self.edit_idx = i self.sel_step = nil self.mode = "steps" self:refresh() end}
 	end
-	items[#items+1] = {name=_t"New routine", sub=_t"Start empty", on_tap=function() self:newRoutine() end}
+	items[#items+1] = {name=_t"New routine", on_tap=function() self:newRoutine() end}
 	if self:classTemplate() then
-		items[#items+1] = {name=_t"Class routine", sub=_t"Reset to the class default", on_tap=function() self:resetToClass() end}
+		items[#items+1] = {name=_t"Class routine", on_tap=function() self:resetToClass() end}
 	end
 	if self.portrait then
 		-- chips in rows of three across the top (the Flow scrolls past two rows)
@@ -366,7 +366,7 @@ function _M:refresh(keep_scroll)
 				icon=function(x, y, size) self:drawStepIcon(step, x, y, size) end,
 				on_tap=function() self.sel_step = i self:showDetail() self:refresh(true) end}
 		end
-		if #steps == 0 then steps[1] = {name=_t"No steps yet", sub=_t"Tap Add step to build the routine"} end
+		if #steps == 0 then steps[1] = {name=_t"No steps yet"} end
 		local pos = keep_scroll and self.c_flow.scrollbar.pos or 0
 		self.c_flow:setSections{{title=r.name, items=steps, cols=1, row_h=74, icon_size=48}}
 		self.c_flow.scrollbar.pos = util.minBound(pos, 0, self.c_flow.scrollbar.max)
@@ -444,7 +444,7 @@ function _M:pickerEntries()
 		local hk = a.hotkey[i]
 		if hk and hk[1] == "inventory" and not seen[hk[2]] then
 			seen[hk[2]] = true
-			items[#items+1] = {name=hk[2], sub=_t"item on your hotkeys", step={kind="item", item=hk[2], target="manual", if_unusable="skip"}}
+			items[#items+1] = {name=hk[2], step={kind="item", item=hk[2], target="manual", if_unusable="skip"}}
 		end
 	end
 	return acts, tal, items
@@ -645,7 +645,7 @@ end
 
 function _M:newRoutine()
 	local rs = self.actor.act_routines
-	rs[#rs+1] = {name=("Routine %d"):format(#rs + 1), steps={}, pos=1, mode="priority"}
+	rs[#rs+1] = {name=("Routine %d"):tformat(#rs + 1), steps={}, pos=1, mode="priority"}
 	self.edit_idx = #rs
 	self.sel_step = nil
 	self.mode = "steps"
@@ -699,12 +699,10 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	local st = self:step()
 	if self.mode == "picker" then
 		draw(text(_t"Add a step", 22, 240, 212, 138, true), dx + 12, y + 16)
-		draw(text(_t"Tap a card to add it", 13, 142, 136, 120), dx + 12, y + 50)
 		return
 	end
 	if not st then
 		draw(text(self:routine().name, 22, 240, 212, 138, true, self.detail_w - 24), dx + 12, y + 16)
-		draw(text(_t"Tap a step to edit it", 13, 142, 136, 120), dx + 12, y + 50)
 		return
 	end
 	local sz = 56
@@ -714,7 +712,7 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	local maxw = self.detail_w - (tx - dx) - 12
 	draw(text(("%d.  %s"):format(self.sel_step, self.actor:actStepName(st)), 20, 240, 212, 138, true, maxw), tx, y + 16)
 	local kind = st.kind == "talent" and (self:isSustain(st) and _t"sustain" or _t"talent") or st.kind == "item" and _t"item" or _t"action"
-	draw(text(kind, 13, 142, 136, 120, false, maxw), tx, y + 46)
+	draw(text(kind, 15, 142, 136, 120, false, maxw), tx, y + 46)
 end
 
 -- the one-line hint under the mode button (landscape: above it in the rail)
@@ -722,10 +720,12 @@ function _M:drawModeHint(x, y)
 	local e = self.ui_by_ui[self.b_mode]
 	if not e then return end
 	if self.portrait then
-		draw(text(self:modeHint(), 13, 142, 136, 120, false, self.iw - 16), x + 8, y + self.top_h - self.hint_h + 2)
+		draw(text(self:modeHint(), 15, 142, 136, 120, false, self.iw - 16), x + 8, y + self.top_h - self.hint_h + 1)
 	else
 		-- entry positions already include the inner offset; x/y here are the inner origin
-		draw(text(self:modeHint(), 13, 142, 136, 120, false, self.rail_w - 16), x + 8, (y - self.iy) + e.y - self.hint_h + 4)
+		for li, l in ipairs(K.wrap(self:modeHint(), font(14), self.rail_w - 16, 2)) do
+			draw(text(l, 14, 142, 136, 120, false, self.rail_w - 16), x + 8, (y - self.iy) + e.y - self.hint_h + 2 + (li - 1) * 18)
+		end
 	end
 end
 
@@ -741,12 +741,10 @@ function _M:innerDisplayBackPortrait(x, y)
 	local st = self:step()
 	if self.mode == "picker" then
 		draw(text(_t"Add a step", 22, 240, 212, 138, true), x + 12, sy + 16)
-		draw(text(_t"Tap a card to add it", 13, 142, 136, 120), x + 12, sy + 50)
 		return
 	end
 	if not st then
 		draw(text(self:routine().name, 22, 240, 212, 138, true, self.iw - 24), x + 12, sy + 16)
-		draw(text(_t"Tap a step to edit it", 13, 142, 136, 120), x + 12, sy + 50)
 		return
 	end
 	local sz = 56
@@ -756,7 +754,7 @@ function _M:innerDisplayBackPortrait(x, y)
 	local maxw = self.iw - (tx - x) - 12
 	draw(text(("%d.  %s"):format(self.sel_step, self.actor:actStepName(st)), 20, 240, 212, 138, true, maxw), tx, sy + 16)
 	local kind = st.kind == "talent" and (self:isSustain(st) and _t"sustain" or _t"talent") or st.kind == "item" and _t"item" or _t"action"
-	draw(text(kind, 13, 142, 136, 120, false, maxw), tx, sy + 46)
+	draw(text(kind, 15, 142, 136, 120, false, maxw), tx, sy + 46)
 end
 
 -- a rotation: the parent game hook swaps the dialog for a fresh one laid out

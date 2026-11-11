@@ -274,7 +274,7 @@ function Sheet:innerDisplayBack(x, y, nb_keyframes)
 	x, y = x + self.ix, y + self.iy
 	draw(text(self.entry.when, 22, GOLD[1], GOLD[2], GOLD[3], true, self.iw - 16), x + 8, y + 6)
 	local a = ago(self.entry.stamp)
-	draw(text(a and (_t"made %s"):format(a) or self.entry.file, 14, MUTED[1], MUTED[2], MUTED[3], false, self.iw - 16), x + 8, y + 36)
+	draw(text(a and (_t"made %s"):format(a) or self.entry.file, 15, MUTED[1], MUTED[2], MUTED[3], false, self.iw - 16), x + 8, y + 36)
 end
 
 function Sheet:innerDisplay(x, y, nb_keyframes)
@@ -296,7 +296,7 @@ function _M:init(in_game)
 	self.__touch_backups = true
 
 	self.top_h = 52
-	self.hint_h = 30
+	self.hint_h = 6
 	self.b_back = Button.new{text=_t"< Back", width=90, font=font(18), fct=function() game:unregisterDialog(self) end}
 	self.b_backup = Button.new{text=_t"Back up now", width=self.iw - 24 - 16, font=font(22), fct=function() self:backupNow() end}
 	self.flow_x = 0
@@ -355,13 +355,13 @@ function _M:refresh()
 	local items = {}
 	for _, e in ipairs(self.backups) do
 		local a = ago(e.stamp)
-		items[#items+1] = {name=e.when, sub=a and (_t"%s · tap for restore, details, delete"):format(a) or e.file, data=e, on_tap=function() self:openSheet(e) end}
+		items[#items+1] = {name=e.when, sub=a or e.file, data=e, on_tap=function() self:openSheet(e) end}
 	end
 	local secs = {}
 	if #items > 0 then
 		secs[#secs+1] = {title=_t"Backups", items=items, cols=1, row_h=64}
 	else
-		secs[#secs+1] = {title=_t"Backups", items={{name=_t"No backups yet", sub=_t"Back up now writes one from every saved character."}}, cols=1, row_h=64}
+		secs[#secs+1] = {title=_t"Backups", items={{name=_t"No backups yet"}}, cols=1, row_h=60}
 	end
 	self.c_flow:setSections(secs)
 end
@@ -384,9 +384,8 @@ end
 function _M:innerDisplayBack(x, y, nb_keyframes)
 	x, y = x + self.ix, y + self.iy
 	draw(text(_t"Backups", 24, INK[1], INK[2], INK[3], true, self.iw - 220), x + 104, y + 12)
-	local count = text(("%d"):format(#(self.backups or {})), 14, MUTED[1], MUTED[2], MUTED[3])
+	local count = text(("%d"):format(#(self.backups or {})), 15, MUTED[1], MUTED[2], MUTED[3])
 	if count then draw(count, x + self.iw - count.w - 8, y + 18) end
-	draw(text(_t"Zips of every saved character. In the Files app they are under this app's folder.", 14, MUTED[1], MUTED[2], MUTED[3], false, self.iw - 16), x + 8, y + self.top_h + 4)
 	quad(x + self.flow_x, y + self.flow_y, self.flow_w, self.flow_h, {18, 16, 13})
 end
 

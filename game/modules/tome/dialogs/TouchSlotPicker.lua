@@ -138,7 +138,7 @@ function _M:build()
 			local i = _M.SLOTS_PER_PAGE * (p - 1) + j
 			local name, ent, empty = _M.slotLabel(a, i)
 			local slot = i
-			items[#items+1] = {name=("%d · %s"):format(j, name), sub=(self.current_slot == i) and _t"here now" or (empty and _t"free" or _t"replace"),
+			items[#items+1] = {name=("%d · %s"):format(j, name), sub=(self.current_slot == i) and _t"here now" or nil,
 				sel=self.current_slot == i, locked=false,
 				icon=ent and function(x, y, size) pcall(ent.toScreen, ent, tiles, x, y, size, size) end or nil,
 				on_tap=function() self:pick(slot) end}
@@ -152,7 +152,7 @@ function _M:build()
 			self.opts.on_remove()
 		end}
 	end
-	more[#more+1] = {name=_t"Cancel", sub=_t"leave the bar as it is", on_tap=function() game:unregisterDialog(self) end}
+	more[#more+1] = {name=_t"Cancel", on_tap=function() game:unregisterDialog(self) end}
 	secs[#secs+1] = {title=self.opts.subject and tostring(self.opts.subject) or _t"Or", items=more, min_w=200, row_h=66}
 	self.c_flow:setSections(secs)
 end
@@ -160,10 +160,4 @@ end
 function _M:pick(slot)
 	game:unregisterDialog(self)
 	if self.fct then self.fct(slot) end
-end
-
-function _M:innerDisplayBack(x, y, nb_keyframes)
-	if self.opts.subject then
-		draw(text(_t"Tap a slot: this is the order of the skill drawer", 13, 142, 136, 120, false, self.iw), x + self.ix, y + self.iy + self.ih - 60 + 20)
-	end
 end

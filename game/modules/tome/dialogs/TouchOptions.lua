@@ -80,7 +80,7 @@ function Rows:display(x, y, nb_keyframes, screen_x, screen_y)
 			local vw = 0
 			if ON_WORDS[lv] or OFF_WORDS[lv] then
 				local on = ON_WORDS[lv]
-				local d = text(val:upper(), 12, on and 16 or 200, on and 32 or 195, on and 26 or 180, true)
+				local d = text(val:upper(), 14, on and 16 or 200, on and 32 or 195, on and 26 or 180, true)
 				local pw = (d and d.w or 30) + 24
 				local px = x + it.x + it.w - 12 - pw
 				quad(px, iy + (it.h - 30) / 2, pw, 30, on and {123, 211, 137} or {60, 63, 72})
@@ -92,8 +92,8 @@ function Rows:display(x, y, nb_keyframes, screen_x, screen_y)
 				if d then draw(d, x + it.x + it.w - 12 - d.w, iy + (it.h - d.h) / 2) vw = d.w + 12 end
 			end
 			local maxw = it.w - 24 - vw - 8
-			draw(text(it.label, 17, 234, 227, 209, true, maxw), x + it.x + 12, iy + 10)
-			if it.pitch and it.pitch ~= "" then draw(text(it.pitch, 12, 142, 136, 120, false, maxw), x + it.x + 12, iy + 38) end
+			draw(text(it.label, 17, 234, 227, 209, true, maxw), x + it.x + 12, iy + 8)
+			if it.pitch and it.pitch ~= "" then draw(text(it.pitch, 15, 142, 136, 120, false, maxw), x + it.x + 12, iy + 37) end
 		end
 	end
 	core.display.glScissor(false)
@@ -120,22 +120,22 @@ function _M:init()
 	self.touch_lw = 0
 
 	self.sections = {}
-	local function section(kind, title, sub) self.sections[#self.sections+1] = {kind=kind, name=title, sub=sub} end
-	if require("engine.TouchInput").active() then section("touch", _t"Touch", _t"Wheels, Act, auto stops") end
-	section("gameplay", _t"Gameplay", _t"Warnings, auto-explore, saving")
-	section("ui", _t"Interface", _t"Look, fonts, HUD, tooltips")
-	section("audio", _t"Audio", _t"Music and effects")
-	section("video", _t"Video", _t"Frame rate, particles, gamma")
-	section("online", _t"Online", _t"Chat, vault, Discord")
-	section("misc", _t"Misc", _t"Background saves, censor")
-	if require("engine.TouchInput").active() then section("backups", _t"Backups", _t"Back up and restore saves") end
+	local function section(kind, title) self.sections[#self.sections+1] = {kind=kind, name=title} end
+	if require("engine.TouchInput").active() then section("touch", _t"Touch") end
+	section("gameplay", _t"Gameplay")
+	section("ui", _t"Interface")
+	section("audio", _t"Audio")
+	section("video", _t"Video")
+	section("online", _t"Online")
+	section("misc", _t"Misc")
+	if require("engine.TouchInput").active() then section("backups", _t"Backups") end
 	-- addon tabs, as the stock dialog collects them
 	local hooks = {}
 	self:triggerHook{"GameOptions:tabs", tab=function(title, fct)
 		local id = #hooks + 1
 		hooks[id] = true
 		self['generateListHooktab'..id] = fct
-		section("hooktab"..id, title, _t"Addon")
+		section("hooktab"..id, title)
 	end}
 	self.lists = {}
 
@@ -262,10 +262,10 @@ end
 function _M:refreshNav()
 	local items = {}
 	for _, s in ipairs(self.sections) do
-		items[#items+1] = {name=s.name, sub=s.sub, sel=s.kind == self.kind, on_tap=function() self:switchTo(s.kind) end}
+		items[#items+1] = {name=s.name, sel=s.kind == self.kind, on_tap=function() self:switchTo(s.kind) end}
 	end
 	if self.portrait then self.c_nav:setSections{{items=items, cols=3, row_h=56, center=true}}
-	else self.c_nav:setSections{{items=items, cols=1, row_h=64}} end
+	else self.c_nav:setSections{{items=items, cols=1, row_h=56}} end
 end
 
 function _M:tapRow(it)

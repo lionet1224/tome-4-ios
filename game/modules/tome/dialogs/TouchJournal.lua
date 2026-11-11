@@ -141,7 +141,7 @@ function _M:questSections()
 			if self.select_quest and e.quest.id == self.select_quest then pick = it end
 		end
 	end
-	if #items == 0 then items[1] = {name=(f == "active") and _t"No active quests" or _t"Nothing finished yet", sub=_t"Talk to people and explore."} end
+	if #items == 0 then items[1] = {name=(f == "active") and _t"No active quests" or _t"Nothing finished yet"} end
 	secs[#secs+1] = {title=(f == "active") and _t"In progress" or _t"Finished", items=items, cols=1, row_h=84}
 	if pick then self.select_quest = nil self.cur = pick pick.sel = true
 	elseif self.select_quest then
@@ -182,7 +182,7 @@ function _M:loreSections()
 		secs[#secs+1] = {title=("%s (%d)"):format(cat, #items), items=items, min_w=200, row_h=(#items > 0) and 64 or 64}
 	end
 	if nb == 0 then
-		secs[#secs+1] = {title=_t"Lore", items={{name=_t"Nothing found yet", sub=_t"Notes and books you pick up show up here."}}, cols=1, row_h=84}
+		secs[#secs+1] = {title=_t"Lore", items={{name=_t"Nothing found yet"}}, cols=1, row_h=60}
 	end
 	return secs
 end
@@ -238,7 +238,7 @@ function _M:achievementSections()
 			icon=function(x, y, size) local tex = self:achievementIcon(a) if tex then tex[1]:toScreenFull(x, y, size, size, tex[2], tex[3]) end end,
 			sel=self.cur and self.cur.data == e, on_tap=function(it) self:pick(it) end}
 	end
-	if #items == 0 then items[1] = {name=(f == "earned") and _t"None yet" or _t"Everything is earned", sub=_t"Keep playing."} end
+	if #items == 0 then items[1] = {name=(f == "earned") and _t"None yet" or _t"Everything is earned"} end
 	secs[#secs+1] = {title=(f == "earned") and (("%d earned"):format(#list)) or (("%d to go"):format(#list)), items=items, min_w=260, row_h=72, icon_size=44}
 	return secs
 end
@@ -359,7 +359,6 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	else
 		title = TABS[1].title
 		for _, t in ipairs(TABS) do if t.kind == self.kind then title = t.title end end
-		meta = self.kind == "quests" and _t"Your log" or (self.kind == "lore" and _t"What you have read" or _t"What you have done")
 	end
 	local maxw = dx + self.detail_w - 12 - tx
 	local lines = K.wrap(title, K.font(22), maxw, 2)
@@ -367,7 +366,7 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	for _, l in ipairs(lines) do K.draw(K.text(l, 22, 240, 212, 138, true, maxw), tx, ty) ty = ty + 28 end
 	if meta and meta ~= "" then
 		local c = meta_color or {142, 136, 120}
-		for _, l in ipairs(K.wrap((meta:gsub("#[^#]*#", "")), K.font(13), maxw, 2)) do K.draw(K.text(l, 13, c[1], c[2], c[3], false, maxw), tx, ty) ty = ty + 18 end
+		for _, l in ipairs(K.wrap((meta:gsub("#[^#]*#", "")), K.font(15), maxw, 2)) do K.draw(K.text(l, 15, c[1], c[2], c[3], false, maxw), tx, ty) ty = ty + 20 end
 	end
 	-- lore illustration under the text pane, scaled to the pane
 	if self.image and self.image.w then

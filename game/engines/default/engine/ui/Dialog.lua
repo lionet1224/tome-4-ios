@@ -255,7 +255,7 @@ function _M:multiButtonPopup(title, text, button_list, w, h, choice_fct, no_leav
 	local tex, text_lines, text_width = self.font:draw(text, (w or max_w)*.9, 255, 255, 255, false, true)
 	local text_height = text_lines*text_h+5
 	local button_spacing = 10
-	
+
 	local d = new(title, w or 1, h or 1)
 --print(("[multiButtonPopup] initialized: (w:%s,h:%s), (maxw:%s,maxh:%s) "):format(w, h, max_w, max_h))
 	if not no_leave then d.key:addBind("EXIT", function() game:unregisterDialog(d)
@@ -465,12 +465,26 @@ function _M:resize(w, h, nogen)
 	local TI = require("engine.TouchInput")
 	local sa = TI.active() and TI.safeArea() or {l=0, t=0, r=0, b=0}
 	if w > gamew - sa.l - sa.r - 10 then w = gamew - sa.l - sa.r - 10 end
-	if h > gameh - sa.t - sa.b - 40 then h = gameh - sa.t - sa.b - 40 end
+	-- portrait: a big dialog leaves room under it for a Close bar the thumb can reach
+	local avail = gameh - sa.t - sa.b
+	local reserve = 0
+	self.close_bar = nil
+	if TI.active() and gameh > gamew and not self.no_close_box and not self.no_close_bar and not self.absolute and (self.force_close_bar or h > avail * 0.62) then
+		self.close_bar = {h=60, gap=10}
+		reserve = self.close_bar.h + self.close_bar.gap
+	end
+	if h > avail - 40 - reserve then h = avail - 40 - reserve end
 	self.w, self.h = math.floor(w), math.floor(h)
 	self.display_x = math.floor(self.force_x or (sa.l + (gamew - sa.l - sa.r - self.w) / 2))
-	self.display_y = math.floor(self.force_y or (sa.t + (gameh - sa.t - sa.b - self.h) / 2))
-	if not self.force_x then self.display_x = util.bound(self.display_x, sa.l, math.max(sa.l, gamew - sa.r - self.w)) end
-	if not self.force_y then self.display_y = util.bound(self.display_y, sa.t, math.max(sa.t, gameh - sa.b - self.h)) end
+	self.display_y = math.floor(self.force_y or (sa.t + (avail - self.h - reserve) / 2))
+	-- a dialog that asks for a position (Levelup: 5% in) still stays out of the Dynamic Island / home bar
+	if TI.active() then
+		self.display_x = util.bound(self.display_x, sa.l, math.max(sa.l, gamew - sa.r - self.w))
+		self.display_y = util.bound(self.display_y, sa.t, math.max(sa.t, gameh - sa.b - self.h - reserve))
+	else
+		if not self.force_x then self.display_x = util.bound(self.display_x, sa.l, math.max(sa.l, gamew - sa.r - self.w)) end
+		if not self.force_y then self.display_y = util.bound(self.display_y, sa.t, math.max(sa.t, gameh - sa.b - self.h)) end
+	end
 	if self.title then
 		self.ix, self.iy = 5, 8 + 3 + self.font_bold_h
 		self.iw, self.ih = w - 2 * 5, h - 8 - 8 - 3 - self.font_bold_h
@@ -541,6 +555,15 @@ function _M:generate()
 		-- hit-tested in mouseEvent (dialog-relative), so a dialog that moves
 		-- after generate() keeps a working close box
 	end
+	if self.close_bar then
+		local cbar = self.close_bar
+		cbar.w = math.floor(math.min(self.w, math.max(260, self.w * 0.6)))
+		cbar.x, cbar.y = self.display_x + math.floor((self.w - cbar.w) / 2), self.display_y + self.h + cbar.gap
+		if not self.close_bar_tex then self.close_bar_tex = self:drawFontLine(self.font_bold, _t"Close", nil, 255, 255, 255) end
+		self.mouse:registerZone(cbar.x, cbar.y, cbar.w, cbar.h, function(button, x, y, xrel, yrel, bx, by, event)
+			if button == "left" and event == "button" then print("[TOUCH] close bar", tostring(self.title)) self.key:triggerVirtual("EXIT") end
+		end)
+	end
 	self.key.receiveKey = function(_, ...) self:keyEvent(...) end
 	self.key:addCommands{
 		_TAB = function() self:moveFocus(1) end,
@@ -603,7 +626,7 @@ function _M:setupUI(resizex, resizey, on_resize, addmw, addmh)
 				if ui.bottom and type(ui.bottom) == "table" then ui.bottom = self.ui_by_ui[ui.bottom].bottom + self.ui_by_ui[ui.bottom].ui.h + padding end
 				if ui.left and type(ui.left) == "table" then ui.left = self.ui_by_ui[ui.left].left + self.ui_by_ui[ui.left].ui.w + padding end
 				if ui.right and type(ui.right) == "table" then ui.right = self.ui_by_ui[ui.right].right + self.ui_by_ui[ui.right].ui.w + padding end
-				
+
 				if not ui.ignore_size then
 					if ui.top then mh = math.max(mh, ui.top + ui.ui.h + (ui.padding_h or 0))
 					elseif ui.bottom then addh = math.max(addh, ui.bottom + ui.ui.h + (ui.padding_h or 0))
@@ -720,7 +743,7 @@ function _M:setupUI(resizex, resizey, on_resize, addmw, addmh)
 				uy = uy + math.floor(self.ih / 2) + ui.vcenter - ui.ui.h / 2
 			end
 
-			if ui.left then 
+			if ui.left then
 				ux = ux + ui.left
 			elseif ui.right then
 				ux = ux + self.iw - ui.right - ui.ui.w
@@ -1089,6 +1112,20 @@ function _M:toScreen(x, y, nb_keyframes)
 		local cb = self.close_box
 		core.display.drawQuad(x + self.w - cb.w - 2, y + 2, cb.w, cb.h, 60, 20, 20, 200)
 		self:textureToScreen(self.close_box_tex, x + self.w - cb.w - 2 + (cb.w - self.close_box_tex.w) / 2, y + 2 + (cb.h - self.close_box_tex.h) / 2)
+	end
+
+	if self.close_bar and self.close_bar_tex then
+		local cbar = self.close_bar
+		local bx = x + math.floor((self.w - cbar.w) / 2)
+		local by = y + self.h + cbar.gap
+		local TIn = require "engine.TouchInput"
+		local down = TIn.t and not TIn.t.moved and TIn.t.x0 and TIn.t.x0 >= bx and TIn.t.x0 < bx + cbar.w and TIn.t.y0 >= by and TIn.t.y0 < by + cbar.h
+		core.display.drawQuad(bx, by, cbar.w, cbar.h, down and 110 or 70, down and 36 or 24, down and 30 or 22, 235)
+		core.display.drawQuad(bx, by, cbar.w, 2, 210, 170, 74, 255)
+		core.display.drawQuad(bx, by + cbar.h - 2, cbar.w, 2, 210, 170, 74, 255)
+		core.display.drawQuad(bx, by, 2, cbar.h, 210, 170, 74, 255)
+		core.display.drawQuad(bx + cbar.w - 2, by, 2, cbar.h, 210, 170, 74, 255)
+		self:textureToScreen(self.close_bar_tex, bx + (cbar.w - self.close_bar_tex.w) / 2, by + (cbar.h - self.close_bar_tex.h) / 2)
 	end
 
 	if prof0 then prof0["<title>"] = (prof0["<title>"] or 0) + (os.clock() - pt0) pt0 = os.clock() end

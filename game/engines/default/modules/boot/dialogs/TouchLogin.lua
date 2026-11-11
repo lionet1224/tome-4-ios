@@ -23,6 +23,7 @@ function _M:init()
 	self.logged = profile and profile.auth and profile.auth.name or nil
 	local h = self.logged and 300 or 380
 	-- high on the screen: the keyboard needs the lower half (Dialog.init takes the forced y)
+	self.no_close_bar = true -- has its own Close button
 	Dialog.init(self, _t"Online profile", w, h, nil, sa.t + 16)
 	self.__touch_login = true
 	self.__showup = false

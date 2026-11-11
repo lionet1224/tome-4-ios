@@ -25,7 +25,7 @@ end
 function Card:generate()
 	self.mouse:reset() self.key:reset()
 	self.f_title = core.display.newFont(FontPackage:getFont("default"), 22)
-	self.f_small = core.display.newFont(FontPackage:getFont("default"), 14)
+	self.f_small = core.display.newFont(FontPackage:getFont("default"), 15)
 	self.f_row = core.display.newFont(FontPackage:getFont("default"), 17)
 	self.texts = {}
 end
@@ -114,6 +114,7 @@ _M.Card = Card
 function _M:init(actor, o, worn, on_wear)
 	self.actor = actor
 	self.bigfont = core.display.newFont(FontPackage:getFont("default"), 22)
+	self.no_close_bar = true -- has its own Close button
 	Dialog.init(self, _t"Compare", game.w * 0.96, game.h * 0.96)
 	local colw = math.floor((self.iw - 20) / 2)
 	local bh = 56

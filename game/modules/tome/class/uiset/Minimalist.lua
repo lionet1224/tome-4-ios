@@ -348,6 +348,9 @@ function _M:init()
 
 	self:resetPlaces()
 	table.merge(self.places, config.settings.tome.uiset_minimalist and config.settings.tome.uiset_minimalist.places or {}, true)
+	-- touch HUD is locked and laid out from the screen and safe area: a saved position (from another
+	-- orientation or an older layout) must not override it
+	if require("engine.TouchInput").active() then self:resetPlaces() end
 	self:applySafeArea()
 
 	local w, h = core.display.size()
@@ -412,7 +415,7 @@ function _M:applySafeArea()
 	for _, k in ipairs{"minimap", "buffs", "chatlog"} do
 		local d = self.places[k]
 		if d and d.x then
-			local dw = d.w or (k == "minimap" and 239 or k == "buffs" and 40 or 0)
+			local dw = d.w or (k == "minimap" and math.floor(240 * (d.scale or 1)) or k == "buffs" and 40 or 0)
 			if d.x + dw > w - sa.r then d.x = w - sa.r - dw end
 		end
 	end
@@ -448,16 +451,18 @@ function _M:applyPortraitPlaces()
 	if not (TI.active() and TI.portrait()) then return end
 	local w, h = core.display.size()
 	local sa = TI.safeArea()
-	local ms = 0.55
+	local ms = 0.62
 	local TM = require "mod.class.TouchManual"
 	self.places.player = {x=sa.l, y=sa.t, scale=1, a=1}
 	self.places.resources = {x=sa.l, y=sa.t + 111, scale=1, a=1}
-	self.places.minimap = {x=w - sa.r - math.floor(239 * ms), y=sa.t, scale=ms, a=1}
-	self.places.buffs = {x=w - sa.r - 40, y=sa.t + math.floor(160 * ms) + 60, scale=1, a=1}
+	-- the artwork (dark-ui back.png, 242 wide) is opaque up to x=240: tuck the
+	-- frame into the corner (title is drawn at the top of the sprite, so y stays at the safe top)
+	self.places.minimap = {x=w - sa.r - math.floor(240 * ms), y=sa.t, scale=ms, a=1}
+	self.places.buffs = {x=w - sa.r - 40, y=sa.t + math.floor(204 * ms) + 12, scale=1, a=1}
 	-- the HUD band at the bottom (mirrors TouchManual:layout: dock, routine strip, skill strip,
 	-- band top 8 px above the strip); the log sits just above the band
-	local dock_y = h - sa.b - 24 - 112
-	local band_y = dock_y - TM.ACT_STRIP_H - 8 - TM.STRIP_H - 8
+	local dock_y = h - sa.b - 12 - TM.DOCK
+	local band_y = dock_y - TM.ACT_STRIP_H - 6 - TM.STRIP_H - 6
 	local lw = w - sa.l - sa.r
 	self.places.gamelog = {x=sa.l, y=band_y - 8 - 200, w=lw, h=200, scale=1, a=1}
 	self.places.chatlog = {x=sa.l, y=band_y - 8 - 200, w=lw, h=200, scale=1, a=1}
@@ -1752,7 +1757,7 @@ function _M:displayMinimap(scale, bx, by)
 			else self.mhandle.minimap = true end
 			if self.no_minimap then return end
 
-			game.tooltip_x, game.tooltip_y = 1, 1; game:tooltipDisplayAtMap(game.w, game.h, _t"Left mouse to move\nRight mouse to scroll\nMiddle mouse to show full map")
+			if not require("engine.TouchInput").active() then game.tooltip_x, game.tooltip_y = 1, 1; game:tooltipDisplayAtMap(game.w, game.h, _t"Left mouse to move\nRight mouse to scroll\nMiddle mouse to show full map") end
 
 			-- Move handle
 			if not self.locked and bx >= self.mhandle_pos.minimap.x and bx <= self.mhandle_pos.minimap.x + move_handle[6] and by >= self.mhandle_pos.minimap.y and by <= self.mhandle_pos.minimap.y + move_handle[7] then
@@ -1761,7 +1766,11 @@ function _M:displayMinimap(scale, bx, by)
 			end
 
 			if bx >= 50 and bx <= 50 + 150 and by >= 30 and by <= 30 + 150 then
-				if button == "left" and not xrel and not yrel and event == "button" then
+				local touch = require("engine.TouchInput").active()
+				if touch then
+					-- the minimap is only a thumbnail: a tap opens the full map, travel happens there
+					if button == "left" and not xrel and not yrel and event == "button" then game.key:triggerVirtual("SHOW_MAP") end
+				elseif button == "left" and not xrel and not yrel and event == "button" then
 					local tmx, tmy = math.floor((bx-50) / 3), math.floor((by-30) / 3)
 					game.player:mouseMove(tmx + game.minimap_scroll_x, tmy + game.minimap_scroll_y)
 				elseif button == "right" then
@@ -2144,7 +2153,7 @@ function _M:displayTouchPips()
 	if TI.portrait() then
 		-- under the (smaller) minimap in the top-right corner
 		local mm = self.places.minimap
-		y0 = (mm and mm.y or sa.t) + math.floor(160 * ((mm and mm.scale) or 1)) + 8
+		y0 = (mm and mm.y or sa.t) + math.floor(204 * ((mm and mm.scale) or 1)) + 8
 		x0 = game.w - sa.r - 12 - #cooling * (size + gap)
 	else
 		y0 = 268 -- under the status-effect icons, which sit in the row above
@@ -2165,7 +2174,7 @@ end
 -- iOS port: Cast / Cancel buttons at the right thumb while aiming a talent
 function _M:displayTouchTargeting()
 	local targeting = game.key == game.targetmode_key
-	local bw = 112
+	local bw = require("mod.class.TouchManual").DOCK
 	-- the dock rectangles: Act under the thumb (x2), AUTO beside it (x1)
 	local lr = self.touch_manual:layout()
 	local x2, x1, y = lr.act.x, lr.auto.x, lr.act.y
@@ -2240,8 +2249,8 @@ function _M:displayTouchAttack(x, y, bw)
 	core.display.drawQuad(ax, y, bw, bw, (on or kd) and 60 or 24, (on or kd) and 40 or 26, (on or kd) and 16 or 30, 235)
 	local br, bg, bb = (on or kd) and 240 or 120, (on or kd) and 200 or 110, (on or kd) and 60 or 80
 	for _, e in ipairs{{ax, y, bw, 3}, {ax, y + bw - 3, bw, 3}, {ax, y, 3, bw}, {ax + bw - 3, y, 3, bw}} do core.display.drawQuad(e[1], e[2], e[3], e[4], br, bg, bb, math.floor(255 * pulse)) end
-	self.touch_wheel:drawLabel(on and "II" or ">>", ax + bw / 2, y + 40, 2, 1, 0.83, 0.79, 1)
-	self.touch_wheel:drawLabel(on and _t"STOP" or _t"AUTO", ax + bw / 2, y + 96, 0.8, 1, 0.83, 0.79, 1)
+	self.touch_wheel:drawLabel(on and "II" or ">>", ax + bw / 2, y + 36, 2, 1, 0.83, 0.79, 1)
+	self.touch_wheel:drawLabel(on and _t"STOP" or _t"AUTO", ax + bw / 2, y + bw - 17, 0.8, 1, 0.83, 0.79, 1)
 	if game.mouse.areas_name and game.mouse.areas_name.touch_attack2 then game.mouse:unregisterZone("touch_attack2") end
 	if not game.mouse:updateZone("touch_attack", x, y, bw, bw, nil, 1) then
 		game.mouse:registerZone(x, y, bw, bw, function(button, mx, my, xrel, yrel, bx, by, event)
@@ -2278,39 +2287,39 @@ function _M:displayTouchAttack(x, y, bw)
 	local step = pv and pv.step
 	if pv and pv.explore then
 		-- no enemy in view: the tap auto-explores
-		self.touch_wheel:drawLabel("z", x + bw / 2, y + 34, 2, 0.94, 0.83, 0.54, 1)
-		self.touch_wheel:drawLabel(_t"Explore", x + bw / 2, y + 72, 0.65, 0.9, 0.87, 0.78, 1)
+		self.touch_wheel:drawLabel("z", x + bw / 2, y + 30, 2, 0.94, 0.83, 0.54, 1)
+		self.touch_wheel:drawLabel(_t"Explore", x + bw / 2, y + 66, 0.65, 0.9, 0.87, 0.78, 1)
 	elseif pv and pv.what == "step_in" then
 		-- the step is out of reach: the tap closes in one tile instead
-		self.touch_wheel:drawLabel(">>", x + bw / 2, y + 34, 2, 1, 0.83, 0.79, 1)
-		self.touch_wheel:drawLabel(_t"Close in", x + bw / 2, y + 72, 0.65, 0.9, 0.87, 0.78, 1)
+		self.touch_wheel:drawLabel(">>", x + bw / 2, y + 30, 2, 1, 0.83, 0.79, 1)
+		self.touch_wheel:drawLabel(_t"Close in", x + bw / 2, y + 66, 0.65, 0.9, 0.87, 0.78, 1)
 	elseif pv and pv.what == "wait_for" then
-		self.touch_wheel:drawLabel("...", x + bw / 2, y + 34, 2, 1, 0.83, 0.79, 1)
-		self.touch_wheel:drawLabel(_t"Wait", x + bw / 2, y + 72, 0.65, 0.9, 0.87, 0.78, 1)
+		self.touch_wheel:drawLabel("...", x + bw / 2, y + 30, 2, 1, 0.83, 0.79, 1)
+		self.touch_wheel:drawLabel(_t"Wait", x + bw / 2, y + 66, 0.65, 0.9, 0.87, 0.78, 1)
 	elseif pv and not step then
 		-- nothing in the routine applies right now: the tap only says so
-		self.touch_wheel:drawLabel("-", x + bw / 2, y + 34, 2, 0.6, 0.55, 0.5, 1)
-		self.touch_wheel:drawLabel(_t"Nothing", x + bw / 2, y + 72, 0.65, 0.6, 0.55, 0.5, 1)
+		self.touch_wheel:drawLabel("-", x + bw / 2, y + 30, 2, 0.6, 0.55, 0.5, 1)
+		self.touch_wheel:drawLabel(_t"Nothing", x + bw / 2, y + 66, 0.65, 0.6, 0.55, 0.5, 1)
 	elseif step then
 		local ent = p:actStepEntity(step)
 		if ent then
-			ent:toScreen(nil, x + (bw - 56) / 2, y + 6, 56, 56)
+			ent:toScreen(nil, x + (bw - 52) / 2, y + 4, 52, 52)
 			if pv.t then
 				local cd = p:isTalentCoolingDown(pv.t)
 				if cd and cd > 0 then
-					core.display.drawQuad(x + (bw - 56) / 2, y + 6, 56, 56, 40, 8, 8, 170)
-					self.touch_wheel:drawLabel(tostring(math.ceil(cd)), x + bw / 2, y + 34, 1.2, 1, 0.75, 0.65, 1)
+					core.display.drawQuad(x + (bw - 52) / 2, y + 4, 52, 52, 40, 8, 8, 170)
+					self.touch_wheel:drawLabel(tostring(math.ceil(cd)), x + bw / 2, y + 30, 1.2, 1, 0.75, 0.65, 1)
 				end
 			end
 		else
 			local g = step.kind == "back" and "<<" or step.kind == "approach" and ">>" or step.kind == "wait" and "..." or "X"
-			self.touch_wheel:drawLabel(g, x + bw / 2, y + 34, 2, 1, 0.83, 0.79, 1)
+			self.touch_wheel:drawLabel(g, x + bw / 2, y + 30, 2, 1, 0.83, 0.79, 1)
 		end
 		local nm = p:actStepName(step)
 		if #nm > 13 then nm = nm:sub(1, 12).."." end
-		self.touch_wheel:drawLabel(nm, x + bw / 2, y + 72, 0.65, 0.9, 0.87, 0.78, 1)
+		self.touch_wheel:drawLabel(nm, x + bw / 2, y + 66, 0.65, 0.9, 0.87, 0.78, 1)
 	end
-	self.touch_wheel:drawLabel(_t"ACT", x + bw / 2, y + 96, 0.8, 1, 0.83, 0.79, 1)
+	self.touch_wheel:drawLabel(_t"ACT", x + bw / 2, y + bw - 17, 0.8, 1, 0.83, 0.79, 1)
 
 	-- the routine strip: one small box per step, the next one lit
 	local n = #r.steps

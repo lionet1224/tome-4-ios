@@ -2736,6 +2736,11 @@ function _M:setupMouse(reset)
 		end
 
 		local tmx, tmy = game.level.map:getMouseTile(mx, my)
+		-- iOS port: the magnifier is armed: this tap asks for details instead of acting
+		if TouchInput.active() and button == "left" and not xrel and not yrel and event == "button" and self.key == self.normal_key and self.uiset.touch_manual and self.uiset.touch_manual.inspect_mode then
+			self.uiset.touch_manual:inspectTile(tmx, tmy)
+			return
+		end
 		if core.shader.allow("adv") and outline then
 			local o = self.level.map(tmx, tmy, Map.OBJECT)
 			if cur_obj and cur_obj._mo then cur_obj._mo:shader(nil) end
@@ -2772,6 +2777,8 @@ function _M:setupMouse(reset)
 
 		-- Handle targeting
 		if not config.settings.tome.disable_mouse_targeting and self:targetMouse(button, mx, my, xrel, yrel, event) then return end
+		-- iOS port: no hover tooltips on a phone (a hold used to show one); details come from the magnifier
+		if TouchInput.active() then self.tooltip_x, self.tooltip_y = nil, nil end
 
 		-- Cheat kill
 		if config.settings.cheat then

@@ -32,6 +32,15 @@ local function font(size)
 end
 _M.uiScale = uiScale
 local texts = {}
+function _M.u8cut(s, n)
+	if n >= #s then return s end
+	while n > 0 do
+		local b = s:byte(n + 1)
+		if b < 0x80 or b >= 0xC0 then break end
+		n = n - 1
+	end
+	return s:sub(1, n)
+end
 local function text(str, size, r, g, b, bold, maxw)
 	str = tostring(str or "")
 	local f = font(size)
@@ -41,9 +50,12 @@ local function text(str, size, r, g, b, bold, maxw)
 		-- ellipsis when the string does not fit
 		local plain = str:gsub("#[^#]*#", "")
 		if f:size(plain) > maxw then
-			local n = #plain
-			while n > 1 and f:size(plain:sub(1, n) .. "...") > maxw do n = n - 1 end
-			str = plain:sub(1, n) .. "..."
+			local cut = plain
+			while #cut > 1 do
+				cut = _M.u8cut(cut, #cut - 1)
+				if f:size(cut .. "...") <= maxw then break end
+			end
+			str = cut .. "..."
 		end
 	end
 	local key = size .. "@" .. uiScale() .. "|" .. r .. "," .. g .. "," .. b .. (bold and "b" or "") .. "|" .. str
@@ -96,16 +108,49 @@ local function circle(cx, cy, r, c, a, ring)
 	flush()
 	if core.display.drawRingWedge then core.display.drawRingWedge(cx, cy, ring or 0, r, 0, 360, c[1], c[2], c[3], math.floor((a or 1) * 255)) end
 end
+-- split into wrap units: a run of non-space ASCII is one unit, every multi-byte
+-- (CJK) character is its own unit; sp tells whether a space preceded the unit
+local no_lead = {["\239\188\140"]=1, ["\227\128\130"]=1, ["\227\128\129"]=1, ["\239\188\129"]=1, ["\239\188\159"]=1, ["\239\188\154"]=1, ["\239\188\155"]=1, ["\239\188\137"]=1, ["\227\128\141"]=1, ["\227\128\143"]=1, ["\227\128\145"]=1}
+local function wrapUnits(str)
+	local s = tostring(str or "")
+	local units, sp, i, n = {}, false, 1, #s
+	while i <= n do
+		local b = s:byte(i)
+		if b <= 32 then sp = true i = i + 1
+		elseif b >= 0xC0 then
+			local len = b >= 0xF0 and 4 or b >= 0xE0 and 3 or 2
+			local ch = s:sub(i, i + len - 1)
+			if no_lead[ch] and #units > 0 and not sp then units[#units][1] = units[#units][1] .. ch
+			else units[#units+1] = {ch, sp} end
+			sp = false i = i + len
+		else
+			local j = i
+			while j <= n do
+				local c = s:byte(j)
+				if c <= 32 or c >= 0xC0 then break end
+				j = j + 1
+			end
+			units[#units+1] = {s:sub(i, j - 1), sp}
+			sp = false i = j
+		end
+	end
+	return units
+end
+local function joinUnits(units, a)
+	local out = {}
+	for k = a, #units do out[#out+1] = (units[k][2] and k > a and " " or "") .. units[k][1] end
+	return table.concat(out)
+end
 -- greedy word wrap into at most n lines; the last line carries the rest (ellipsis by text())
 local function wrap(str, f, maxw, n)
 	local lines, line = {}, ""
-	local words = {}
-	for w in tostring(str or ""):gmatch("%S+") do words[#words+1] = w end
+	local units = wrapUnits(str)
 	local i = 1
-	while i <= #words do
-		local try = line == "" and words[i] or (line .. " " .. words[i])
+	while i <= #units do
+		local u = units[i]
+		local try = line == "" and u[1] or (line .. (u[2] and " " or "") .. u[1])
 		if f:size(try) > maxw and line ~= "" then
-			if #lines == n - 1 then line = line .. " " .. table.concat(words, " ", i) break end
+			if #lines == n - 1 then line = line .. (u[2] and " " or "") .. joinUnits(units, i) break end
 			lines[#lines+1] = line line = ""
 		else line = try i = i + 1 end
 	end
@@ -124,14 +169,16 @@ local function pitch(desc)
 	if type(desc) == "table" then
 		-- descriptors often open with a one-line title ("#GOLD#Normal mode#WHITE#"): skip it
 		local first = tostring(desc[1] or ""):gsub("#[^#]*#", "")
-		if #desc > 1 and #first < 40 and not first:find("[%.!?]") then desc = desc[2] else desc = desc[1] end
+		if #desc > 1 and #first < 40 and not first:find("[%.!?]") and not first:find("\227\128\130", 1, true) then desc = desc[2] else desc = desc[1] end
 	end
 	desc = tostring(desc or ""):gsub("#[^#]*#", ""):gsub("^%s+", "")
 	-- same title-line convention inside a single string ("Normal mode\nProvides ...")
 	local first, rest = desc:match("^([^\n]*)\n%s*(.+)$")
-	if first and #first < 40 and not first:find("[%.!?]") then desc = rest end
+	if first and #first < 40 and not first:find("[%.!?]") and not first:find("\227\128\130", 1, true) then desc = rest end
 	local s = desc:match("^(.-[%.!?])%s") or desc
-	if #s > 90 then s = s:sub(1, 88) .. "..." end
+	local cn = desc:match("^(.-\227\128\130)")
+	if cn and #cn < #s then s = cn end
+	if #s > 120 then s = _M.u8cut(s, 118) .. "..." end
 	return s
 end
 
@@ -169,12 +216,12 @@ function Rail:display(x, y, nb_keyframes)
 		if done then circle(cx, cy, 15, {123, 211, 137}, a) circle(cx, cy, 6, {16, 32, 26}, a)
 		else
 			circle(cx, cy, 15, cur and GOLD or {60, 63, 72}, a, 13)
-			draw(text(tostring(i), 14, cur and 240 or 150, cur and 212 or 150, cur and 138 or 150, true), cx - 5, cy - 10, a)
+			draw(text(tostring(i), 15, cur and 240 or 150, cur and 212 or 150, cur and 138 or 150, true), cx - 5, cy - 10, a)
 		end
 		local v = s.value()
-		local ny = (v and v ~= "") and ry + 10 or ry + 18
-		draw(text(s.name, 16, cur and 234 or 200, cur and 227 or 195, cur and 209 or 180, cur), x + 50, ny, a)
-		if v and v ~= "" then draw(text(v, 12, 142, 136, 120, false, self.w - 58), x + 50, ry + 34, a) end
+		local ny = (v and v ~= "") and ry + 8 or ry + 18
+		draw(text(s.name, 17, cur and 234 or 200, cur and 227 or 195, cur and 209 or 180, cur), x + 50, ny, a)
+		if v and v ~= "" then draw(text(v, 14, 142, 136, 120, false, self.w - 58), x + 50, ry + 34, a) end
 	end
 	flush()
 	batching = was
@@ -243,7 +290,7 @@ function Flow:display(x, y, nb_keyframes, screen_x, screen_y)
 	batching = true
 	for _, sec in ipairs(self.sections) do
 		if sec.title and sec.ty + 30 - self.scrollbar.pos > 0 and sec.ty - self.scrollbar.pos < self.h then
-			draw(text(sec.title:upper(), 12, 142, 136, 120, true), x + 6, oy + sec.ty + 8)
+			draw(text(sec.title:upper(), 14, 142, 136, 120, true), x + 6, oy + sec.ty + 6)
 		end
 		for _, it in ipairs(sec.items) do
 			local iy = oy + it.y
@@ -253,37 +300,39 @@ function Flow:display(x, y, nb_keyframes, screen_x, screen_y)
 				quad(x + it.x, iy, it.w, it.h, down and {62, 58, 40} or (it.sel and CARD_SEL or CARD))
 				if it.sel then frame(x + it.x, iy, it.w, it.h, GOLD, 2) end
 				local tx = x + it.x + 10
-				local ty = iy + 8
+				local ty = iy + (it.h >= 64 and 8 or 5)
 				if it.icon and sec.icon_only then
 					local size = math.min(it.h - 16, sec.icon_size or 40)
 					flush() batching = false
 					pcall(it.icon, x + it.x + (it.w - size) / 2, iy + 4, size)
 					batching = true
-					if it.name then draw(text(it.name, 11, 200, 195, 180, false, it.w - 6), x + it.x + 3, iy + it.h - 16, a) end
+					if it.name then draw(text(it.name, 14, 200, 195, 180, false, it.w - 6), x + it.x + 3, iy + it.h - 20, a) end
 				elseif sec.center then
-					local d = text(it.name, 17, 234, 227, 209, true, it.w - 16)
+					local d = text(it.name, 18, 234, 227, 209, true, it.w - 16)
 					if d then draw(d, x + it.x + (it.w - d.w) / 2, iy + (it.sub and 8 or (it.h - d.h) / 2), a) end
-					if it.sub then local s = text(it.sub, 12, 142, 136, 120, false, it.w - 16) if s then draw(s, x + it.x + (it.w - s.w) / 2, iy + it.h - 24, a) end end
+					if it.sub then local s = text(it.sub, 15, 142, 136, 120, false, it.w - 16) if s then draw(s, x + it.x + (it.w - s.w) / 2, iy + it.h - 28, a) end end
 				elseif sec.rows then
-					draw(text(it.name, 15, 142, 136, 120, false), tx, iy + (it.h - 20) / 2, a)
-					local v = text(it.sub or "", 17, 234, 227, 209, true, it.w - 140 - 60)
+					draw(text(it.name, 16, 142, 136, 120, false), tx, iy + (it.h - 20) / 2, a)
+					local v = text(it.sub or "", 18, 234, 227, 209, true, it.w - 140 - 60)
 					if v then draw(v, x + it.x + it.w - 60 - v.w, iy + (it.h - v.h) / 2, a) end
-					draw(text(_t"edit", 13, 240, 212, 138), x + it.x + it.w - 44, iy + (it.h - 18) / 2, a)
+					draw(text(_t"edit", 15, 240, 212, 138), x + it.x + it.w - 44, iy + (it.h - 20) / 2, a)
 				else
+					local nosub = not it.sub or it.sub == ""
 					if it.icon then
 						local size = math.min(it.h - 16, sec.icon_size or 40)
 						flush() batching = false
-						pcall(it.icon, tx, ty, size)
+						pcall(it.icon, tx, nosub and iy + (it.h - size) / 2 or ty, size)
 						batching = true
 						tx = tx + size + 8
 					end
 					local maxw = x + it.x + it.w - tx - 8
-					draw(text(it.name, 17, 234, 227, 209, true, maxw), tx, ty, a)
+					local lk = it.locked and text(_t"locked", 14, 224, 122, 106, true)
+					draw(text(it.name, 17, 234, 227, 209, true, lk and maxw - lk.w - 8 or maxw), tx, nosub and iy + (it.h - 22) / 2 or ty, a)
+					if lk then draw(lk, x + it.x + it.w - 8 - lk.w, nosub and iy + (it.h - 18) / 2 or ty + 2, 1) end
 					if it.sub then
 						local nl = it.h >= 84 and 2 or 1
-						for li, l in ipairs(wrap(it.sub, font(12), maxw, nl)) do draw(text(l, 12, 142, 136, 120, false, maxw), tx, ty + 28 + (li - 1) * 18, a) end
+						for li, l in ipairs(wrap(it.sub, font(15), maxw, nl)) do draw(text(l, 15, 142, 136, 120, false, maxw), tx, ty + 28 + (li - 1) * 20, a) end
 					end
-					if it.locked then draw(text(_t"locked", 11, 224, 122, 106, true), tx, iy + it.h - 20, 1) end
 				end
 			end
 		end

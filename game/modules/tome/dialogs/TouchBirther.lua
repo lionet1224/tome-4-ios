@@ -57,9 +57,9 @@ function StepBar:display(x, y, nb_keyframes)
 		if done then circle(cx, cy, 11, {123, 211, 137}, a) circle(cx, cy, 4, {16, 32, 26}, a)
 		else
 			circle(cx, cy, 11, cur and GOLD or {60, 63, 72}, a, 9)
-			draw(text(tostring(i), 12, cur and 240 or 150, cur and 212 or 150, cur and 138 or 150, true), cx - 4, cy - 8, a)
+			draw(text(tostring(i), 14, cur and 240 or 150, cur and 212 or 150, cur and 138 or 150, true), cx - 4, cy - 9, a)
 		end
-		draw(text(s.name, 14, cur and 234 or 200, cur and 227 or 195, cur and 209 or 180, cur, self.pill_w - 40), px + 34, cy - 9, a)
+		draw(text(s.name, 15, cur and 234 or 200, cur and 227 or 195, cur and 209 or 180, cur, self.pill_w - 36), px + 33, cy - 10, a)
 	end
 end
 
@@ -419,12 +419,12 @@ function _M:refresh()
 		for _, r in ipairs(rows) do r.on_tap = function() self:goStep(r.go) end end
 		secs[#secs+1] = {title=_t"Your character", items=rows, cols=1, row_h=52, rows=true}
 		local more = {
-			{name=_t"Tutorial", sub=_t"The game's basics", on_tap=function() self:tutorial() end},
-			{name=_t"Random", sub=_t"Roll everything", on_tap=function() self:randomBirth() end},
-			{name=_t"Premade", sub=_t"Load a saved character", on_tap=function() self:loadPremadeUI() end},
-			{name=_t"Custom tile", sub=_t"Pick another sprite", on_tap=function() self:selectTile() end},
+			{name=_t"Tutorial", on_tap=function() self:tutorial() end},
+			{name=_t"Random", on_tap=function() self:randomBirth() end},
+			{name=_t"Premade", on_tap=function() self:loadPremadeUI() end},
+			{name=_t"Custom tile", on_tap=function() self:selectTile() end},
 		}
-		secs[#secs+1] = {title=_t"More", items=more, min_w=170, row_h=64}
+		secs[#secs+1] = {title=_t"More", items=more, min_w=150, row_h=56, center=true}
 	end
 	self.c_flow:setSections(secs)
 	self.b_back.text = self.step == 1 and _t"Cancel" or _t"Back"
@@ -507,7 +507,7 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 		dx, dy = x, y + self.sheet_y
 		quad(dx, dy, self.iw, self.sheet_h, PANE)
 		quad(dx, dy, self.iw, 2, {60, 63, 72})
-		if self.step == 1 then draw(text(_t"NAME", 12, 142, 136, 120, true), x + 8, y + self.content_y + 12) end
+		if self.step == 1 then draw(text(_t"NAME", 14, 142, 136, 120, true), x + 8, y + self.content_y + 11) end
 	else
 	dx = x + self.rail_w + 12 + self.content_w + 12
 	dy = y
@@ -516,7 +516,7 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	quad(x + self.rail_w + 12, y, self.content_w, self.ih, {18, 19, 23})
 	quad(dx, dy, self.detail_w, self.ih, PANE)
 	-- name label on the first step
-	if self.step == 1 then draw(text(_t"NAME", 12, 142, 136, 120, true), x + self.rail_w + 12 + 8, y + 12) end
+	if self.step == 1 then draw(text(_t"NAME", 14, 142, 136, 120, true), x + self.rail_w + 12 + 8, y + 11) end
 	end
 	-- hero: the character as it will look, name and one line
 	local sz = 112
@@ -533,7 +533,7 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	if sub and sub ~= "" then
 		-- two lines of the pitch
 		local maxw = self.detail_w - (tx - dx) - 12
-		for li, l in ipairs(wrap(sub, font(13), maxw, 3)) do draw(text(l, 13, 142, 136, 120, false, maxw), tx, dy + 54 + (li - 1) * 18) end
+		for li, l in ipairs(wrap(sub, font(15), maxw, 3)) do draw(text(l, 15, 142, 136, 120, false, maxw), tx, dy + 52 + (li - 1) * 20) end
 	end
 	if self.step == 3 and self.descriptors_by_type.subclass then
 		local sc = self.birth_descriptor_def.subclass[self.descriptors_by_type.subclass]
@@ -547,8 +547,8 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 		local col, row = (i - 1) % 3, math.floor((i - 1) / 3)
 		local cx, cy = dx + 12 + col * (cw + 6), dy + 12 + sz + 16 + row * 44
 		quad(cx, cy, cw, 40, {36, 39, 47})
-		draw(text(c[1]:upper(), 10, 142, 136, 120, true), cx + 8, cy + 4)
-		draw(text(c[2], 16, c[3] and 123 or 224, c[3] and 211 or 122, c[3] and 137 or 106, true), cx + 8, cy + 17)
+		draw(text(c[1]:upper(), 14, 142, 136, 120, true), cx + 8, cy + 1)
+		draw(text(c[2], 16, c[3] and 123 or 224, c[3] and 211 or 122, c[3] and 137 or 106, true), cx + 8, cy + 19)
 	end
 end
 

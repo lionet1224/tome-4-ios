@@ -44,5 +44,6 @@
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key><true/>
+	<key>CADisableMinimumFrameDurationOnPhone</key><true/>
 </dict>
 </plist>

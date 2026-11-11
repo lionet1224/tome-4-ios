@@ -30,12 +30,21 @@ local LINE = {58, 51, 41}
 function _M.parseDescription(desc)
 	desc = tostring(desc or "")
 	local info = {}
+	-- the description is built with :tformat, so it may be English or Chinese (zh_hans)
 	local level, sub, cls = desc:match("the level (%d+) (%S+) ([^%.\n]+)%.")
+	if not level then
+		local first = desc:match("^[^\n]*")
+		level, sub, cls = first:match("\231\173\137\231\186\167(%d+)\239\188\140(%S+) (.+)\227\128\130%s*$")
+	end
 	if level then info.level, info.subrace, info.class = tonumber(level), sub, cls end
 	local diff, death = desc:match("Difficulty: ([^/\n]+) / ([^\n]+)")
+	if not diff then diff, death = desc:match("\233\154\190\229\186\166\239\188\154([^/\n]+) / ([^\n]+)") end
 	if diff then info.difficulty, info.permadeath = diff:gsub("%s+$", ""), death:gsub("%s+$", "") end
-	info.campaign = desc:match("Campaign: ([^\n]+)")
+	info.campaign = desc:match("Campaign: ([^\n]+)") or desc:match("\230\136\152\229\189\185\239\188\154([^\n]+)")
 	local zl, zone = desc:match("Exploring level (%S+) of ([^%.\n]+)%.")
+	if not zone then
+		zl, zone = desc:match("\230\173\163\229\156\168\230\142\162\231\180\162\230\165\188\229\177\130 (%S+)\239\188\140([^\n]+)\227\128\130%s*$")
+	end
 	if zone then info.zone_level, info.zone = zl, zone end
 	-- the stock description never says so; a module that does gets the Fallen section
 	local low = desc:lower()
@@ -203,7 +212,7 @@ function Sheet:innerDisplayBack(x, y, nb_keyframes)
 	if i.difficulty then parts[#parts+1] = ("%s / %s"):format(i.difficulty, i.permadeath or "") end
 	local ago = _M.ago(s.timestamp)
 	if ago then parts[#parts+1] = (_t"played %s"):format(ago) end
-	draw(text(table.concat(parts, " · "), 14, MUTED[1], MUTED[2], MUTED[3], false, self.iw - 16), x + 8, y + 36)
+	draw(text(table.concat(parts, " · "), 15, MUTED[1], MUTED[2], MUTED[3], false, self.iw - 16), x + 8, y + 38)
 end
 
 function Sheet:innerDisplay(x, y, nb_keyframes)
@@ -239,7 +248,7 @@ function _M:init(force_compat)
 		self.hero_x, self.hero_y, self.hero_w = 0, self.top_h, math.floor(self.iw * 0.45)
 		self.shot_h = math.min(math.floor(self.hero_w * 9 / 16), math.floor((self.ih - self.top_h - self.foot_h) * 0.45))
 	end
-	self.hero_h = self.shot_h + 158
+	self.hero_h = self.shot_h + 166
 	local avail_h = self.ih - self.top_h - self.foot_h
 	if self.hero_h > avail_h then self.hero_h = avail_h end
 	self.b_more = Button.new{text="...", width=40, font=bigfont, fct=function() if self.hero then self:openSheet(self.hero) end end}
@@ -378,7 +387,7 @@ function _M:buildCards()
 	end
 	local secs = {}
 	if #self.saves == 0 then
-		secs[#secs+1] = {title=_t"Saved characters", items={{name=_t"No saved games", sub=_t"Start a new character from the main menu."}}, cols=1, row_h=72}
+		secs[#secs+1] = {title=_t"Saved characters", items={{name=_t"No saved games"}}, cols=1, row_h=60}
 	else
 		local items = {}
 		for _, s in ipairs(self.others) do items[#items+1] = row(s, false) end
@@ -388,7 +397,7 @@ function _M:buildCards()
 			for _, s in ipairs(self.fallen) do f[#f+1] = row(s, true) end
 			secs[#secs+1] = {title=_t"Fallen", items=f, cols=1, row_h=64, icon_size=48}
 		end
-		if #secs == 0 then secs[#secs+1] = {title=_t"Other characters", items={{name=_t"No other characters", sub=_t"Everyone you have played is above."}}, cols=1, row_h=64} end
+		if #secs == 0 then secs[#secs+1] = {title=_t"Other characters", items={{name=_t"No other characters"}}, cols=1, row_h=60} end
 	end
 	self.c_flow:setSections(secs)
 	self.c_flow.scrollbar.pos = 0
@@ -436,12 +445,12 @@ function _M:regen()
 end
 
 local function pill(x, y, label, col, border)
-	local d = text(label:upper(), 11, col[1], col[2], col[3], true)
+	local d = text(label:upper(), 14, col[1], col[2], col[3], true)
 	if not d then return x end
 	local w = d.w + 16
-	quad(x, y, w, 22, {24, 21, 17})
-	frame(x, y, w, 22, border or LINE, 1)
-	draw(d, x + 8, y + 4)
+	quad(x, y, w, 26, {24, 21, 17})
+	frame(x, y, w, 26, border or LINE, 1)
+	draw(d, x + 8, y + 3)
 	return x + w + 6
 end
 
@@ -450,7 +459,7 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	x, y = x + self.ix, y + self.iy
 	-- top row: title beside the back button, the count at the right
 	draw(text(_t"Load character", 22, INK[1], INK[2], INK[3], true), x + 104, y + 12)
-	local cnt = text((self.count or 0) == 1 and _t"1 saved" or ("%d saved"):tformat(self.count or 0), 14, MUTED[1], MUTED[2], MUTED[3])
+	local cnt = text((self.count or 0) == 1 and _t"1 saved" or ("%d saved"):tformat(self.count or 0), 15, MUTED[1], MUTED[2], MUTED[3])
 	if cnt then draw(cnt, x + self.iw - cnt.w - 8, y + 18) end
 
 	-- hero card
@@ -471,7 +480,7 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 		local meta = {}
 		if i.level then meta[#meta+1] = ("Level %d %s %s"):tformat(i.level, i.subrace or "", i.class or "") end
 		if i.zone then meta[#meta+1] = ("%s, level %s"):tformat(i.zone, i.zone_level or "?") end
-		draw(text(table.concat(meta, " · "), 15, MUTED[1], MUTED[2], MUTED[3], false, hw - 24), hx + 12, cy) cy = cy + 26
+		draw(text(table.concat(meta, " · "), 16, MUTED[1], MUTED[2], MUTED[3], false, hw - 24), hx + 12, cy) cy = cy + 28
 		local px = hx + 12
 		if i.difficulty then px = pill(px, cy, i.difficulty, RED, {122, 58, 51}) end
 		if i.permadeath then px = pill(px, cy, i.permadeath, MUTED) end

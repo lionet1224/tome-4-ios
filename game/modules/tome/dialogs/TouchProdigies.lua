@@ -160,7 +160,7 @@ function _M:status(t)
 		if need then return ("Needs %s %d"):tformat(stat, need), "locked" end
 		return ("Needs more %s"):tformat(stat), "locked"
 	end
-	if #why > 60 then why = why:sub(1, 58) .. "..." end
+	if #why > 60 then why = require("engine.ui.TouchKit").u8cut(why, 58) .. "..." end
 	return why:sub(1, 1):upper() .. why:sub(2), "locked"
 end
 
@@ -322,11 +322,10 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	quad(dx, y, self.detail_w, self.ih, PANE)
 	local e = self.cur
 	local points = self.actor.unused_prodigies or 0
-	local pd = text((_t"Points left: %d"):format(points), 13, points > 0 and 240 or 142, points > 0 and 212 or 136, points > 0 and 138 or 120, true)
+	local pd = text((_t"Points left: %d"):format(points), 15, points > 0 and 240 or 142, points > 0 and 212 or 136, points > 0 and 138 or 120, true)
 	if not e then
 		draw(text(_t"Prodigies", 22, 240, 212, 138, true), dx + 12, y + 16)
 		draw(pd, dx + 12, y + 52)
-		draw(text(_t"Tap a prodigy to read about it.", 13, 142, 136, 120), dx + 12, y + 76)
 		return
 	end
 	local sz = 64
@@ -339,8 +338,8 @@ function _M:innerDisplayBack(x, y, nb_keyframes)
 	if e.kind == "ok" then sc = {123, 211, 137}
 	elseif e.kind == "known" or e.kind == "pending" then sc = {240, 212, 138}
 	elseif e.kind == "locked" then sc = {224, 122, 106} end
-	for li, l in ipairs(K.wrap(e.status, font(13), maxw, 2)) do draw(text(l, 13, sc[1], sc[2], sc[3], false, maxw), tx, y + 48 + (li - 1) * 18) end
-	draw(pd, tx, y + 90)
+	for li, l in ipairs(K.wrap(e.status, font(15), maxw, 2)) do draw(text(l, 15, sc[1], sc[2], sc[3], false, maxw), tx, y + 46 + (li - 1) * 20) end
+	draw(pd, tx, y + 92)
 end
 
 -- portrait: cards on top, the selected prodigy's header at the top of the
@@ -352,11 +351,10 @@ function _M:innerDisplayBackPortrait(x, y)
 	quad(x, sy, self.iw, 2, {60, 63, 72})
 	local e = self.cur
 	local points = self.actor.unused_prodigies or 0
-	local pd = text((_t"Points left: %d"):format(points), 13, points > 0 and 240 or 142, points > 0 and 212 or 136, points > 0 and 138 or 120, true)
+	local pd = text((_t"Points left: %d"):format(points), 15, points > 0 and 240 or 142, points > 0 and 212 or 136, points > 0 and 138 or 120, true)
 	if not e then
 		draw(text(_t"Prodigies", 22, 240, 212, 138, true), x + 12, sy + 16)
 		draw(pd, x + 12, sy + 52)
-		draw(text(_t"Tap a prodigy to read about it.", 13, 142, 136, 120), x + 12, sy + 76)
 		return
 	end
 	local sz = 64
@@ -369,8 +367,8 @@ function _M:innerDisplayBackPortrait(x, y)
 	if e.kind == "ok" then sc = {123, 211, 137}
 	elseif e.kind == "known" or e.kind == "pending" then sc = {240, 212, 138}
 	elseif e.kind == "locked" then sc = {224, 122, 106} end
-	for li, l in ipairs(K.wrap(e.status, font(13), maxw, 2)) do draw(text(l, 13, sc[1], sc[2], sc[3], false, maxw), tx, sy + 48 + (li - 1) * 18) end
-	draw(pd, tx, sy + 90)
+	for li, l in ipairs(K.wrap(e.status, font(15), maxw, 2)) do draw(text(l, 15, sc[1], sc[2], sc[3], false, maxw), tx, sy + 46 + (li - 1) * 20) end
+	draw(pd, tx, sy + 92)
 end
 
 -- a rotation: the game swaps this dialog for a fresh one laid out for the

@@ -52,7 +52,7 @@ function Chips:generate()
 	self.mouse:reset()
 	self.key:reset()
 	self.tex = {}
-	for _, try in ipairs{{17, 26, 6}, {17, 14, 4}, {15, 12, 4}, {13, 10, 3}} do
+	for _, try in ipairs{{17, 26, 6}, {17, 14, 4}, {16, 12, 4}, {15, 10, 3}} do
 		self.font_c = core.display.newFont(FontPackage:getFont("default"), try[1])
 		local x = 0
 		for _, it in ipairs(self.items) do
@@ -112,6 +112,7 @@ function _M.build(self, actor, start_tab)
 	self.portrait = TI.portrait()
 	self.is_player = (actor == game.player) or (game.party and game.party:hasMember(actor))
 
+	self.no_close_bar = true -- has its own Close button
 	Dialog.init(self, _t"Character sheet", game.w * 0.96, game.h * 0.96)
 	self.w_desktop = self.w
 	self.touch_static_bg = true
@@ -150,7 +151,7 @@ function _M.build(self, actor, start_tab)
 			{left=2 * (third + 16 + 6), bottom=0, ui=self.b_inven},
 		}
 	else
-		self.head_h = 96
+		self.head_h = 112
 		self.list_x, self.list_y = 0, self.head_h + self.c_chips.h + 8
 		self.list_w = math.floor(self.iw * 0.55)
 		self.list_h = self.ih - self.list_y
@@ -243,7 +244,7 @@ function _M.touchTalentSections(self)
 			if not groups[gname] then groups[gname] = {} order[#order+1] = gname end
 			local lvl = a:getTalentLevelRaw(t)
 			local mode = t.mode == "sustained" and (a:isTalentActive(t.id) and _t"sustain · active" or _t"sustain") or t.mode == "passive" and _t"passive" or _t"active"
-			table.insert(groups[gname], {name=t.name, sub=("Level %d · %s"):format(lvl, mode), icon=talentIcon(t), data={talent=t},
+			table.insert(groups[gname], {name=t.name, sub=("Level %d · %s"):tformat(lvl, mode), icon=talentIcon(t), data={talent=t},
 				on_tap=function(it) self:touchSelectCard(it) end})
 		end
 	end
@@ -258,7 +259,7 @@ function _M.touchTalentSections(self)
 		table.sort(groups[g], function(x, y) return x.name < y.name end)
 		secs[#secs+1] = {title=g, items=groups[g], min_w=200, row_h=74, icon_size=40}
 	end
-	if #secs == 0 then secs[1] = {title=_t"Talents", items={{name=_t"No talents known", sub=""}}, cols=1, row_h=60} end
+	if #secs == 0 then secs[1] = {title=_t"Talents", items={{name=_t"No talents known"}}, cols=1, row_h=60} end
 	return secs
 end
 
@@ -365,8 +366,8 @@ function _M.touchHeader(self, x, y)
 	local bw = math.min(tw - 8, portrait and 300 or 260)
 	if a.max_life then
 		bar(tx, by, bw, 14, a.life or 0, a.max_life, {200, 40, 40})
-		draw(text(("%d / %d"):format(math.floor(a.life or 0), math.floor(a.max_life)), 12, 235, 230, 215, true), tx + bw + 8, by - 1)
-		by = by + 18
+		draw(text(("%d / %d"):format(math.floor(a.life or 0), math.floor(a.max_life)), 14, 235, 230, 215, true), tx + bw + 8, by - 2)
+		by = by + 19
 	end
 	local n = 0
 	for _, res in ipairs(a.resources_def or {}) do
@@ -377,8 +378,8 @@ function _M.touchHeader(self, x, y)
 			local col = type(res.color) == "table" and res.color or {120, 160, 255}
 			if type(col) == "string" then col = {120, 160, 255} end
 			bar(tx, by, bw, 10, v, max, {col[1] or 120, col[2] or 160, col[3] or 255})
-			draw(text(("%s %d / %d"):format(res.name or res.short_name, math.floor(v), math.floor(max)), 11, 200, 195, 180, false, tw - bw - 8), tx + bw + 8, by - 3)
-			by = by + 14
+			draw(text(("%s %d / %d"):format(res.name or res.short_name, math.floor(v), math.floor(max)), 14, 200, 195, 180, false, tw - bw - 8), tx + bw + 8, by - 4)
+			by = by + 16
 			n = n + 1
 		end
 	end
